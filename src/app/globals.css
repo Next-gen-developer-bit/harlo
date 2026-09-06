@@ -1,26 +1,433 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Editorial rebuild — warm ivory canvas + deep charcoal ink, replacing
+     the previous cool near-white/medium-grey system. These tokens are
+     consumed sitewide via bg-background/bg-surface/text-foreground/
+     text-muted etc., so this one change is the base of the whole
+     palette shift; component-level radius/shadow still needed tuning
+     separately (see Button, ShowcaseCard, product frames). */
+  --background: #faf8f3;
+  --surface: #f1ebde;
+  --surface-2: #e9e0cf;
+  --foreground: #24221d;
+  --muted: #6e6659;
+  --border: rgba(40, 34, 20, 0.1);
+  /* Thin dark border — the Harlo "signature" outline (product frames,
+     audience cards, pricing surfaces) as distinct from --border, which
+     stays reserved for quiet internal dividers (FAQ rows, table rules). */
+  --border-dark: rgba(36, 30, 18, 0.16);
+  --border-dark-hover: rgba(36, 30, 18, 0.32);
+  --primary: #3d5afe;
+  --primary-ink: #ffffff;
+  --primary-soft: #eef0ff;
+  --pastel-blue: #eaf1ff;
+  --pastel-pink: #fdecf3;
+  --pastel-green: #eafaf1;
+  --pastel-yellow: #fdf6df;
+  --pastel-peach: #fff3e8;
+  --pastel-purple: #f3edfe;
+  /* Reduced across the board — editorial/architectural rather than the
+     previous soft, highly-rounded system. Nothing above ~12px any more. */
+  --radius-lg: 12px;
+  --radius-md: 10px;
+  --radius-sm: 8px;
+  /* Harlo Product Frame radius — deliberately its own token even though it
+     currently equals --radius-lg, so the frame can be tuned independently
+     of ordinary cards. */
+  --radius-frame: 10px;
+
+  /* Dark section background range (Analytics, Footer) — deep warm
+     charcoal, not glossy/near-black, so it stays in the same warm family
+     as the rest of the page rather than reading as a different brand. */
+  --dark-bg: #211d17;
+  --dark-surface: #2b2620;
+  --dark-border: rgba(255, 255, 255, 0.1);
+  --dark-muted: rgba(255, 255, 255, 0.6);
+
+  /* Shared width for the floating nav and the major product-demo showcases
+     directly beneath it, so their left/right edges line up. */
+  --harlo-content-width: 86rem;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-dark: var(--border-dark);
+  --color-border-dark-hover: var(--border-dark-hover);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-soft: var(--primary-soft);
+  --color-pastel-blue: var(--pastel-blue);
+  --color-pastel-pink: var(--pastel-pink);
+  --color-pastel-green: var(--pastel-green);
+  --color-pastel-yellow: var(--pastel-yellow);
+  --color-pastel-peach: var(--pastel-peach);
+  --color-pastel-purple: var(--pastel-purple);
+  --font-sans: var(--font-poppins);
+
+  /* ------------------------------------------------------------------
+     Global fluid type scale — one hierarchy, applied site-wide via these
+     shared tokens rather than one-off clamp()/px values scattered per
+     component. Each tier uses clamp(min, rem+vw, max) so it scales
+     smoothly between breakpoints and stops growing at a sensible desktop
+     ceiling (large monitors get more surrounding space, not bigger text).
+     Tiers, largest to smallest:
+       display        — homepage hero H1 only
+       h1-page        — inner-page H1s (pricing, features, platforms, etc.)
+       h2             — major section headings ("Built for people...")
+       feature        — product-story headings beside product UI (homepage)
+       h3             — subsections, FAQ group titles
+       h4             — card titles
+       lg             — large supporting copy / hero subheading
+       body (base)    — standard paragraph text
+       tile           — small supporting/metadata text
+       eyebrow        — small uppercase labels
+       nav            — navigation links
+     ------------------------------------------------------------------ */
+  /* Third correction pass — reset to match the Pallyy sizing hierarchy
+     (proportions only; Poppins/Harlo branding unchanged). Every ceiling
+     below is deliberately reached by ~1440-1600px and does not grow
+     further on ultra-wide monitors. Do not increase this scale again
+     without explicit instruction — this is the final Harlo type scale. */
+  --text-eyebrow: 0.75rem;
+  --text-eyebrow--line-height: 1.3;
+  --text-nav: clamp(0.9375rem, 0.92rem + 0.1vw, 1rem);
+  --text-base--line-height: 1.6;
+  --text-body: clamp(0.975rem, 0.95rem + 0.05vw, 1.0625rem);
+  --text-body--line-height: 1.65;
+  /* Large supporting copy — hero subheading and product-section
+     descriptions share this one tier rather than two near-duplicate
+     tokens. Matches Pallyy's ~18px introduction copy. */
+  --text-lg: clamp(1rem, 0.97rem + 0.1vw, 1.125rem);
+  --text-lg--line-height: 1.6;
+  --text-hero-desc: clamp(1rem, 0.97rem + 0.1vw, 1.125rem);
+  --text-hero-desc--line-height: 1.6;
+  --text-tile: clamp(0.875rem, 0.86rem + 0.03vw, 0.9375rem);
+  --text-tile--line-height: 1.55;
+  /* Feature-card / compact heading — intentionally restrained (Pallyy
+     uses ~16px for smaller product-feature headings). */
+  --text-h4: clamp(1rem, 0.97rem + 0.08vw, 1.125rem);
+  --text-h4--line-height: 1.3;
+  /* Subsections / FAQ group titles. */
+  --text-h3: clamp(1.25rem, 1.15rem + 0.2vw, 1.625rem);
+  --text-h3--line-height: 1.25;
+  --text-h3--letter-spacing: -0.01em;
+  /* Product-story headings beside large product interfaces (homepage
+     Create & Publish / Organise / Analyse, agency workflow sections) —
+     same ceiling as Major H2 (36px) so the two tiers read as one visual
+     rank, per the Pallyy reference. */
+  --text-feature: clamp(1.75rem, 1.6rem + 0.35vw, 2.25rem);
+  --text-feature--line-height: 1.12;
+  --text-feature--letter-spacing: -0.015em;
+  /* Major section headings — "Built for people managing social every
+     day.", "See your whole social schedule in one place." Ceiling is
+     36px, matching Pallyy's observed H2 sizing. */
+  --text-h2: clamp(1.875rem, 1.7rem + 0.4vw, 2.25rem);
+  --text-h2--line-height: 1.1;
+  --text-h2--letter-spacing: -0.015em;
+  /* Legal document title — its own, smaller tier: legal pages prioritise
+     readability over marketing impact (used by LegalPageShell only). */
+  --text-h1-legal: clamp(2rem, 1.8rem + 0.4vw, 2.75rem);
+  --text-h1-legal--line-height: 1.15;
+  /* Homepage hero display H1 only — the single largest heading site-wide.
+     Hard ceiling is 60px, reached by ~1440-1600px. */
+  --text-h1: clamp(2.75rem, 2.35rem + 1vw, 3.75rem);
+  --text-h1--line-height: 1.02;
+  --text-h1--letter-spacing: -0.03em;
+  /* Editorial rebuild: SemiBold rather than Bold sitewide — restraint
+     over weight, per the brief's typography direction. */
+  --text-h1--font-weight: 600;
+
+  /* Inner-page heading tiers — smaller than the homepage hero, used for
+     standard page headers (pricing, features, platforms, solutions,
+     agency hero, etc). Ceiling is 52px. */
+  --text-h1-page: clamp(2.375rem, 2.1rem + 0.65vw, 3.25rem);
+  --text-h1-page--line-height: 1.05;
+  --text-h1-page--letter-spacing: -0.015em;
+  --text-h2-page: clamp(1.5rem, 3vw, 1.875rem);
+  --text-h2-page--line-height: 1.25;
+  --text-h2-page--letter-spacing: -0.01em;
+
+  /* Fluid spacing rhythm for section padding, heading groups and hero gaps.
+     Sitewide baseline for STANDARD sections: settles around 48px on mobile
+     up to ~72-104px at typical desktop widths. Smaller supporting sections
+     and major/statement sections deliberately don't use this token as-is —
+     they pass an explicit className override (e.g. py-16 md:py-20 for
+     supporting, py-24 md:py-32 for a major dark statement section) rather
+     than stretching one token to cover every case. */
+  --spacing-section: clamp(3rem, 6.5vw, 6.5rem);
+  --spacing-heading: clamp(2rem, 4vw, 3.5rem);
+  --spacing-hero: clamp(1rem, 2vw, 1.5rem);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.balance {
+  text-wrap: balance;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.fade-up {
+  animation: fadeUp 0.6s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Quick crossfade for content that swaps in place (e.g. pricing hero copy
+   and cards reacting to an audience toggle) — deliberately shorter and
+   opacity-only compared to .fade-up, so switching feels responsive rather
+   than like a fresh section entering the page. */
+.fade-text {
+  animation: fadeText 200ms ease both;
+}
+
+@keyframes fadeText {
+  from { opacity: 0.85; }
+  to { opacity: 1; }
+}
+
+/* Hides the scrollbar on a horizontally-scrollable row (e.g. the mobile
+   audience tab strip) while keeping it scrollable via touch/drag. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Shared card treatment — thin dark border is the signature, not a soft
+   floating shadow. Hover strengthens the border and lifts by 2px maximum,
+   rather than the deep drop-shadow this used to grow into. */
+.surface-card {
+  background: var(--background);
+  border: 1px solid var(--border-dark);
+  box-shadow: none;
+  transition: transform 200ms ease, border-color 200ms ease;
+}
+
+.surface-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-dark-hover);
+}
+
+/* Flat architectural planning grid — the Harlo signature background motif
+   for product-showcase sections. Orthogonal (not the hero's perspective
+   tunnel), so it reads as a calendar/scheduling grid rather than
+   decorative graph paper. Opacity is controlled per use via the element's
+   own `opacity` (recommended 0.03-0.07), not baked into the pattern. */
+.planning-grid {
+  background-image:
+    linear-gradient(to right, var(--foreground) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--foreground) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.planning-grid-dark {
+  background-image:
+    linear-gradient(to right, #ffffff 1px, transparent 1px),
+    linear-gradient(to bottom, #ffffff 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+@media (max-width: 640px) {
+  .planning-grid,
+  .planning-grid-dark {
+    background-size: 32px 32px;
+  }
+}
+
+/* Icon badges that pop slightly on hover */
+.icon-pop {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease;
+}
+
+.icon-pop:hover {
+  transform: translateY(-2px) scale(1.06);
+}
+
+/* FAQ accordion smooth reveal */
+.faq-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease;
+}
+
+.faq-panel.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.faq-panel > div {
+  overflow: hidden;
+}
+
+.faq-chevron {
+  transition: transform 220ms ease-in-out, color 220ms ease-in-out;
+}
+
+.faq-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+/* Legal document typography */
+.legal-ink {
+  color: #3f3f46;
+}
+
+.legal-prose p {
+  color: #3f3f46;
+  line-height: 1.75;
+  font-size: 16.5px;
+}
+
+.legal-prose p + p {
+  margin-top: 1rem;
+}
+
+.legal-prose ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  color: #3f3f46;
+  line-height: 1.75;
+  font-size: 16.5px;
+}
+
+.legal-prose ul + p,
+.legal-prose p + ul {
+  margin-top: 1rem;
+}
+
+.legal-prose li {
+  margin-top: 0.4rem;
+}
+
+.legal-prose strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.legal-prose a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legal-prose h3 {
+  margin-top: 1.75rem;
+  margin-bottom: 0.25rem;
+  font-size: 21px;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.legal-prose h3:first-child {
+  margin-top: 0;
+}
+
+/* Feedback panel — near-black card with a blue glow that fades inward from
+   each inner corner toward an almost-black centre. The glow is built purely
+   from gradients/shadows (no image assets) and stays contained inside the
+   panel via overflow:hidden, so the white page background is never touched. */
+.feedback-panel {
+  position: relative;
+  overflow: hidden;
+  background-color: #08090d;
+  background-image:
+    radial-gradient(60% 85% at 0% 0%, rgba(61, 90, 254, 0.4), transparent 60%),
+    radial-gradient(60% 85% at 100% 0%, rgba(61, 90, 254, 0.34), transparent 60%),
+    radial-gradient(65% 90% at 0% 100%, rgba(61, 90, 254, 0.32), transparent 60%),
+    radial-gradient(65% 90% at 100% 100%, rgba(61, 90, 254, 0.32), transparent 60%);
+  box-shadow:
+    inset 0 0 0 1px rgba(61, 90, 254, 0.5),
+    inset 0 0 60px -14px rgba(61, 90, 254, 0.35),
+    0 30px 70px -30px rgba(8, 9, 13, 0.55);
+}
+
+/* Marquee / infinite scroll tracks */
+@keyframes marquee-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.marquee-mask {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-left 34s linear infinite;
+}
+
+.marquee-track-slow {
+  animation-duration: 50s;
+}
+
+.marquee-track-reverse {
+  animation-direction: reverse;
+}
+
+.marquee-mask:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-float,
+  .fade-up {
+    animation: none !important;
+  }
+
+  .surface-card,
+  .icon-pop,
+  .faq-panel,
+  .faq-chevron,
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* An infinite animation at 0.01ms above would still technically keep
+     looping (and can flicker) rather than actually stop — marquees need a
+     real animation: none so tracks sit still, not just run imperceptibly
+     fast. */
+  .marquee-track {
+    animation: none !important;
+    transform: none !important;
+  }
 }
