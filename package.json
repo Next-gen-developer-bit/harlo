@@ -18,7 +18,7 @@
     "pm2-run": "pm2 delete all || true && pnpm run prisma-db-push && node ./var/docker/wait-for-temporal.js && pnpm run --parallel --filter ./apps/backend --filter ./apps/frontend --filter ./apps/orchestrator pm2 && pm2 logs",
     "dev:stripe": "pnpm dlx concurrently \"stripe listen --forward-to localhost:3000/stripe\" \"pnpm run dev\"",
     "build": "pnpm -r --workspace-concurrency=1 --filter ./apps/frontend --filter ./apps/backend --filter ./apps/orchestrator run build",
-    "build:backend": "rm -rf apps/backend/dist && pnpm --filter ./apps/backend run build",
+    "build:backend": "rm -rf apps/backend/dist && NODE_OPTIONS=--max-old-space-size=4096 pnpm --filter ./apps/backend run build",
     "build:frontend": "rm -rf apps/frontend/dist && pnpm --filter ./apps/frontend run build",
     "build:orchestrator": "rm -rf apps/orchestrator/dist && pnpm --filter ./apps/orchestrator run build",
     "build:extension": "rm -rf apps/extension/dist && pnpm --filter ./apps/extension run build",
