@@ -32,7 +32,7 @@ export const FeedbackModal = () => {
         modals.closeAll();
         toaster.show('Thank you! Your feedback has been submitted.', 'success');
       } catch {
-        toaster.show('Could not submit feedback. Please try again.', 'error');
+        toaster.show('Could not submit feedback. Please try again.', 'warning');
       } finally {
         setLoading(false);
       }

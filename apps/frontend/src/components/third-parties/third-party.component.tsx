@@ -129,10 +129,10 @@ export const ThirdPartyComponent = () => {
           toaster.show(`${name} disconnected successfully`, 'success');
           mutate();
         } else {
-          toaster.show(`Failed to disconnect ${name}`, 'error');
+          toaster.show(`Failed to disconnect ${name}`, 'warning');
         }
       } catch {
-        toaster.show(`Error disconnecting ${name}`, 'error');
+        toaster.show(`Error disconnecting ${name}`, 'warning');
       }
     },
     [fetch, toaster, mutate]
@@ -148,7 +148,7 @@ export const ThirdPartyComponent = () => {
         return true;
       }
       if (data?.err) {
-        toaster.show(`Could not connect ${identifier}`, 'error');
+        toaster.show(`Could not connect ${identifier}`, 'warning');
         return true;
       }
       return false;
@@ -180,7 +180,7 @@ export const ThirdPartyComponent = () => {
           ),
         });
       } catch {
-        toaster.show(`Unable to initialize connection for ${title}`, 'error');
+        toaster.show(`Unable to initialize connection for ${title}`, 'warning');
       }
     },
     [startOAuth, modals, mutate, toaster]

@@ -37,10 +37,10 @@ export const MainBillingComponent: FC = () => {
       }
       toast.show(
         payload.message || 'Unable to open billing portal',
-        'error'
+        'warning'
       );
     } catch {
-      toast.show('Unable to open billing portal', 'error');
+      toast.show('Unable to open billing portal', 'warning');
     }
   }, [fetch, toast]);
 
@@ -74,7 +74,7 @@ export const MainBillingComponent: FC = () => {
           toast.show(
             payload.message ||
               'Checkout is not available until Stripe is configured.',
-            'error'
+            'warning'
           );
           return;
         }
@@ -88,7 +88,7 @@ export const MainBillingComponent: FC = () => {
         }
 
         if (payload.url === 'Already subscribed') {
-          toast.show('You are already subscribed to this plan', 'info');
+          toast.show('You are already subscribed to this plan', 'warning');
           return;
         }
 
@@ -103,9 +103,9 @@ export const MainBillingComponent: FC = () => {
           return;
         }
 
-        toast.show('Could not start checkout. Please try again.', 'error');
+        toast.show('Could not start checkout. Please try again.', 'warning');
       } catch {
-        toast.show('Error initiating checkout', 'error');
+        toast.show('Error initiating checkout', 'warning');
       } finally {
         setLoading(false);
       }

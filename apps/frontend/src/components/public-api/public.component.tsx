@@ -47,10 +47,10 @@ export const PublicComponent = () => {
         setNewKeyRevealed(generatedKey);
         mutate();
       } else {
-        toaster.show('Failed to create API key', 'error');
+        toaster.show('Failed to create API key', 'warning');
       }
     } catch {
-      toaster.show('Error creating API key', 'error');
+      toaster.show('Error creating API key', 'warning');
     }
   }, [fetch, mutate, toaster]);
 
@@ -65,10 +65,10 @@ export const PublicComponent = () => {
           toaster.show('API key revoked successfully', 'success');
           mutate();
         } else {
-          toaster.show('Failed to revoke API key', 'error');
+          toaster.show('Failed to revoke API key', 'warning');
         }
       } catch {
-        toaster.show('Error revoking API key', 'error');
+        toaster.show('Error revoking API key', 'warning');
       }
     },
     [fetch, mutate, toaster]
