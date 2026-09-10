@@ -3,7 +3,8 @@
 #
 # In the Render dashboard, set:
 #   Build command: corepack enable && corepack prepare pnpm@10.6.1 --activate && pnpm install --frozen-lockfile && pnpm run build:backend
-#   Start command: pnpm run start:prod:backend
+#   Start command: npm run start
+#   (or: pnpm run start:prod:backend)
 # Do not use `pnpm run build` on this service — that also compiles the Next.js
 # frontend and will run the instance out of memory.
 # Frontend belongs on Vercel. Orchestrator is a second worker service with
@@ -16,7 +17,7 @@ services:
     runtime: node
     plan: starter
     buildCommand: corepack enable && corepack prepare pnpm@10.6.1 --activate && pnpm install --frozen-lockfile && NODE_OPTIONS=--max-old-space-size=4096 pnpm run build:backend
-    startCommand: pnpm run start:prod:backend
+    startCommand: npm run start
     healthCheckPath: /
     envVars:
       - key: NODE_VERSION

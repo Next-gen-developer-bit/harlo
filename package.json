@@ -29,6 +29,7 @@
     "temporal:down": "docker compose -f docker-compose.temporal.yaml down",
     "temporal:logs": "docker compose -f docker-compose.temporal.yaml logs -f --tail=100",
     "dev:orchestrator": "rm -rf apps/orchestrator/dist && pnpm --filter ./apps/orchestrator run dev",
+    "start": "node --experimental-require-module ./apps/backend/dist/apps/backend/src/main.js",
     "start:prod:orchestrator": "pnpm --filter ./apps/orchestrator run start",
     "start:prod:backend": "pnpm --filter ./apps/backend run start",
     "start:prod:frontend": "pnpm --filter ./apps/frontend run start",
