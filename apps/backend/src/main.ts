@@ -55,7 +55,13 @@ async function start() {
     },
   });
 
-  await startMcp(app);
+  try {
+    await startMcp(app);
+  } catch (e) {
+    Logger.warn(
+      `MCP server failed to start: ${e instanceof Error ? e.message : e}`
+    );
+  }
 
   app.useGlobalPipes(
     new ValidationPipe({
