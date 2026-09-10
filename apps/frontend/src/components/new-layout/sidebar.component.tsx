@@ -853,7 +853,7 @@ export const Sidebar: FC = () => {
         {/* User Profile Footer */}
         <div className="pb-user-footer" ref={accountRef} onClick={() => setAccountOpen((open) => !open)}>
           <img
-            src={user?.picture || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Harlo Social'}
+            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.email || user?.name || 'Harlo Social')}`}
             alt="User"
             className="pb-user-avatar"
           />
