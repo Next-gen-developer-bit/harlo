@@ -1,0 +1,536 @@
+'use client';
+
+import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import SafeImage from '@gitroom/react/helpers/safe.image';
+import { orderBy } from 'lodash';
+import { CalendarWeekProvider } from '@gitroom/frontend/components/launches/calendar.context';
+import { Filters } from '@gitroom/frontend/components/launches/filters';
+import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
+import clsx from 'clsx';
+import { useUser } from '../layout/user.context';
+import { Menu } from '@gitroom/frontend/components/launches/menu/menu';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Integration } from '@prisma/client';
+import ImageWithFallback from '@gitroom/react/helpers/image.with.fallback';
+import { useToaster } from '@gitroom/react/toaster/toaster';
+import { useFireEvents } from '@gitroom/helpers/utils/use.fire.events';
+import { Calendar } from './calendar';
+import { useDrag, useDrop } from 'react-dnd';
+import { DNDProvider } from '@gitroom/frontend/components/launches/helpers/dnd.provider';
+import { useT } from '@gitroom/react/translation/get.transation.service.client';
+import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
+import { Onboarding } from '@gitroom/frontend/components/onboarding/onboarding';
+
+export const SVGLine = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="5"
+      height="52"
+      viewBox="0 0 5 52"
+      fill="none"
+      className="rtl:rotate-180"
+    >
+      <path
+        d="M0.5 4C0.5 1.79086 2.29086 0 4.5 0V52C2.29086 52 0.5 50.2091 0.5 48V4Z"
+        fill="url(#paint0_linear_1930_1119)"
+      />
+      <path
+        d="M0.5 4C0.5 1.79086 2.29086 0 4.5 0V52C2.29086 52 0.5 50.2091 0.5 48V4Z"
+        fill="url(#paint1_radial_1930_1119)"
+      />
+      <defs>
+        <linearGradient
+          id="paint0_linear_1930_1119"
+          x1="-7"
+          y1="-27.7727"
+          x2="-2.58929"
+          y2="-28.6843"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#662FDA" />
+          <stop offset="1" stopColor="#5720CB" />
+        </linearGradient>
+        <radialGradient
+          id="paint1_radial_1930_1119"
+          cx="0"
+          cy="0"
+          r="1"
+          gradientUnits="userSpaceOnUse"
+          gradientTransform="translate(1.19333 7.45342) rotate(21.2064) scale(16.1503 188.627)"
+        >
+          <stop stopColor="#8C66FF" />
+          <stop offset="1" stopColor="#8C66FF" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+    </svg>
+  );
+};
+interface MenuComponentInterface {
+  refreshChannel: (
+    integration: Integration & {
+      identifier: string;
+    }
+  ) => () => void;
+  collapsed: boolean;
+  continueIntegration: (integration: Integration) => () => void;
+  totalNonDisabledChannels: number;
+  mutate: (shouldReload?: boolean) => void;
+  update: (shouldReload: boolean) => void;
+}
+export const OpenClose: FC<{
+  isOpen: boolean;
+}> = (props) => {
+  const { isOpen } = props;
+  return (
+    <svg
+      width="11"
+      height="6"
+      viewBox="0 0 22 12"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={clsx(
+        'rotate-180 transition-all',
+        isOpen ? 'rotate-180' : 'rotate-90'
+      )}
+    >
+      <path
+        d="M21.9245 11.3823C21.8489 11.5651 21.7207 11.7213 21.5563 11.8312C21.3919 11.9411 21.1986 11.9998 21.0008 11.9998H1.00079C0.802892 12 0.609399 11.9414 0.444805 11.8315C0.280212 11.7217 0.151917 11.5654 0.076165 11.3826C0.000412494 11.1998 -0.0193921 10.9986 0.0192583 10.8045C0.0579087 10.6104 0.153276 10.4322 0.293288 10.2923L10.2933 0.29231C10.3862 0.199333 10.4964 0.125575 10.6178 0.0752506C10.7392 0.0249263 10.8694 -0.000976562 11.0008 -0.000976562C11.1322 -0.000976562 11.2623 0.0249263 11.3837 0.0752506C11.5051 0.125575 11.6154 0.199333 11.7083 0.29231L21.7083 10.2923C21.8481 10.4322 21.9433 10.6105 21.9818 10.8045C22.0202 10.9985 22.0003 11.1996 21.9245 11.3823Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+};
+export const MenuGroupComponent: FC<
+  MenuComponentInterface & {
+    changeItemGroup: (id: string, group: string) => void;
+    group: {
+      id: string;
+      name: string;
+      values: Array<
+        Integration & {
+          identifier: string;
+          changeProfilePicture: boolean;
+          changeNickName: boolean;
+        }
+      >;
+    };
+  }
+> = (props) => {
+  const {
+    group,
+    mutate,
+    update,
+    continueIntegration,
+    totalNonDisabledChannels,
+    refreshChannel,
+    changeItemGroup,
+    collapsed,
+  } = props;
+  const [isOpen, setIsOpen] = useState(
+    !!+(localStorage.getItem(group.name + '_isOpen') || '1')
+  );
+  const changeOpenClose = useCallback(
+    (e: any) => {
+      setIsOpen(!isOpen);
+      localStorage.setItem(group.name + '_isOpen', isOpen ? '0' : '1');
+      e.stopPropagation();
+    },
+    [isOpen]
+  );
+  const [collectedProps, drop] = useDrop(() => ({
+    accept: 'menu',
+    drop: (
+      item: {
+        id: string;
+      },
+      monitor
+    ) => {
+      changeItemGroup(item.id, group.id);
+    },
+    collect: (monitor) => ({
+      isOver: !!monitor.isOver(),
+    }),
+  }));
+  return (
+    <div
+      className="gap-[16px] flex flex-col relative"
+      // @ts-ignore
+      ref={drop}
+    >
+      {collectedProps.isOver && (
+        <div className="absolute start-0 top-0 w-full h-full pointer-events-none">
+          <div className="w-full h-full start-0 top-0 relative">
+            <div className="bg-white/30 w-full h-full p-[8px] box-content rounded-md" />
+          </div>
+        </div>
+      )}
+      {!!group.name && (
+        <div
+          className="flex items-center gap-[5px] cursor-pointer"
+          onClick={changeOpenClose}
+        >
+          <div>
+            <OpenClose isOpen={isOpen} />
+          </div>
+          <div
+            className="line-clamp-1"
+            {...(collapsed
+              ? {
+                  'data-tooltip-id': 'tooltip',
+                  'data-tooltip-content': group.name,
+                }
+              : {})}
+          >
+            {group.name}
+          </div>
+        </div>
+      )}
+      <div
+        className={clsx(
+          'gap-[12px] flex flex-col relative',
+          !isOpen && 'hidden'
+        )}
+      >
+        {group.values.map((integration) => (
+          <MenuComponent
+            collapsed={collapsed}
+            key={integration.id}
+            integration={integration}
+            mutate={mutate}
+            continueIntegration={continueIntegration}
+            update={update}
+            refreshChannel={refreshChannel}
+            totalNonDisabledChannels={totalNonDisabledChannels}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+export const MenuComponent: FC<
+  MenuComponentInterface & {
+    integration: Integration & {
+      identifier: string;
+      changeProfilePicture: boolean;
+      changeNickName: boolean;
+      refreshNeeded?: boolean;
+    };
+  }
+> = (props) => {
+  const {
+    totalNonDisabledChannels,
+    continueIntegration,
+    refreshChannel,
+    mutate,
+    update,
+    integration,
+    collapsed,
+  } = props;
+  const user = useUser();
+  const t = useT();
+  const [collected, drag, dragPreview] = useDrag(() => ({
+    type: 'menu',
+    item: {
+      id: integration.id,
+    },
+  }));
+  return (
+    <div
+      // @ts-ignore
+      ref={dragPreview}
+      {...(integration.refreshNeeded && {
+        onClick: refreshChannel(integration),
+        'data-tooltip-id': 'tooltip',
+        'data-tooltip-content': t(
+          'channel_disconnected_click_to_reconnect',
+          'Channel disconnected, click to reconnect.'
+        ),
+      })}
+      {...(collapsed
+        ? {
+            'data-tooltip-id': 'tooltip',
+            'data-tooltip-content': integration.name,
+          }
+        : {})}
+      className={clsx(
+        'flex gap-[12px] items-center bg-newBgColorInner hover:bg-boxHover group/profile transition-all rounded-e-[8px]',
+        integration.refreshNeeded && 'cursor-pointer'
+      )}
+    >
+      <div
+        className={clsx(
+          'relative gap-[6px] flex justify-center items-center',
+          integration.disabled && 'opacity-50'
+        )}
+      >
+        <div className="h-full w-[4px] -ms-[12px] rounded-s-[3px] opacity-0 group-hover/profile:opacity-100 transition-opacity">
+          <SVGLine />
+        </div>
+        {(integration.inBetweenSteps || integration.refreshNeeded) && (
+          <div
+            className="absolute start-0 top-0 w-[39px] h-[46px] cursor-pointer"
+            onClick={
+              integration.refreshNeeded
+                ? refreshChannel(integration)
+                : continueIntegration(integration)
+            }
+          >
+            <div className="bg-red-500 w-[15px] h-[15px] rounded-full start-[5px] top-[5px] absolute z-[200] text-[10px] flex justify-center items-center">
+              !
+            </div>
+            <div className="bg-primary/60 w-[39px] h-[46px] start-0 top-0 absolute rounded-full z-[199]" />
+          </div>
+        )}
+        <ImageWithFallback
+          fallbackSrc={'/no-picture.jpg'}
+          src={integration.picture || '/no-picture.jpg'}
+          className="rounded-[8px] min-w-[36px] min-h-[36px]"
+          alt={integration.identifier}
+          width={36}
+          height={36}
+        />
+        {integration.identifier === 'youtube' ? (
+          <img
+            src="/icons/platforms/youtube.svg"
+            className="absolute z-10 bottom-[5px] -end-[5px]"
+            width={20}
+          />
+        ) : (
+          <SafeImage
+            src={`/icons/platforms/${integration.identifier}.png`}
+            className="rounded-[8px] absolute z-10 bottom-[5px] -end-[5px] border border-fifth"
+            alt={integration.identifier}
+            width={18.41}
+            height={18.41}
+          />
+        )}
+      </div>
+      <div
+        // @ts-ignore
+        ref={drag}
+        {...(integration.disabled &&
+        totalNonDisabledChannels === user?.totalChannels
+          ? {
+              'data-tooltip-id': 'tooltip',
+              'data-tooltip-content': t(
+                'channel_disabled_upgrade_plan',
+                'This channel is disabled, please upgrade your plan to enable it.'
+              ),
+            }
+          : {})}
+        role="Handle"
+        className={clsx(
+          'group-[.sidebar]:hidden flex-1 whitespace-nowrap text-ellipsis overflow-hidden cursor-move',
+          integration.disabled && 'opacity-50'
+        )}
+      >
+        {integration.name}
+      </div>
+      <Menu
+        canChangeProfilePicture={integration.changeProfilePicture}
+        canChangeNickName={integration.changeNickName}
+        refreshChannel={refreshChannel}
+        mutate={mutate}
+        onChange={update}
+        id={integration.id}
+        canEnable={
+          user?.totalChannels! > totalNonDisabledChannels &&
+          integration.disabled
+        }
+        canDisable={!integration.disabled}
+      />
+    </div>
+  );
+};
+export const LaunchesComponent = () => {
+  const fetch = useFetch();
+  const router = useRouter();
+  const search = useSearchParams();
+  const toast = useToaster();
+  const fireEvents = useFireEvents();
+  const t = useT();
+  const [reload, setReload] = useState(false);
+  const { isLoading, data: integrations, mutate } = useIntegrationList();
+
+  const totalNonDisabledChannels = useMemo(() => {
+    return (
+      integrations?.filter((integration: any) => !integration.disabled)
+        ?.length || 0
+    );
+  }, [integrations]);
+  const sortedIntegrations = useMemo(() => {
+    return orderBy(
+      integrations,
+      ['type', 'disabled', 'identifier'],
+      ['desc', 'asc', 'asc']
+    );
+  }, [integrations]);
+  const update = useCallback(async (shouldReload: boolean) => {
+    if (shouldReload) {
+      setReload(true);
+    }
+    await mutate();
+    if (shouldReload) {
+      setReload(false);
+    }
+  }, []);
+  const continueIntegration = useCallback(
+    (integration: any) => async () => {
+      router.push(
+        `/launches?added=${integration.identifier}&continue=${integration.id}`
+      );
+    },
+    []
+  );
+  const refreshChannel = useCallback(
+    (
+        integration: Integration & {
+          identifier: string;
+        }
+      ) =>
+      async () => {
+        const { url } = await (
+          await fetch(
+            `/integrations/social/${integration.identifier}?refresh=${integration.internalId}`,
+            {
+              method: 'GET',
+            }
+          )
+        ).json();
+        window.location.href = url;
+      },
+    []
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    if (search.get('msg')) {
+      toast.show(search.get('msg')!, 'success');
+      window?.opener?.postMessage(
+        {
+          msg: search.get('msg')!,
+          success: false,
+        },
+        '*'
+      );
+    }
+    if (search.get('added')) {
+      fireEvents('channel_added');
+      window?.opener?.postMessage(
+        {
+          msg: t('channel_added', 'Channel added'),
+          success: true,
+        },
+        '*'
+      );
+    }
+    if (window.opener) {
+      window.close();
+    }
+  }, []);
+  if (isLoading || reload) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <LoadingComponent />
+      </div>
+    );
+  }
+
+  return (
+    <DNDProvider>
+      <Onboarding />
+      <CalendarWeekProvider integrations={sortedIntegrations}>
+        <div className="flex flex-1 flex-col min-h-0 h-full w-full px-6 py-6 md:px-8">
+          <Filters />
+          <CalendarAccountsBar
+            integrations={sortedIntegrations}
+            totalNonDisabledChannels={totalNonDisabledChannels}
+            mutate={mutate}
+            update={update}
+            continueIntegration={continueIntegration}
+            refreshChannel={refreshChannel}
+          />
+          <div className="flex-1 flex min-h-0 mt-3">
+            <Calendar />
+          </div>
+        </div>
+      </CalendarWeekProvider>
+    </DNDProvider>
+  );
+};
+
+const CalendarAccountsBar: FC<{
+  integrations: Array<
+    Integration & {
+      identifier: string;
+      changeProfilePicture: boolean;
+      changeNickName: boolean;
+      refreshNeeded?: boolean;
+      disabled?: boolean;
+    }
+  >;
+  totalNonDisabledChannels: number;
+  mutate: (shouldReload?: boolean) => void;
+  update: (shouldReload: boolean) => void;
+  continueIntegration: (integration: Integration) => () => void;
+  refreshChannel: (
+    integration: Integration & {
+      identifier: string;
+    }
+  ) => () => void;
+}> = ({
+  integrations,
+  totalNonDisabledChannels,
+  mutate,
+  update,
+  continueIntegration,
+  refreshChannel,
+}) => {
+  const router = useRouter();
+
+  if (!integrations.length) {
+    return (
+      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 mb-1">
+        <div className="text-sm text-slate-500">
+          No social accounts connected yet.
+        </div>
+        <button
+          onClick={() => router.push('/third-party')}
+          className="h-9 px-3 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
+        >
+          Connect accounts
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 overflow-x-auto overflow-y-visible pb-1 mb-1">
+      {integrations.map((integration) => (
+        <div
+          key={integration.id}
+          className="shrink-0 rounded-xl border border-slate-200 bg-white"
+        >
+          <MenuComponent
+            collapsed={false}
+            integration={integration}
+            mutate={mutate}
+            continueIntegration={continueIntegration}
+            update={update}
+            refreshChannel={refreshChannel}
+            totalNonDisabledChannels={totalNonDisabledChannels}
+          />
+        </div>
+      ))}
+      <button
+        onClick={() => router.push('/third-party')}
+        className="shrink-0 h-11 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-blue-200"
+      >
+        Manage
+      </button>
+    </div>
+  );
+};

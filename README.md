@@ -1,36 +1,141 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<p align="center">
+  <a href="https://poscally.com/" target="_blank">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/765e9d72-3ee7-4a56-9d59-a2c9befe2311">
+    <img alt="Poscally Logo" src="https://github.com/user-attachments/assets/f0d30d70-dddb-4142-8876-e9aa6ed1cb99" width="280"/>
+  </picture>
+  </a>
+</p>
 
-## Getting Started
+<p align="center">
+<a href="https://opensource.org/license/agpl-v3">
+  <img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License">
+</a>
+</p>
 
-First, run the development server:
+<h3 align="center"><strong><a href="https://github.com/gitroomhq/poscally-agent">NEW: check out Poscally agent CLI! perfect for OpenClaw and other agents</a></strong></h3>
+<div align="center">
+  <strong>
+  <h2>Your ultimate AI social media scheduling tool</h2><br />
+  <a href="https://poscally.com">Poscally</a>: An alternative to: Buffer.com, Hypefury, Twitter Hunter, etc...<br /><br />
+  </strong>
+  Poscally offers everything you need to manage your social media posts,<br />build an audience, capture leads, and grow your business.
+</div>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+<div class="flex" align="center">
+  <br />
+  <img alt="Instagram" src="https://poscally.com/svgs/socials/Instagram.svg" width="32">
+  <img alt="Youtube" src="https://poscally.com/svgs/socials/Youtube.svg" width="32">
+  <img alt="Dribbble" src="https://poscally.com/svgs/socials/Dribbble.svg" width="32">
+  <img alt="Linkedin" src="https://poscally.com/svgs/socials/Linkedin.svg" width="32">
+  <img alt="Reddit" src="https://poscally.com/svgs/socials/Reddit.svg" width="32">
+  <img alt="TikTok" src="https://poscally.com/svgs/socials/TikTok.svg" width="32">
+  <img alt="Facebook" src="https://poscally.com/svgs/socials/Facebook.svg" width="32">
+  <img alt="Pinterest" src="https://poscally.com/svgs/socials/Pinterest.svg" width="32">
+  <img alt="Threads" src="https://poscally.com/svgs/socials/Threads.svg" width="32">
+  <img alt="X" src="https://poscally.com/svgs/socials/X.svg" width="32">
+  <img alt="Slack" src="https://poscally.com/svgs/socials/Slack.svg" width="32">
+  <img alt="Discord" src="https://poscally.com/svgs/socials/Discord.svg" width="32">
+  <img alt="Mastodon" src="https://poscally.com/svgs/socials/Mastodon.svg" width="32">
+  <img alt="Bluesky" src="https://poscally.com/svgs/socials/Bluesky.svg" width="32">
+</div>
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+<p align="center">
+  <br />
+  <a href="https://docs.poscally.com" rel="dofollow"><strong>Explore the docs »</strong></a>
+  <br />
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+  <br />
+  <a href="https://youtube.com/@poscallyofficial" rel="dofollow"><strong>Watch the YouTube Tutorials»</strong></a>
+  <br />
+</p>
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+<p align="center">
+  <a href="https://platform.poscally.com">Register</a>
+  ·
+  <a href="https://discord.poscally.com">Join Our Discord (devs only)</a>
+  ·
+  <a href="https://docs.poscally.com/public-api">Public API</a><br />
+</p>
+<p align="center">
+  <a href="https://www.npmjs.com/package/@poscally/node">NodeJS SDK</a>
+  ·
+  <a href="https://www.npmjs.com/package/n8n-nodes-poscally">N8N custom node</a>
+  ·
+  <a href="https://apps.make.com/poscally">Make.com integration</a>
+</p>
 
-## Learn More
+<br /><br />
 
-To learn more about Next.js, take a look at the following resources:
+## 🔌 See the leading Poscally features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=BdsCVvEYgHU" target="_blank">
+    <img alt="Poscally" src="https://github.com/user-attachments/assets/8b9b7939-da1a-4be5-95be-42c6fce772de" />
+  </a>
+</p>
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## ✨ Features
 
-## Deploy on Vercel
+| ![Image 1](https://github.com/user-attachments/assets/a27ee220-beb7-4c7e-8c1b-2c44301f82ef) | ![Image 2](https://github.com/user-attachments/assets/eb5f5f15-ed90-47fc-811c-03ccba6fa8a2) |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| ![Image 3](https://github.com/user-attachments/assets/d51786ee-ddd8-4ef8-8138-5192e9cfe7c3) | ![Image 4](https://github.com/user-attachments/assets/91f83c89-22f6-43d6-b7aa-d2d3378289fb) |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Our Sponsors
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Sponsor |                                  Logo                                   | Description     |
+|---------|:-----------------------------------------------------------------------:|-----------------|
+| [Hostinger](https://www.hostinger.com/vps/docker/poscally?ref=poscally) | <img src=".github/sponsors/hostinger.png" alt="Hostinger" width="500"/> | Hostinger is on a mission to make online success possible for anyone – from developers to aspiring bloggers and business owners |
+| [Virlo](https://dev.virlo.ai/?ref=poscally) | <img src="https://github.com/user-attachments/assets/25182598-5344-45fc-b9cd-e4cfa16aabfd" alt="Virlo" width="500"/> | Virlo is the #1 social media trend spotting and all-in-one GTM tool for teams leveraging short-form video |
+| [ChatbotX](https://chatbotx.io/?ref=poscally) | <img src="https://github.com/user-attachments/assets/0aa6b058-9a64-46d3-bc26-337abc51737d" alt="ChatbotX" width="500"/> | The ManyChat alternative that you can self-host, white-label, and resell to your clients. Bring your own OpenClaw, Hermes, or Claude agents! |
+
+![Bronze Tier](https://opencollective.com/poscally/tiers/main-repository-bronze-tier.svg?avatarHeight=36&width=600&button=false)
+
+# Intro
+
+- Schedule all your social media posts (many AI features)
+- Measure your work with analytics.
+- Collaborate with other team members to exchange or buy posts.
+- Invite your team members to collaborate, comment, and schedule posts.
+- At the moment, there is no difference between the hosted version and the self-hosted version
+- Perfect for automation (API) with platforms like N8N, Make.com, Zapier, etc.
+
+## Tech Stack
+
+- Pnpm workspaces (Monorepo)
+- NextJS (React)
+- NestJS
+- Prisma (Default to PostgreSQL)
+- Temporal
+- Resend (email notifications)
+
+## Quick Start
+
+To have the project up and running, please follow the [Quick Start Guide](https://docs.poscally.com/quickstart)
+
+## Sponsor Poscally
+
+We now give a few options to Sponsor Poscally:
+- Just a donation: You like what we are building, and want to buy us some coffee so we can build faster.
+- Main repository: Get your logo with a backlink from the main Poscally repository. Poscally has over 7M downloads and 20k views per month.
+
+Link: https://opencollective.com/poscally
+
+## Poscally Compliance
+
+- Poscally is an open-source, self-hosted social media scheduling tool that supports platforms like X (formerly Twitter), Bluesky, Mastodon, Discord, and others.
+- Poscally hosted service uses official, platform-approved OAuth flows.
+- Poscally does not automate or scrape content from social media platforms.
+- Poscally does not collect, store, or proxy API keys or access tokens from users.
+- Poscally never asks users to paste API keys into our hosted product.
+- Poscally users always authenticate directly with the social platform (e.g., X, Discord, etc.), ensuring platform compliance and data privacy.
+
+## License
+
+This repository's source code is available under the [AGPL-3.0 license](LICENSE).
+
+<br /><br />
+
+<p align="center">
+  <img src="https://github.com/snyk-labs/secure-developer-sample-repo/raw/main/badge_full.svg" alt="Secure Developer Badge Full" width="150">
+</p>

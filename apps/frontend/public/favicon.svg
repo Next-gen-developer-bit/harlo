@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Black circle background -->
+  <circle cx="16" cy="16" r="16" fill="#111111"/>
+  <!-- White H letterform with rounded strokes matching Harlo Social brand -->
+  <text
+    x="16"
+    y="22"
+    font-family="'Arial Rounded MT Bold', 'Nunito', 'Poppins', Arial, sans-serif"
+    font-weight="900"
+    font-size="18"
+    fill="white"
+    text-anchor="middle"
+    dominant-baseline="auto"
+    letter-spacing="-0.5"
+  >H</text>
+</svg>

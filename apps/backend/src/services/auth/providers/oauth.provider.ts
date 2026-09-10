@@ -1,0 +1,94 @@
+import {
+  AuthProvider,
+  AuthProviderAbstract,
+} from '@gitroom/backend/services/auth/providers.interface';
+
+@AuthProvider({ provider: 'GENERIC' })
+export class OauthProvider extends AuthProviderAbstract {
+  private getConfig() {
+    const {
+      POSCALLY_OAUTH_AUTH_URL,
+      POSCALLY_OAUTH_CLIENT_ID,
+      POSCALLY_OAUTH_CLIENT_SECRET,
+      POSCALLY_OAUTH_TOKEN_URL,
+      POSCALLY_OAUTH_USERINFO_URL,
+      FRONTEND_URL,
+    } = process.env;
+
+    if (
+      !POSCALLY_OAUTH_USERINFO_URL ||
+      !POSCALLY_OAUTH_TOKEN_URL ||
+      !POSCALLY_OAUTH_CLIENT_ID ||
+      !POSCALLY_OAUTH_CLIENT_SECRET ||
+      !POSCALLY_OAUTH_AUTH_URL ||
+      !FRONTEND_URL
+    ) {
+      throw new Error('POSCALLY_OAUTH environment variables are not set');
+    }
+
+    return {
+      authUrl: POSCALLY_OAUTH_AUTH_URL,
+      clientId: POSCALLY_OAUTH_CLIENT_ID,
+      clientSecret: POSCALLY_OAUTH_CLIENT_SECRET,
+      tokenUrl: POSCALLY_OAUTH_TOKEN_URL,
+      userInfoUrl: POSCALLY_OAUTH_USERINFO_URL,
+      frontendUrl: FRONTEND_URL,
+    };
+  }
+
+  generateLink(): string {
+    const { authUrl, clientId, frontendUrl } = this.getConfig();
+    const params = new URLSearchParams({
+      client_id: clientId,
+      scope: 'openid profile email',
+      response_type: 'code',
+      redirect_uri: `${frontendUrl}/settings`,
+    });
+
+    return `${authUrl}?${params.toString()}`;
+  }
+
+  async getToken(code: string, _redirectUri?: string): Promise<string> {
+    const { tokenUrl, clientId, clientSecret, frontendUrl } = this.getConfig();
+    const response = await fetch(`${tokenUrl}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json',
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        redirect_uri: `${frontendUrl}/settings`,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Token request failed: ${error}`);
+    }
+
+    const { access_token } = await response.json();
+    return access_token;
+  }
+
+  async getUser(access_token: string): Promise<{ email: string; id: string }> {
+    const { userInfoUrl } = this.getConfig();
+    const response = await fetch(`${userInfoUrl}`, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`User info request failed: ${error}`);
+    }
+
+    const { email, sub: id } = await response.json();
+    return { email, id };
+  }
+}
