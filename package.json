@@ -44,7 +44,7 @@
     "test": "jest --coverage --detectOpenHandles --reporters=default --reporters=jest-junit"
   },
   "dependencies": {
-    "@ag-ui/mastra": "^1.0.1",
+    "@ag-ui/mastra": "1.0.1",
     "@ai-sdk/openai": "^2.0.52",
     "@atproto/api": "^0.15.15",
     "@aws-sdk/client-s3": "^3.787.0",
@@ -330,7 +330,8 @@
       "react": "19.2.4",
       "react-dom": "19.2.4",
       "@types/react": "19.1.8",
-      "@types/react-dom": "19.1.6"
+      "@types/react-dom": "19.1.6",
+      "@ag-ui/mastra": "1.0.1"
     },
     "onlyBuiltDependencies": [
       "bcrypt"

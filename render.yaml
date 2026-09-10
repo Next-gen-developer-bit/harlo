@@ -1,0 +1,23 @@
+# Render Blueprint for the Harlo API.
+# This repo is a pnpm monorepo. Do not use `npm install`.
+#
+# In the Render dashboard (if you are not using this blueprint), set:
+#   Build command: corepack enable && corepack prepare pnpm@10.6.1 --activate && pnpm install --frozen-lockfile && pnpm run build:backend
+#   Start command: pnpm run start:prod:backend
+# Frontend belongs on Vercel. Orchestrator is a second worker service with
+#   pnpm run build:orchestrator / pnpm run start:prod:orchestrator
+# and Temporal must be reachable at TEMPORAL_ADDRESS.
+
+services:
+  - type: web
+    name: harlo-api
+    runtime: node
+    plan: starter
+    buildCommand: corepack enable && corepack prepare pnpm@10.6.1 --activate && pnpm install --frozen-lockfile && pnpm run build:backend
+    startCommand: pnpm run start:prod:backend
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 22.23.2
+      - key: NODE_ENV
+        value: production
