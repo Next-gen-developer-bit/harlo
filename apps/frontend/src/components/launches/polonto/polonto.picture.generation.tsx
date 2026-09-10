@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { observer } from 'mobx-react-lite';
 import { SectionTab } from 'polotno/side-panel';
-import { getImageSize } from 'polotno/utils/image';
 import { ImagesGrid } from 'polotno/side-panel/images-grid';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
@@ -11,7 +9,17 @@ import { Button } from '@gitroom/react/form/button';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-const GenerateTab = observer(({ store }: any) => {
+
+const getImageSize = (src: string) =>
+  new Promise<{ width: number; height: number }>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () =>
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => reject(new Error('Unable to load image'));
+    img.src = src;
+  });
+
+const GenerateTab = ({ store }: any) => {
   const inputRef = React.useRef<any>(null);
   const [image, setImage] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
@@ -131,8 +139,8 @@ const GenerateTab = observer(({ store }: any) => {
       )}
     </>
   );
-});
-const PictureGeneratorPanel = observer(({ store }: any) => {
+};
+const PictureGeneratorPanel = ({ store }: any) => {
   return (
     <div
       style={{
@@ -144,7 +152,7 @@ const PictureGeneratorPanel = observer(({ store }: any) => {
       <GenerateTab store={store} />
     </div>
   );
-});
+};
 
 // define the new custom section
 export const PictureGeneratorSection = {
@@ -156,6 +164,5 @@ export const PictureGeneratorSection = {
       </svg>
     </SectionTab>
   ),
-  // we need observer to update component automatically on any store changes
   Panel: PictureGeneratorPanel,
 };
