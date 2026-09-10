@@ -60,6 +60,16 @@ export class EmailService {
     addTo: 'top' | 'bottom',
     replyTo?: string
   ) {
+    const temporalAddress = (process.env.TEMPORAL_ADDRESS || '').trim();
+    const temporalIsLocal =
+      !temporalAddress ||
+      temporalAddress.startsWith('localhost') ||
+      temporalAddress.startsWith('127.0.0.1');
+
+    if (temporalIsLocal) {
+      return this.sendEmailSync(to, subject, html, replyTo);
+    }
+
     try {
       return await this._temporalService.client
         .getRawClient()

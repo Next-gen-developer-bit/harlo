@@ -27,6 +27,33 @@ import { HttpExceptionFilter } from '@gitroom/nestjs-libraries/services/exceptio
 import { ConfigurationChecker } from '@gitroom/helpers/configuration/configuration.checker';
 import { startMcp } from '@gitroom/nestjs-libraries/chat/start.mcp';
 
+function corsOrigins() {
+  const raw = [
+    process.env.FRONTEND_URL,
+    process.env.MAIN_URL,
+    'http://localhost:6274',
+    'http://localhost:4200',
+  ]
+    .filter((value): value is string => !!value)
+    .map((value) => value.trim().replace(/\/+$/, ''));
+
+  const origins = new Set<string>();
+  for (const origin of raw) {
+    origins.add(origin);
+    try {
+      const url = new URL(origin);
+      if (url.hostname.startsWith('www.')) {
+        origins.add(`${url.protocol}//${url.hostname.slice(4)}`);
+      } else if (url.hostname.includes('.')) {
+        origins.add(`${url.protocol}//www.${url.hostname}`);
+      }
+    } catch {
+      // Ignore invalid URLs; the configuration checker will warn.
+    }
+  }
+  return [...origins];
+}
+
 async function start() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
@@ -47,11 +74,7 @@ async function start() {
         'x-copilotkit-runtime-client-gql-version',
         ...(process.env.NOT_SECURED ? ['auth', 'showorg', 'impersonate'] : []),
       ],
-      origin: [
-        process.env.FRONTEND_URL,
-        'http://localhost:6274',
-        ...(process.env.MAIN_URL ? [process.env.MAIN_URL] : []),
-      ],
+      origin: corsOrigins(),
     },
   });
 
