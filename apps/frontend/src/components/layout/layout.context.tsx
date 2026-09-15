@@ -23,7 +23,7 @@ export function setCookie(cname: string, cvalue: string, exdays: number) {
 }
 function LayoutContextInner(params: { children: ReactNode }) {
   const returnUrl = useReturnUrl();
-  const { backendUrl, isGeneral, isSecured } = useVariables();
+  const { backendUrl, isGeneral, isSecured, frontEndUrl } = useVariables();
   const afterRequest = useCallback(
     async (url: string, options: RequestInit, response: Response) => {
       if (
@@ -58,6 +58,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
         window.location.href = '/';
         return true;
       }
+      const app = (frontEndUrl || '').replace(/\/+$/, '');
       const reloadOrOnboarding =
         response?.headers?.get('reload') ||
         response?.headers?.get('onboarding');
@@ -69,15 +70,19 @@ function LayoutContextInner(params: { children: ReactNode }) {
         }
       }
       if (response?.headers?.get('onboarding')) {
-        window.location.href = isGeneral
-          ? '/overview?onboarding=true'
-          : '/analytics?onboarding=true';
+        window.location.href = `${app}${
+          isGeneral ? '/overview?onboarding=true' : '/analytics?onboarding=true'
+        }`;
         return true;
       }
 
       if (response?.headers?.get('reload')) {
-        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/auth')) {
-          window.location.href = '/overview';
+        const path =
+          typeof window !== 'undefined' ? window.location.pathname : '';
+        const authPath =
+          path.startsWith('/auth') || path === '/login' || path === '/signup';
+        if (authPath) {
+          window.location.href = `${app}/overview`;
         } else {
           window.location.reload();
         }
@@ -129,7 +134,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
       }
       return true;
     },
-    []
+    [frontEndUrl, isGeneral, isSecured, returnUrl]
   );
   return (
     <FetchWrapperComponent baseUrl={backendUrl} afterRequest={afterRequest}>

@@ -73,10 +73,15 @@ export async function proxy(request: NextRequest) {
     return topResponse;
   }
 
+  const isPublicAuthPath =
+    nextUrl.pathname.startsWith('/auth') ||
+    nextUrl.pathname === '/login' ||
+    nextUrl.pathname === '/signup';
+
   // If the URL is logout, delete the cookie and redirect to login
   if (nextUrl.href.indexOf('/auth/logout') > -1) {
     const response = NextResponse.redirect(
-      new URL('/auth/login', nextUrl.href)
+      new URL('/login', nextUrl.href)
     );
     response.cookies.set('auth', '', {
       path: '/',
@@ -94,14 +99,15 @@ export async function proxy(request: NextRequest) {
   }
 
   if (
-    nextUrl.pathname.startsWith('/auth/register') &&
+    (nextUrl.pathname.startsWith('/auth/register') ||
+      nextUrl.pathname === '/signup') &&
     process.env.DISABLE_REGISTRATION === 'true'
   ) {
-    return NextResponse.redirect(new URL('/auth/login', nextUrl.href));
+    return NextResponse.redirect(new URL('/login', nextUrl.href));
   }
 
   const url = new URL(nextUrl).search;
-  if (!nextUrl.pathname.startsWith('/auth') && !authCookie) {
+  if (!isPublicAuthPath && !authCookie) {
     const providers = ['google', 'settings'];
     const findIndex = providers.find((p) => nextUrl.href.indexOf(p) > -1);
     const additional = !findIndex
@@ -113,7 +119,7 @@ export async function proxy(request: NextRequest) {
             : 'github'
           : findIndex
         ).toUpperCase()}`;
-    const authPath = new URL(`/auth${url}${additional}`, nextUrl.href);
+    const authPath = new URL(`/login${url}${additional}`, nextUrl.href);
     if (nextUrl.pathname.startsWith('/billing')) {
       authPath.searchParams.set(
         'returnUrl',
@@ -123,11 +129,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(authPath);
   }
 
-  // If the url is /auth and the cookie exists, redirect to /overview
-  if (nextUrl.pathname.startsWith('/auth') && authCookie) {
+  // If the url is a public auth page and the cookie exists, redirect to /overview
+  if (isPublicAuthPath && authCookie) {
     return NextResponse.redirect(new URL(`/overview${url}`, nextUrl.href));
   }
-  if (nextUrl.pathname.startsWith('/auth') && !authCookie) {
+  if (isPublicAuthPath && !authCookie) {
     if (org) {
       const redirect = NextResponse.redirect(new URL(`/overview`, nextUrl.href));
       redirect.cookies.set('org', org, {

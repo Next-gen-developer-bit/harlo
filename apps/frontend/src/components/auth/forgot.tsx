@@ -46,7 +46,7 @@ export function Forgot() {
           </div>
           {!state ? (
             <>
-              <div className="space-y-4 text-white">
+              <div className="space-y-4">
                 <Input
                   label="Email"
                   translationKey="label_email"
@@ -65,7 +65,7 @@ export function Forgot() {
                   </Button>
                 </div>
                 <p className="mt-4 text-sm">
-                  <Link href="/auth/login" className="underline cursor-pointer">
+                  <Link href="/login" className="underline cursor-pointer">
                     {t('go_back_to_login', 'Go back to login')}
                   </Link>
                 </p>
@@ -80,7 +80,7 @@ export function Forgot() {
                 )}
               </div>
               <p className="mt-4 text-sm">
-                <Link href="/auth/login" className="underline cursor-pointer">
+                <Link href="/login" className="underline cursor-pointer">
                   {t('go_back_to_login', 'Go back to login')}
                 </Link>
               </p>

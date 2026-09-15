@@ -73,7 +73,7 @@ export function Activate() {
           {t('activate_your_account', 'Activate your account')}
         </h1>
       </div>
-      <div className="text-white">
+      <div>
         {t('thank_you_for_registering', 'Thank you for registering!')}
         <br />
         {t(
@@ -95,7 +95,7 @@ export function Activate() {
               )}
             </div>
             {cooldown > 0 ? (
-              <p className="text-sm text-white/70">
+              <p className="text-sm text-[#60656C]">
                 {t('resend_available_in', 'You can resend in')} {cooldown}s
               </p>
             ) : (
@@ -115,7 +115,7 @@ export function Activate() {
                 'Great news! Your account is already activated.'
               )}
             </div>
-            <Link href="/auth/login">
+            <Link href="/login">
               <Button className="rounded-[10px] !h-[52px] w-full">
                 {t('go_to_login', 'Go to Login')}
               </Button>
@@ -123,7 +123,7 @@ export function Activate() {
           </div>
         ) : (
           <FormProvider {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 text-white">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
               <Input
                 label={t('label_email', 'Email')}
                 translationKey="label_email"
@@ -145,9 +145,9 @@ export function Activate() {
           </FormProvider>
         )}
         {status !== 'already_activated' && (
-          <p className="mt-4 text-sm text-white">
+          <p className="mt-4 text-sm">
             {t('already_activated', 'Already activated?')}&nbsp;
-            <Link href="/auth/login" className="underline cursor-pointer">
+            <Link href="/login" className="underline cursor-pointer">
               {t('sign_in', 'Sign In')}
             </Link>
           </p>

@@ -58,7 +58,7 @@ export function ForgotReturn({ token }: { token: string }) {
         </div>
         {!state ? (
           <>
-            <div className="space-y-4 text-white">
+            <div className="space-y-4">
               <Input
                 label="New Password"
                 translationKey="label_new_password"
@@ -81,7 +81,7 @@ export function ForgotReturn({ token }: { token: string }) {
                 </Button>
               </div>
               <p className="mt-4 text-sm">
-                <Link href="/auth/login" className="underline cursor-pointer">
+                <Link href="/login" className="underline cursor-pointer">
                   {t('go_back_to_login', 'Go back to login')}
                 </Link>
               </p>
@@ -96,7 +96,7 @@ export function ForgotReturn({ token }: { token: string }) {
               )}
             </div>
             <p className="mt-4 text-sm">
-              <Link href="/auth/login" className="underline cursor-pointer">
+              <Link href="/login" className="underline cursor-pointer">
                 {t('go_back_to_login', 'Go back to login')}
               </Link>
             </p>

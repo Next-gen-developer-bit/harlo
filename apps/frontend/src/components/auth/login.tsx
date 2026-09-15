@@ -1,57 +1,42 @@
 'use client';
 
-import { useForm, SubmitHandler, FormProvider } from 'react-hook-form';
-import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { FormEvent, useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@gitroom/react/form/button';
-import { Input } from '@gitroom/react/form/input';
-import { useMemo, useState } from 'react';
-import { classValidatorResolver } from '@hookform/resolvers/class-validator';
-import { LoginUserDto } from '@gitroom/nestjs-libraries/dtos/auth/login.user.dto';
-import { OauthProvider } from '@gitroom/frontend/components/auth/providers/oauth.provider';
-import { GoogleProvider } from '@gitroom/frontend/components/auth/providers/google.provider';
+import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import {
+  HarloAuthError,
+  HarloGoogleButton,
+  HarloOrDivider,
+  HarloPasswordField,
+  fieldClassName,
+  primaryButtonClassName,
+  readFormValue,
+  useHarloAuthRedirect,
+} from '@gitroom/frontend/components/auth/harlo-auth-fields';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
-import { FarcasterProvider } from '@gitroom/frontend/components/auth/providers/farcaster.provider';
-import WalletProvider from '@gitroom/frontend/components/auth/providers/wallet.provider';
-import { useT } from '@gitroom/react/translation/get.transation.service.client';
-type Inputs = {
-  email: string;
-  password: string;
-  providerToken: '';
-  provider: 'LOCAL';
-};
+
 export function Login() {
-  const t = useT();
-  const [loading, setLoading] = useState(false);
-  const [notActivated, setNotActivated] = useState(false);
-  const { isGeneral, neynarClientId, billingEnabled, genericOauth } =
-    useVariables();
-  const showGenericOauth = isGeneral && genericOauth;
-  const showGoogleProviders = isGeneral && !genericOauth;
-  const hasSocialLogin =
-    showGenericOauth ||
-    showGoogleProviders ||
-    (isGeneral && !!neynarClientId) ||
-    (isGeneral && billingEnabled);
-  const resolver = useMemo(() => {
-    return classValidatorResolver(LoginUserDto);
-  }, []);
-  const form = useForm<Inputs>({
-    resolver,
-    defaultValues: {
-      providerToken: '',
-      provider: 'LOCAL',
-    },
-  });
   const fetchData = useFetch();
-  const onSubmit: SubmitHandler<Inputs> = async (data) => {
+  const redirectAfterAuth = useHarloAuthRedirect();
+  const { genericOauth, isGeneral } = useVariables();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [notActivated, setNotActivated] = useState(false);
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setLoading(true);
+    setError('');
     setNotActivated(false);
+    const email = readFormValue(event, 'email');
+    const password = readFormValue(event, 'password');
     const login = await fetchData('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        ...data,
+        email,
+        password,
         provider: 'LOCAL',
+        providerToken: '',
       }),
     });
     if (login.status === 400) {
@@ -59,112 +44,78 @@ export function Login() {
       if (errorMessage === 'User is not activated') {
         setNotActivated(true);
       } else {
-        form.setError('email', {
-          message: errorMessage,
-        });
+        setError(errorMessage || 'Could not sign in');
       }
       setLoading(false);
+      return;
     }
+    if (login.ok && redirectAfterAuth(login)) {
+      return;
+    }
+    setLoading(false);
   };
+
   return (
-    <FormProvider {...form}>
-      <form className="flex-1 flex" onSubmit={form.handleSubmit(onSubmit)}>
-        <div className="flex flex-col flex-1">
-          <div>
-            <h1 className="text-[40px] font-[500] -tracking-[0.8px] text-start cursor-pointer">
-              {t('sign_in', 'Sign In')}
-            </h1>
-          </div>
-          {hasSocialLogin && (
-            <>
-              <div className="text-[14px] mt-[32px] mb-[12px]">
-                {t('continue_with', 'Continue With')}
-              </div>
-              <div className="flex flex-col">
-                {showGenericOauth ? (
-                  <OauthProvider />
-                ) : (
-                  <div className="gap-[8px] flex">
-                    <GoogleProvider />
-                    {!!neynarClientId && <FarcasterProvider />}
-                    {billingEnabled && <WalletProvider />}
-                  </div>
-                )}
-                <div className="h-[20px] mb-[24px] mt-[24px] relative">
-                  <div className="absolute w-full h-[1px] bg-fifth top-[50%] -translate-y-[50%]" />
-                  <div
-                    className={`absolute z-[1] justify-center items-center w-full start-0 -top-[4px] flex`}
-                  >
-                    <div className="px-[16px]">{t('or', 'or')}</div>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-          <div className={hasSocialLogin ? 'flex flex-col' : 'flex flex-col mt-[32px]'}>
-            <div className="flex flex-col gap-[12px]">
-              <div className="text-white">
-                <Input
-                  label="Email"
-                  translationKey="label_email"
-                  {...form.register('email')}
-                  type="email"
-                  placeholder={t('email_address', 'Email Address')}
-                />
-                <Input
-                  label="Password"
-                  translationKey="label_password"
-                  {...form.register('password')}
-                  autoComplete="off"
-                  type="password"
-                  placeholder={t('label_password', 'Password')}
-                />
-              </div>
-              {notActivated && (
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-[10px] p-4 mb-4">
-                  <p className="text-amber-400 text-sm mb-2">
-                    {t(
-                      'account_not_activated',
-                      'Your account is not activated yet. Please check your email for the activation link.'
-                    )}
-                  </p>
-                  <Link
-                    href="/auth/activate"
-                    className="text-amber-400 underline hover:font-bold text-sm"
-                  >
-                    {t('resend_activation_email', 'Resend Activation Email')}
-                  </Link>
-                </div>
-              )}
-              <div className="text-center mt-6">
-                <div className="w-full flex">
-                  <Button
-                    type="submit"
-                    className="flex-1 rounded-[10px] !h-[52px]"
-                    loading={loading}
-                  >
-                    {t('sign_in_1', 'Sign in')}
-                  </Button>
-                </div>
-                <p className="mt-4 text-sm">
-                  {t('don_t_have_an_account', "Don't Have An Account?")}&nbsp;
-                  <Link href="/auth" className="underline cursor-pointer">
-                    {t('sign_up', 'Sign Up')}
-                  </Link>
-                </p>
-                <p className="mt-4 text-sm">
-                  <Link
-                    href="/auth/forgot"
-                    className="underline hover:font-bold cursor-pointer"
-                  >
-                    {t('forgot_password', 'Forgot password')}
-                  </Link>
-                </p>
-              </div>
+    <div>
+      <div className="mt-7 text-center">
+        <h1 className="text-[28px] font-semibold tracking-[-0.4px]">Welcome back</h1>
+        <p className="mt-2 text-[14.5px] leading-6 text-[#60656C]">
+          Sign in to continue managing your social media with Harlo.
+        </p>
+      </div>
+      <div className="mt-7">
+        {isGeneral && !genericOauth && <HarloGoogleButton />}
+        {isGeneral && !genericOauth && <HarloOrDivider />}
+        <form className="space-y-3" onSubmit={onSubmit}>
+          {error && <HarloAuthError>{error}</HarloAuthError>}
+          {notActivated && (
+            <div className="rounded-[12px] border border-amber-200 bg-amber-50 px-3 py-3 text-[13px] text-amber-800">
+              Your account is not activated yet. Please check your email for the
+              activation link.{' '}
+              <Link href="/auth/activate" className="font-medium underline">
+                Resend activation email
+              </Link>
             </div>
+          )}
+          <div>
+            <label htmlFor="login-email" className="sr-only">
+              Email address
+            </label>
+            <input
+              id="login-email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="Email address"
+              className={fieldClassName}
+            />
           </div>
-        </div>
-      </form>
-    </FormProvider>
+          <HarloPasswordField
+            id="login-password"
+            name="password"
+            autoComplete="current-password"
+            placeholder="Password"
+          />
+          <div className="text-right">
+            <Link
+              href="/auth/forgot"
+              className="text-[12.5px] font-medium text-[#3D5AFE]"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <button type="submit" disabled={loading} className={primaryButtonClassName}>
+            {loading ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
+        <p className="mt-5 text-center text-[13.5px] text-[#60656C]">
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="font-medium text-[#3D5AFE]">
+            Start free
+          </Link>
+        </p>
+      </div>
+    </div>
   );
 }

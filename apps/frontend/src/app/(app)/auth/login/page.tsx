@@ -1,10 +1,19 @@
+import { redirect } from 'next/navigation';
+
 export const dynamic = 'force-dynamic';
-import { Login } from '@gitroom/frontend/components/auth/login';
-import { Metadata } from 'next';
-export const metadata: Metadata = {
-  title: 'Harlo Social Login',
-  description: '',
-};
-export default async function Auth() {
-  return <Login />;
+
+export default async function AuthLogin({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params || {})) {
+    if (typeof value === 'string' && value) {
+      query.set(key, value);
+    }
+  }
+  const suffix = query.toString();
+  redirect(suffix ? `/login?${suffix}` : '/login');
 }
