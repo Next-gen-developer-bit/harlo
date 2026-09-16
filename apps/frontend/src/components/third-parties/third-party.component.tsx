@@ -1,104 +1,70 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import useSWR from 'swr';
+import clsx from 'clsx';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import { useClickAway } from '@uidotdev/usehooks';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
-import clsx from 'clsx';
-import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import { ApiModal } from '@gitroom/frontend/components/third-parties/third-party.list.component';
+import { useUser } from '@gitroom/frontend/components/layout/user.context';
+import { useOrganizations } from '@gitroom/frontend/components/layout/use.organizations';
+import { useAddProvider } from '@gitroom/frontend/components/launches/add.provider.component';
 import {
-  MVP_PLATFORM_FAMILIES,
+  PLATFORM_LABELS,
+  SOCIAL_ACCOUNT_FILTERS,
   channelKindLabel,
+  platformFamily,
 } from '@gitroom/frontend/components/launches/helpers/mvp.platforms';
 
-interface MVPPlatformDef {
-  identifier: string;
-  name: string;
-  description: string;
-  iconBg: string;
-  textColor: string;
-  iconText: string;
-}
+dayjs.extend(relativeTime);
 
-const MVP_PLATFORMS: MVPPlatformDef[] = [
-  {
-    identifier: 'instagram',
-    name: 'Instagram',
-    description: 'Connect eligible personal and professional account types using official Meta access.',
-    iconBg: 'bg-gradient-to-tr from-amber-500 via-pink-500 to-purple-600',
-    textColor: 'text-white',
-    iconText: 'IG',
-  },
-  {
-    identifier: 'facebook',
-    name: 'Facebook',
-    description: 'Connect eligible personal/professional profiles and Business Pages where official access permits.',
-    iconBg: 'bg-blue-600',
-    textColor: 'text-white',
-    iconText: 'FB',
-  },
-  {
-    identifier: 'linkedin',
-    name: 'LinkedIn',
-    description:
-      'Profile and company page are separate. Connect a personal profile to post as yourself, then connect a company page you admin.',
-    iconBg: 'bg-blue-700',
-    textColor: 'text-white',
-    iconText: 'in',
-  },
-  {
-    identifier: 'tiktok',
-    name: 'TikTok',
-    description: 'Connect eligible personal and business accounts.',
-    iconBg: 'bg-slate-900',
-    textColor: 'text-white',
-    iconText: 'TT',
-  },
-  {
-    identifier: 'youtube',
-    name: 'YouTube',
-    description: 'Connect YouTube channels.',
-    iconBg: 'bg-red-600',
-    textColor: 'text-white',
-    iconText: 'YT',
-  },
-  {
-    identifier: 'threads',
-    name: 'Threads',
-    description: 'Connect eligible Threads profiles.',
-    iconBg: 'bg-slate-900',
-    textColor: 'text-white',
-    iconText: '@',
-  },
-  {
-    identifier: 'pinterest',
-    name: 'Pinterest',
-    description: 'Connect eligible personal and business accounts and available boards.',
-    iconBg: 'bg-red-700',
-    textColor: 'text-white',
-    iconText: 'P',
-  },
-  {
-    identifier: 'x',
-    name: 'X',
-    description: 'Connect your X (Twitter) account to schedule and publish posts.',
-    iconBg: 'bg-black',
-    textColor: 'text-white',
-    iconText: 'X',
-  },
+const AVATAR_COLORS = [
+  'bg-violet-600',
+  'bg-blue-600',
+  'bg-pink-500',
+  'bg-emerald-600',
+  'bg-slate-800',
+  'bg-orange-500',
+  'bg-sky-600',
 ];
+
+const platformIcon = (identifier?: string) => {
+  const family = platformFamily(identifier);
+  if (family === 'youtube') {
+    return '/icons/platforms/youtube.svg';
+  }
+  return `/icons/platforms/${identifier || family}.png`;
+};
+
+const initials = (value?: string) =>
+  (value || 'A')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'A';
+
+const accountHandle = (account: any) => {
+  const display = String(account.display || account.profile || '').trim();
+  if (display) {
+    return display.startsWith('@') ? display : `@${display.replace(/^@/, '')}`;
+  }
+  return account.name || 'Account';
+};
 
 export const ThirdPartyComponent = () => {
   const fetch = useFetch();
   const toaster = useToaster();
-  const modals = useModals();
-
+  const user = useUser();
+  const { data: organizations } = useOrganizations();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'connected' | 'unconnected'>('all');
+  const [platformFilter, setPlatformFilter] = useState('all');
+  const [workspaceFilter, setWorkspaceFilter] = useState('all');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  // Load connected channels / integrations
   const loadIntegrations = useCallback(async () => {
     try {
       const res = await (await fetch('/integrations/list')).json();
@@ -108,13 +74,16 @@ export const ThirdPartyComponent = () => {
     }
   }, [fetch]);
 
-  const { data: connectedIntegrations, mutate } = useSWR('connections-list', loadIntegrations, {
-    revalidateOnFocus: true,
-  });
+  const { data: connectedIntegrations, mutate } = useSWR(
+    'connections-list',
+    loadIntegrations,
+    { revalidateOnFocus: true }
+  );
 
+  const connectAccount = useAddProvider(() => mutate());
   const connectedList = connectedIntegrations || [];
+  const workspaceName = user?.orgName || 'Workspace';
 
-  // Handle disconnect / delete channel
   const handleDisconnect = useCallback(
     async (id: string, name: string) => {
       if (!(await deleteDialog(`Are you sure you want to disconnect ${name}?`))) {
@@ -145,265 +114,418 @@ export const ThirdPartyComponent = () => {
       const data = await oauthRes.json();
       if (data?.url) {
         window.location.href = data.url;
-        return true;
+        return;
       }
-      if (data?.err) {
-        toaster.show(`Could not connect ${identifier}`, 'warning');
-        return true;
-      }
-      return false;
+      toaster.show(`Could not reconnect ${identifier}`, 'warning');
     },
     [fetch, toaster]
   );
 
-  const handleConnect = useCallback(
-    async (
-      identifier: string,
-      title: string,
-      refreshInternalId?: string
-    ) => {
-      try {
-        const started = await startOAuth(identifier, refreshInternalId);
-        if (started) {
-          return;
-        }
-
-        modals.openModal({
-          title: `Connect ${title}`,
-          withCloseButton: true,
-          children: (
-            <ApiModal
-              identifier={identifier}
-              title={title}
-              update={() => mutate()}
-            />
-          ),
-        });
-      } catch {
-        toaster.show(`Unable to initialize connection for ${title}`, 'warning');
+  const changeWorkspace = useCallback(
+    async (id: string) => {
+      if (!id || id === user?.orgId) {
+        setWorkspaceFilter(id || 'all');
+        return;
       }
+      await fetch('/user/change-org', {
+        method: 'POST',
+        body: JSON.stringify({ id }),
+      });
+      window.location.reload();
     },
-    [startOAuth, modals, mutate, toaster]
+    [fetch, user?.orgId]
   );
 
-  // Map MVP platforms with their connected account data if present
-  const platformRows = useMemo(() => {
-    return MVP_PLATFORMS.map((platform) => {
-      const connectedItems = connectedList.filter((c: any) => {
-        const family = MVP_PLATFORM_FAMILIES[platform.identifier] || [
-          platform.identifier,
-        ];
-        return family.includes(c.identifier);
-      });
-
-      return {
-        ...platform,
-        isConnected: connectedItems.length > 0,
-        connectedAccounts: connectedItems,
-      };
-    });
+  const platformCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: connectedList.length };
+    for (const account of connectedList) {
+      const family = platformFamily(account.identifier);
+      counts[family] = (counts[family] || 0) + 1;
+    }
+    return counts;
   }, [connectedList]);
 
-  // Filter rows based on search query and status filter
-  const filteredRows = useMemo(() => {
-    return platformRows.filter((row) => {
-      const matchesSearch =
-        row.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        row.description.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === 'all'
-          ? true
-          : statusFilter === 'connected'
-          ? row.isConnected
-          : !row.isConnected;
-
-      return matchesSearch && matchesStatus;
+  const filteredAccounts = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    return connectedList.filter((account) => {
+      const family = platformFamily(account.identifier);
+      const matchesPlatform =
+        platformFilter === 'all' || family === platformFilter;
+      const haystack = [
+        account.name,
+        account.display,
+        account.identifier,
+        PLATFORM_LABELS[family] || family,
+        channelKindLabel(account.identifier),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return matchesPlatform && (!query || haystack.includes(query));
     });
-  }, [platformRows, searchQuery, statusFilter]);
+  }, [connectedList, platformFilter, searchQuery]);
 
-  const totalConnectedCount = useMemo(
-    () => platformRows.filter((r) => r.isConnected).length,
-    [platformRows]
-  );
+  const groupedAccounts = useMemo(() => {
+    const groups = new Map<string, any[]>();
+    for (const account of filteredAccounts) {
+      const key = account.customer?.name || workspaceName;
+      groups.set(key, [...(groups.get(key) || []), account]);
+    }
+    return Array.from(groups.entries());
+  }, [filteredAccounts, workspaceName]);
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-6 md:p-8 font-sans min-h-screen">
-      
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Connections
-        </h1>
-        <p className="text-sm text-slate-500 mt-1 font-medium">
-          Connect and manage social media accounts for your workspace
-        </p>
+    <div className="w-full min-h-full px-6 py-8 md:px-8 font-sans">
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-6">
+        <div>
+          <p className="text-xs font-semibold tracking-wide text-slate-400 mb-1">
+            Social Accounts
+          </p>
+          <h1 className="text-[28px] leading-tight font-bold text-slate-900">
+            Connect and manage your social accounts.
+          </h1>
+          <p className="text-sm text-slate-500 mt-2 max-w-2xl">
+            Add, remove or manage the social accounts for your workspaces.
+            Connect multiple accounts to publish, analyse and collaborate from
+            one place.
+          </p>
+        </div>
+        <button
+          onClick={connectAccount}
+          className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm shrink-0"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+          </svg>
+          Connect Account
+        </button>
       </div>
 
-      {/* ── Single Large White Card Container (Section 3.9) ── */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 md:p-8">
-        
-        {/* Top Controls: Search & Filter */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-100">
-          <div className="relative w-full sm:w-80">
-            <svg className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search platforms..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-xs text-slate-700 pl-10 pr-4 py-2.5 rounded-xl focus:outline-none focus:border-blue-600 focus:bg-white transition-colors"
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 px-5 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
+            <FilterChip
+              active={platformFilter === 'all'}
+              onClick={() => setPlatformFilter('all')}
+              label="All"
+              count={platformCounts.all || 0}
             />
+            {SOCIAL_ACCOUNT_FILTERS.map((family) => (
+              <FilterChip
+                key={family}
+                active={platformFilter === family}
+                onClick={() => setPlatformFilter(family)}
+                label={PLATFORM_LABELS[family]}
+                count={platformCounts[family] || 0}
+                icon={platformIcon(family === 'x' ? 'x' : family)}
+              />
+            ))}
           </div>
-
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            <span className="text-xs text-slate-500 font-medium">
-              {totalConnectedCount} of {MVP_PLATFORMS.length} platforms connected
-            </span>
-
+          <div className="flex items-center gap-3">
+            <div className="relative w-full sm:w-56">
+              <svg
+                className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search accounts..."
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className="w-full bg-white border border-slate-200 text-sm text-slate-700 pl-9 pr-3 py-2 rounded-xl focus:outline-none focus:border-blue-500"
+              />
+            </div>
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 px-3 py-2 rounded-xl focus:outline-none"
+              value={workspaceFilter}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (value === 'all') {
+                  setWorkspaceFilter('all');
+                  return;
+                }
+                changeWorkspace(value);
+              }}
+              className="bg-white border border-slate-200 text-sm font-medium text-slate-700 px-3 py-2 rounded-xl focus:outline-none min-w-[160px]"
             >
-              <option value="all">All Platforms</option>
-              <option value="connected">Connected</option>
-              <option value="unconnected">Not Connected</option>
+              <option value="all">All workspaces</option>
+              {(organizations || []).map((org: { id: string; name: string }) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
-        {/* ── MVP Platforms Rows List ── */}
-        <div className="divide-y divide-slate-100">
-          {filteredRows.map((platform) => (
-            <div
-              key={platform.identifier}
-              className="py-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors"
-            >
-              {/* Platform Info */}
-              <div className="flex items-start gap-4">
-                <div className={clsx('w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-sm shrink-0 shadow-sm', platform.iconBg, platform.textColor)}>
-                  {platform.iconText}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-slate-900">{platform.name}</h3>
-                    {platform.isConnected && (
-                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        Connected
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 leading-relaxed mt-1 max-w-xl">
-                    {platform.description}
-                  </p>
-
-                  {/* Connected Accounts Sub-Row */}
-                  {platform.isConnected && platform.connectedAccounts.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      {platform.connectedAccounts.map((account: any) => (
-                        <div key={account.id} className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100 w-fit">
-                          <img
-                            src={account.picture || '/no-picture.jpg'}
-                            alt={account.name}
-                            className="w-7 h-7 rounded-full object-cover"
-                          />
-                          <div>
-                            <div className="text-xs font-bold text-slate-800">{account.name}</div>
-                            <div className="text-[10px] text-slate-400">
-                              {[
-                                channelKindLabel(account.identifier),
-                                account.refreshNeeded
-                                  ? 'Reconnection required'
-                                  : account.disabled
-                                  ? 'Disabled'
-                                  : 'Connected',
-                              ]
-                                .filter(Boolean)
-                                .join(' · ')}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[840px] text-left">
+            <thead>
+              <tr className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 border-b border-slate-100">
+                <th className="px-5 py-3 font-semibold">Account</th>
+                <th className="px-5 py-3 font-semibold">Platform</th>
+                <th className="px-5 py-3 font-semibold">Workspace</th>
+                <th className="px-5 py-3 font-semibold">Status</th>
+                <th className="px-5 py-3 font-semibold">Last synced</th>
+                <th className="px-5 py-3 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groupedAccounts.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-5 py-16 text-center">
+                    <div className="text-sm font-semibold text-slate-900 mb-1">
+                      No social accounts connected yet
+                    </div>
+                    <p className="text-sm text-slate-500 mb-4">
+                      Connect a channel to start publishing from this workspace.
+                    </p>
+                    <button
+                      onClick={connectAccount}
+                      className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl"
+                    >
+                      + Connect Account
+                    </button>
+                  </td>
+                </tr>
+              )}
+              {groupedAccounts.map(([groupName, accounts]) => (
+                <React.Fragment key={groupName}>
+                  <tr className="bg-slate-50/80">
+                    <td colSpan={6} className="px-5 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={clsx(
+                            'w-7 h-7 rounded-full text-white text-[11px] font-bold flex items-center justify-center',
+                            AVATAR_COLORS[groupName.length % AVATAR_COLORS.length]
+                          )}
+                        >
+                          {initials(groupName)}
+                        </div>
+                        <div className="text-sm font-semibold text-slate-900">
+                          {groupName}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          ({accounts.length})
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  {accounts.map((account: any, index: number) => {
+                    const family = platformFamily(account.identifier);
+                    const kind = channelKindLabel(account.identifier);
+                    const status = account.refreshNeeded
+                      ? 'Reconnect'
+                      : account.disabled
+                      ? 'Disabled'
+                      : 'Connected';
+                    return (
+                      <tr
+                        key={account.id}
+                        className="border-b border-slate-100 last:border-b-0"
+                      >
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            {account.picture ? (
+                              <img
+                                src={account.picture}
+                                alt=""
+                                className="w-9 h-9 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div
+                                className={clsx(
+                                  'w-9 h-9 rounded-full text-white text-xs font-bold flex items-center justify-center',
+                                  AVATAR_COLORS[index % AVATAR_COLORS.length]
+                                )}
+                              >
+                                {initials(account.name)}
+                              </div>
+                            )}
+                            <div>
+                              <div className="text-sm font-semibold text-slate-900">
+                                {accountHandle(account)}
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                {kind || account.name}
+                              </div>
                             </div>
                           </div>
-                          {account.refreshNeeded && (
-                            <button
-                              onClick={() =>
-                                handleConnect(
-                                  account.identifier || platform.identifier,
-                                  account.name,
-                                  account.internalId
-                                )
-                              }
-                              className="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 hover:bg-blue-50 rounded-lg"
-                            >
-                              Reconnect
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDisconnect(account.id, account.name)}
-                            className="text-xs text-red-500 hover:text-red-700 font-semibold ml-1 px-2 py-1 hover:bg-red-50 rounded-lg transition-colors"
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={platformIcon(account.identifier)}
+                              alt=""
+                              className="w-5 h-5 rounded-sm object-contain"
+                            />
+                            <span className="text-sm text-slate-700">
+                              {PLATFORM_LABELS[family] || family}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className="inline-flex text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
+                            {groupName}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span
+                            className={clsx(
+                              'inline-flex items-center gap-1.5 text-sm',
+                              status === 'Connected'
+                                ? 'text-emerald-600'
+                                : status === 'Disabled'
+                                ? 'text-slate-500'
+                                : 'text-amber-600'
+                            )}
                           >
-                            Disconnect
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Button: Connect / Reconnect */}
-              <div className="flex items-center gap-2 self-end md:self-center shrink-0 flex-wrap justify-end">
-                {platform.identifier === 'linkedin' ? (
-                  <>
-                    <button
-                      onClick={() =>
-                        handleConnect('linkedin', 'LinkedIn Profile')
-                      }
-                      className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs px-4 py-2 rounded-xl transition-colors shadow-sm"
-                    >
-                      Connect profile
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleConnect('linkedin-page', 'LinkedIn Page')
-                      }
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded-xl transition-colors shadow-sm"
-                    >
-                      Connect company page
-                    </button>
-                  </>
-                ) : platform.isConnected ? (
-                  <button
-                    onClick={() => handleConnect(platform.identifier, platform.name)}
-                    className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs px-4 py-2 rounded-xl transition-colors shadow-sm"
-                  >
-                    Connect another
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleConnect(platform.identifier, platform.name)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded-xl transition-colors shadow-sm flex items-center gap-1.5"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Connect
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {filteredRows.length === 0 && (
-            <div className="text-center py-12 text-slate-400 text-xs">
-              No matching platforms found for "{searchQuery}".
-            </div>
-          )}
+                            <span
+                              className={clsx(
+                                'w-1.5 h-1.5 rounded-full',
+                                status === 'Connected'
+                                  ? 'bg-emerald-500'
+                                  : status === 'Disabled'
+                                  ? 'bg-slate-400'
+                                  : 'bg-amber-500'
+                              )}
+                            />
+                            {status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-slate-500">
+                          {account.updatedAt
+                            ? dayjs(account.updatedAt).fromNow()
+                            : '—'}
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <AccountActions
+                            open={openMenuId === account.id}
+                            onToggle={() =>
+                              setOpenMenuId(
+                                openMenuId === account.id ? null : account.id
+                              )
+                            }
+                            onClose={() => setOpenMenuId(null)}
+                            onReconnect={
+                              account.refreshNeeded
+                                ? () =>
+                                    startOAuth(
+                                      account.identifier,
+                                      account.internalId
+                                    )
+                                : undefined
+                            }
+                            onDisconnect={() =>
+                              handleDisconnect(account.id, account.name)
+                            }
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
         </div>
-
       </div>
+    </div>
+  );
+};
+
+const FilterChip = ({
+  active,
+  onClick,
+  label,
+  count,
+  icon,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  icon?: string;
+}) => (
+  <button
+    onClick={onClick}
+    className={clsx(
+      'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm border transition-colors',
+      active
+        ? 'bg-blue-50 border-blue-200 text-blue-700 font-semibold'
+        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+    )}
+  >
+    {icon && <img src={icon} alt="" className="w-3.5 h-3.5 object-contain" />}
+    {label}
+    <span className={clsx('text-xs', active ? 'text-blue-500' : 'text-slate-400')}>
+      {count}
+    </span>
+  </button>
+);
+
+const AccountActions = ({
+  open,
+  onToggle,
+  onClose,
+  onReconnect,
+  onDisconnect,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onReconnect?: () => void;
+  onDisconnect: () => void;
+}) => {
+  const ref = useClickAway<HTMLDivElement>(() => {
+    if (open) {
+      onClose();
+    }
+  });
+
+  return (
+    <div className="relative inline-block" ref={ref}>
+      <button
+        onClick={onToggle}
+        className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 inline-flex items-center justify-center"
+        aria-label="Account actions"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-9 z-20 w-40 bg-white border border-slate-200 rounded-xl shadow-lg py-1 text-left">
+          {onReconnect && (
+            <button
+              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              onClick={() => {
+                onClose();
+                onReconnect();
+              }}
+            >
+              Reconnect
+            </button>
+          )}
+          <button
+            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+            onClick={() => {
+              onClose();
+              onDisconnect();
+            }}
+          >
+            Disconnect
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -35,5 +35,48 @@ export const channelKindLabel = (identifier?: string) => {
   if (identifier === 'linkedin') {
     return 'Personal profile';
   }
+  if (identifier === 'instagram') {
+    return 'Instagram Business';
+  }
+  if (identifier === 'instagram-standalone') {
+    return 'Instagram';
+  }
+  if (identifier === 'facebook') {
+    return 'Business Page';
+  }
   return '';
 };
+
+export const platformFamily = (identifier?: string) => {
+  if (!identifier) {
+    return '';
+  }
+  if (identifier === 'instagram-standalone') {
+    return 'instagram';
+  }
+  if (identifier === 'linkedin-page') {
+    return 'linkedin';
+  }
+  return identifier;
+};
+
+export const PLATFORM_LABELS: Record<string, string> = {
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  linkedin: 'LinkedIn',
+  tiktok: 'TikTok',
+  youtube: 'YouTube',
+  threads: 'Threads',
+  pinterest: 'Pinterest',
+  x: 'X',
+};
+
+export const SOCIAL_ACCOUNT_FILTERS = [
+  'instagram',
+  'facebook',
+  'linkedin',
+  'tiktok',
+  'youtube',
+  'x',
+  'pinterest',
+] as const;
