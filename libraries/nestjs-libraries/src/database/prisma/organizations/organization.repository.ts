@@ -246,16 +246,6 @@ export class OrganizationRepository {
       return false;
     }
 
-    const alreadyMember = await this._userOrg.model.userOrganization.findFirst({
-      where: {
-        userId,
-        organizationId: orgId,
-      },
-    });
-    if (alreadyMember) {
-      return alreadyMember;
-    }
-
     const checkForSubscription =
       await this._organization.model.organization.findFirst({
         where: {
