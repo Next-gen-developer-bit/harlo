@@ -10,6 +10,34 @@ import {
 } from '@gitroom/react/translation/i18n.config';
 acceptLanguage.languages(languages);
 
+const cookieDomain = () =>
+  getCookieUrlFromDomain(process.env.FRONTEND_URL!);
+
+const securedCookie = () =>
+  !process.env.NOT_SECURED
+    ? {
+        path: '/',
+        secure: true,
+        httpOnly: true,
+        sameSite: 'none' as const,
+        domain: cookieDomain(),
+      }
+    : { path: '/' };
+
+const setOrgCookie = (response: NextResponse, token: string) => {
+  response.cookies.set('org', token, {
+    ...securedCookie(),
+    expires: new Date(Date.now() + 15 * 60 * 1000),
+  });
+};
+
+const clearAuthCookie = (response: NextResponse) => {
+  response.cookies.set('auth', '', {
+    ...securedCookie(),
+    maxAge: -1,
+  });
+};
+
 // This function can be marked `async` if using `await` inside
 export async function proxy(request: NextRequest) {
   const nextUrl = request.nextUrl;
@@ -83,18 +111,7 @@ export async function proxy(request: NextRequest) {
     const response = NextResponse.redirect(
       new URL('/login', nextUrl.href)
     );
-    response.cookies.set('auth', '', {
-      path: '/',
-      ...(!process.env.NOT_SECURED
-        ? {
-            secure: true,
-            httpOnly: true,
-            sameSite: false,
-          }
-        : {}),
-      maxAge: -1,
-      domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
-    });
+    clearAuthCookie(response);
     return response;
   }
 
@@ -129,31 +146,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(authPath);
   }
 
-  // If the url is a public auth page and the cookie exists, redirect to /overview
-  if (isPublicAuthPath && authCookie) {
-    return NextResponse.redirect(new URL(`/overview${url}`, nextUrl.href));
-  }
-  if (isPublicAuthPath && !authCookie) {
-    if (org) {
-      const redirect = NextResponse.redirect(new URL(`/overview`, nextUrl.href));
-      redirect.cookies.set('org', org, {
-        ...(!process.env.NOT_SECURED
-          ? {
-              path: '/',
-              secure: true,
-              httpOnly: true,
-              sameSite: false,
-              domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
-            }
-          : {}),
-        expires: new Date(Date.now() + 15 * 60 * 1000),
-      });
-      return redirect;
-    }
-    return topResponse;
-  }
   try {
-    if (org) {
+    if (org && authCookie) {
       const joinResponse = await internalFetch('/user/join-org', {
         body: JSON.stringify({
           org,
@@ -162,6 +156,14 @@ export async function proxy(request: NextRequest) {
       });
       const payload = await joinResponse.json().catch(() => ({}));
       const id = payload?.id;
+      if (payload?.reason === 'email_mismatch') {
+        const redirect = NextResponse.redirect(
+          new URL(`/auth?org=${encodeURIComponent(org)}`, nextUrl.href)
+        );
+        clearAuthCookie(redirect);
+        setOrgCookie(redirect, org);
+        return redirect;
+      }
       if (!joinResponse.ok || !id) {
         return NextResponse.redirect(
           new URL('/overview?invite=invalid', nextUrl.href)
@@ -171,30 +173,33 @@ export async function proxy(request: NextRequest) {
         new URL(`/overview?added=true`, nextUrl.href)
       );
       redirect.cookies.set('showorg', id, {
-        ...(!process.env.NOT_SECURED
-          ? {
-              path: '/',
-              secure: true,
-              httpOnly: true,
-              sameSite: false,
-              domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
-            }
-          : {}),
+        ...securedCookie(),
         expires: new Date(Date.now() + 15 * 60 * 1000),
       });
       return redirect;
     }
-    if (nextUrl.pathname === '/') {
-      return topResponse;
-    }
-
-    return topResponse;
   } catch (err) {
     console.log('err', err);
     return NextResponse.redirect(
       new URL('/overview?invite=error', nextUrl.href)
     );
   }
+
+  // If the url is a public auth page and the cookie exists, redirect to /overview
+  if (isPublicAuthPath && authCookie) {
+    return NextResponse.redirect(new URL(`/overview${url}`, nextUrl.href));
+  }
+  if (isPublicAuthPath && !authCookie) {
+    if (org) {
+      setOrgCookie(topResponse, org);
+    }
+    return topResponse;
+  }
+  if (nextUrl.pathname === '/') {
+    return topResponse;
+  }
+
+  return topResponse;
 }
 
 // See "Matching Paths" below to learn more

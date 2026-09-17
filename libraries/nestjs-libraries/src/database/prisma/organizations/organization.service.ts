@@ -111,8 +111,11 @@ export class OrganizationService {
       const orgName = escapeHtml(org.name);
       emailed = await this._notificationsService.sendEmailNow(
         body.email,
-        `${user.name || user.email} invited you to join "${org.name}"`,
-        `${inviter} has invited you to join the "${orgName}" team.<br /><a href="${url}">Accept the invitation</a> to get started.<br />The link will expire in 2 days.`
+        `${user.name || user.email} invited you to join "${org.name}" on Harlo`,
+        `<p>${inviter} invited you to join the "${orgName}" workspace on Harlo.</p>
+<p><a href="${url}">Accept the invitation</a> to get started. This link expires in 2 days.</p>
+<p>Open this URL if the button does not work:<br />${url}</p>
+<p>If you were not expecting this invitation, you can ignore this email.</p>`
       );
     }
     return { url, emailed, emailConfigured };

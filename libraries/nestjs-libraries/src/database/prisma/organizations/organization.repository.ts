@@ -226,6 +226,16 @@ export class OrganizationRepository {
     orgId: string,
     role: 'USER' | 'ADMIN'
   ) {
+    const alreadyMember = await this._userOrg.model.userOrganization.findFirst({
+      where: {
+        userId,
+        organizationId: orgId,
+      },
+    });
+    if (alreadyMember) {
+      return alreadyMember;
+    }
+
     const checkIfInviteExists = await this._user.model.user.findFirst({
       where: {
         inviteId: id,
@@ -388,6 +398,8 @@ export class OrganizationRepository {
               select: {
                 email: true,
                 id: true,
+                name: true,
+                lastName: true,
                 sendSuccessEmails: true,
                 sendFailureEmails: true,
                 sendStreakEmails: true,

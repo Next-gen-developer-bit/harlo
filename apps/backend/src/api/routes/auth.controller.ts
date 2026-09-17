@@ -49,7 +49,10 @@ export class AuthController {
   ) {
     try {
       const getOrgFromCookie = this._authService.getOrgFromCookie(
-        req?.cookies?.org
+        req?.cookies?.org ||
+          (typeof (req.body as { org?: string })?.org === 'string'
+            ? (req.body as { org?: string }).org
+            : undefined)
       );
 
       const { jwt, addedOrg } = await this._authService.routeAuth(
@@ -123,7 +126,10 @@ export class AuthController {
   ) {
     try {
       const getOrgFromCookie = this._authService.getOrgFromCookie(
-        req?.cookies?.org
+        req?.cookies?.org ||
+          (typeof (req.body as { org?: string })?.org === 'string'
+            ? (req.body as { org?: string }).org
+            : undefined)
       );
 
       const { jwt, addedOrg } = await this._authService.routeAuth(

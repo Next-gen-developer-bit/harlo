@@ -14,11 +14,25 @@ export class ResendProvider implements EmailInterface {
     emailFromAddress: string,
     replyTo?: string
   ) {
+    const text = html
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n\n')
+      .replace(/<a [^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/gi, '$2 ($1)')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
     const sends = await resend.emails.send({
       from: `${emailFromName} <${emailFromAddress}>`,
       to,
       subject,
       html,
+      text,
       ...(replyTo && { reply_to: replyTo }),
     });
 

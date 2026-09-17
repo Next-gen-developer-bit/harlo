@@ -37,7 +37,9 @@ export class AuthService {
     body: CreateOrgUserDto | LoginUserDto,
     ip: string,
     userAgent: string,
-    addToOrg?: boolean | { orgId: string; role: 'USER' | 'ADMIN'; id: string }
+    addToOrg?:
+      | boolean
+      | { orgId: string; role: 'USER' | 'ADMIN'; id: string; email?: string }
   ) {
     if (provider === Provider.LOCAL) {
       if (process.env.DISALLOW_PLUS && body.email.includes('+')) {
@@ -62,15 +64,10 @@ export class AuthService {
           userAgent
         );
 
-        const addedOrg =
-          addToOrg && typeof addToOrg !== 'boolean'
-            ? await this._organizationService.addUserToOrg(
-                create.users[0].user.id,
-                addToOrg.id,
-                addToOrg.orgId,
-                addToOrg.role
-              )
-            : false;
+        const addedOrg = await this.maybeAddToOrg(
+          create.users[0].user,
+          addToOrg
+        );
 
         const obj = { addedOrg, jwt: await this.jwt(create.users[0].user) };
         await this._emailService.sendEmail(
@@ -90,7 +87,10 @@ export class AuthService {
         throw new Error('User is not activated');
       }
 
-      return { addedOrg: false, jwt: await this.jwt(user) };
+      return {
+        addedOrg: await this.maybeAddToOrg(user, addToOrg),
+        jwt: await this.jwt(user),
+      };
     }
 
     const user = await this.loginOrRegisterProvider(
@@ -100,16 +100,35 @@ export class AuthService {
       userAgent
     );
 
-    const addedOrg =
-      addToOrg && typeof addToOrg !== 'boolean'
-        ? await this._organizationService.addUserToOrg(
-            user.id,
-            addToOrg.id,
-            addToOrg.orgId,
-            addToOrg.role
-          )
-        : false;
-    return { addedOrg, jwt: await this.jwt(user) };
+    return {
+      addedOrg: await this.maybeAddToOrg(user, addToOrg),
+      jwt: await this.jwt(user),
+    };
+  }
+
+  private async maybeAddToOrg(
+    user: Pick<User, 'id' | 'email'>,
+    addToOrg?:
+      | boolean
+      | { orgId: string; role: 'USER' | 'ADMIN'; id: string; email?: string }
+  ) {
+    if (!addToOrg || typeof addToOrg === 'boolean') {
+      return false;
+    }
+
+    if (
+      addToOrg.email &&
+      user.email.toLowerCase() !== addToOrg.email.toLowerCase()
+    ) {
+      return false;
+    }
+
+    return this._organizationService.addUserToOrg(
+      user.id,
+      addToOrg.id,
+      addToOrg.orgId,
+      addToOrg.role
+    );
   }
 
   public getOrgFromCookie(cookie?: string) {

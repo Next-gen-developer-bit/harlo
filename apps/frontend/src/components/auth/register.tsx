@@ -12,9 +12,11 @@ import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import {
   HarloAuthError,
   HarloGoogleButton,
+  HarloInviteHint,
   HarloOrDivider,
   HarloPasswordField,
   fieldClassName,
+  inviteAuthHref,
   primaryButtonClassName,
   readFormValue,
   useHarloAuthRedirect,
@@ -69,6 +71,7 @@ export function RegisterAfter({
   const track = useTrack();
   const redirectAfterAuth = useHarloAuthRedirect();
   const { isGeneral, genericOauth, mainUrl } = useVariables();
+  const inviteToken = useSearchParams()?.get('org');
   const [datafast_visitor_id] = useCookie('datafast_visitor_id');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -91,6 +94,7 @@ export function RegisterAfter({
         provider: provider || 'LOCAL',
         providerToken: token || '',
         datafast_visitor_id,
+        ...(inviteToken ? { org: inviteToken } : {}),
       }),
     }).catch((err) => {
       setError(
@@ -128,6 +132,7 @@ export function RegisterAfter({
         </p>
       </div>
       <div className="mt-7">
+        {inviteToken && <HarloInviteHint />}
         {!isAfterProvider && isGeneral && !genericOauth && <HarloGoogleButton />}
         {!isAfterProvider && isGeneral && !genericOauth && <HarloOrDivider />}
         <form className="space-y-3" onSubmit={onSubmit}>
@@ -179,7 +184,10 @@ export function RegisterAfter({
         </p>
         <p className="mt-5 text-center text-[13.5px] text-[#60656C]">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-[#3D5AFE]">
+          <Link
+            href={inviteAuthHref('/login', inviteToken)}
+            className="font-medium text-[#3D5AFE]"
+          >
             Sign in
           </Link>
         </p>

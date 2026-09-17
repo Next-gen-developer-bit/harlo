@@ -2,13 +2,16 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import {
   HarloAuthError,
   HarloGoogleButton,
+  HarloInviteHint,
   HarloOrDivider,
   HarloPasswordField,
   fieldClassName,
+  inviteAuthHref,
   primaryButtonClassName,
   readFormValue,
   useHarloAuthRedirect,
@@ -19,6 +22,7 @@ export function Login() {
   const fetchData = useFetch();
   const redirectAfterAuth = useHarloAuthRedirect();
   const { genericOauth, isGeneral } = useVariables();
+  const inviteToken = useSearchParams()?.get('org');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notActivated, setNotActivated] = useState(false);
@@ -37,6 +41,7 @@ export function Login() {
         password,
         provider: 'LOCAL',
         providerToken: '',
+        ...(inviteToken ? { org: inviteToken } : {}),
       }),
     });
     if (login.status === 400) {
@@ -64,6 +69,7 @@ export function Login() {
         </p>
       </div>
       <div className="mt-7">
+        {inviteToken && <HarloInviteHint />}
         {isGeneral && !genericOauth && <HarloGoogleButton />}
         {isGeneral && !genericOauth && <HarloOrDivider />}
         <form className="space-y-3" onSubmit={onSubmit}>
@@ -111,7 +117,10 @@ export function Login() {
         </form>
         <p className="mt-5 text-center text-[13.5px] text-[#60656C]">
           Don&apos;t have an account?{' '}
-          <Link href="/signup" className="font-medium text-[#3D5AFE]">
+          <Link
+            href={inviteAuthHref('/signup', inviteToken)}
+            className="font-medium text-[#3D5AFE]"
+          >
             Start free
           </Link>
         </p>

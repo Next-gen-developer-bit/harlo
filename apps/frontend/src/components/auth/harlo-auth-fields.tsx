@@ -4,6 +4,23 @@ import { FormEvent, ReactNode, useCallback, useState } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 
+export function inviteAuthHref(path: string, org?: string | null) {
+  if (!org) {
+    return path;
+  }
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}org=${encodeURIComponent(org)}`;
+}
+
+export function HarloInviteHint() {
+  return (
+    <div className="mb-4 rounded-[12px] border border-[#D6E0FF] bg-[#F4F7FF] px-3 py-3 text-[13px] leading-5 text-[#3A4660]">
+      You were invited to a workspace. Sign in or create an account with the
+      invited email to join.
+    </div>
+  );
+}
+
 export const fieldClassName =
   'w-full rounded-2xl border border-[#DDE3E8] bg-white px-4 py-3.5 text-[14.5px] text-[#111] outline-none placeholder:text-[#9AA3AE] focus:border-[#3D5AFE]';
 

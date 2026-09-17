@@ -288,6 +288,13 @@ export class UsersController {
       return response.status(200).json({ id: null });
     }
 
+    if (
+      user.email.toLowerCase() !==
+      String(getOrgFromCookie.email || '').toLowerCase()
+    ) {
+      return response.status(200).json({ id: null, reason: 'email_mismatch' });
+    }
+
     const addedOrg = await this._orgService.addUserToOrg(
       user.id,
       getOrgFromCookie.id,
