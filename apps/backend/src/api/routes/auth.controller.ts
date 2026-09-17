@@ -67,6 +67,23 @@ export class AuthController {
         body.provider === 'LOCAL' && this._emailService.hasProvider();
 
       if (activationRequired) {
+        if (typeof addedOrg !== 'boolean' && addedOrg?.organizationId) {
+          response.cookie('showorg', addedOrg.organizationId, {
+            domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+            ...(!process.env.NOT_SECURED
+              ? {
+                  secure: true,
+                  httpOnly: true,
+                  sameSite: 'none',
+                }
+              : {}),
+            expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+          });
+
+          if (process.env.NOT_SECURED) {
+            response.header('showorg', addedOrg.organizationId);
+          }
+        }
         response.header('activate', 'true');
         response.status(200).json({ activate: true });
         return;

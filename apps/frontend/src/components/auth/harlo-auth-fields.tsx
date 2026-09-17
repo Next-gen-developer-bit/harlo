@@ -169,8 +169,15 @@ export function useHarloAuthRedirect() {
   return useCallback(
     (response: Response) => {
       const app = (frontEndUrl || '').replace(/\/+$/, '') || window.location.origin;
+      const inviteToken = new URL(window.location.href).searchParams.get('org');
       if (response.headers.get('activate') === 'true') {
         window.location.href = `${app}/auth/activate`;
+        return true;
+      }
+      if (inviteToken && response.headers.get('reload')) {
+        window.location.href = `${app}/auth/invite?org=${encodeURIComponent(
+          inviteToken
+        )}`;
         return true;
       }
       if (response.headers.get('onboarding')) {
