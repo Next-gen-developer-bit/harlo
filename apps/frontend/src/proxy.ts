@@ -106,7 +106,6 @@ export async function proxy(request: NextRequest) {
     nextUrl.pathname === '/signup';
   const isInvitePath = nextUrl.pathname === '/auth/invite';
   const isInviteAuthForm =
-    nextUrl.pathname === '/auth' ||
     nextUrl.pathname === '/auth/login' ||
     nextUrl.pathname === '/login' ||
     nextUrl.pathname === '/signup';
