@@ -1,24 +1,23 @@
-import { internalFetch } from '@gitroom/helpers/utils/internal.fetch';
-export const dynamic = 'force-dynamic';
 import { Register } from '@gitroom/frontend/components/auth/register';
-import { Metadata } from 'next';
+import { internalFetch } from '@gitroom/helpers/utils/internal.fetch';
 import Link from 'next/link';
 import { getT } from '@gitroom/react/translation/get.translation.service.backend';
 import { LoginWithOidc } from '@gitroom/frontend/components/auth/login.with.oidc';
-import { redirect } from 'next/navigation';
+import { Metadata } from 'next';
 import { Suspense } from 'react';
+
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Sign Up | Harlo Social',
-  description: '',
+  description: 'Create your Harlo account.',
 };
+
 export default async function Auth(params: {
   searchParams: Promise<{ provider?: string }>;
 }) {
   const t = await getT();
   const searchParams = await params?.searchParams;
-  if (!searchParams?.provider) {
-    redirect('/signup');
-  }
   if (process.env.DISABLE_REGISTRATION === 'true') {
     const canRegister = (
       await (await internalFetch('/auth/can-register')).json()
@@ -30,7 +29,7 @@ export default async function Auth(params: {
           <div className="text-center text-[14.5px] text-[#60656C]">
             {t('registration_is_disabled', 'Registration is disabled')}
             <br />
-            <Link className="font-medium text-[#3D5AFE]" href="/login">
+            <Link className="font-medium text-[#3D5AFE]" href="/auth/login">
               {t('login_instead', 'Login instead')}
             </Link>
           </div>
