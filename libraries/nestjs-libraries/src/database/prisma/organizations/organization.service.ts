@@ -93,7 +93,7 @@ export class OrganizationService {
       timeLimit,
       id,
     });
-    const url = `${process.env.FRONTEND_URL}/auth?org=${encodeURIComponent(
+    const url = `${process.env.FRONTEND_URL}/auth/invite?org=${encodeURIComponent(
       token
     )}`;
     const emailConfigured = this._notificationsService.hasEmailProvider();
@@ -114,7 +114,7 @@ export class OrganizationService {
         `${user.name || user.email} invited you to join "${org.name}" on Harlo`,
         `<p>${inviter} invited you to join the "${orgName}" workspace on Harlo.</p>
 <p><a href="${url}">Accept the invitation</a> to get started. This link expires in 2 days.</p>
-<p>Open this URL if the button does not work:<br />${url}</p>
+<p>Use the invited email address (${escapeHtml(body.email)}) when you create an account or sign in.</p>
 <p>If you were not expecting this invitation, you can ignore this email.</p>`
       );
     }

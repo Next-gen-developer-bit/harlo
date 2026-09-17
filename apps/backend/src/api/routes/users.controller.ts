@@ -285,14 +285,18 @@ export class UsersController {
     const getOrgFromCookie = this._authService.getOrgFromCookie(org);
 
     if (!getOrgFromCookie) {
-      return response.status(200).json({ id: null });
+      return response.status(200).json({ id: null, reason: 'invalid_token' });
     }
 
     if (
       user.email.toLowerCase() !==
       String(getOrgFromCookie.email || '').toLowerCase()
     ) {
-      return response.status(200).json({ id: null, reason: 'email_mismatch' });
+      return response.status(200).json({
+        id: null,
+        reason: 'email_mismatch',
+        email: getOrgFromCookie.email,
+      });
     }
 
     const addedOrg = await this._orgService.addUserToOrg(
@@ -301,9 +305,27 @@ export class UsersController {
       getOrgFromCookie.orgId,
       getOrgFromCookie.role
     );
+    const organizationId =
+      typeof addedOrg !== 'boolean' ? addedOrg.organizationId : null;
+
+    if (organizationId) {
+      response.cookie('showorg', organizationId, {
+        domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+        ...(!process.env.NOT_SECURED
+          ? {
+              secure: true,
+              httpOnly: true,
+              sameSite: 'none',
+            }
+          : {}),
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+      });
+      response.header('showorg', organizationId);
+    }
 
     response.status(200).json({
-      id: typeof addedOrg !== 'boolean' ? addedOrg.organizationId : null,
+      id: organizationId,
+      reason: organizationId ? undefined : 'invite_used',
     });
   }
 

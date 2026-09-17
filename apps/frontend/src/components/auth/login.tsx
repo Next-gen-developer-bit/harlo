@@ -14,6 +14,7 @@ import {
   inviteAuthHref,
   primaryButtonClassName,
   readFormValue,
+  readInviteEmail,
   useHarloAuthRedirect,
 } from '@gitroom/frontend/components/auth/harlo-auth-fields';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
@@ -69,7 +70,7 @@ export function Login() {
         </p>
       </div>
       <div className="mt-7">
-        {inviteToken && <HarloInviteHint />}
+        {inviteToken && <HarloInviteHint email={readInviteEmail(inviteToken)} />}
         {isGeneral && !genericOauth && <HarloGoogleButton />}
         {isGeneral && !genericOauth && <HarloOrDivider />}
         <form className="space-y-3" onSubmit={onSubmit}>

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getCookieUrlFromDomain } from '@gitroom/helpers/subdomain/subdomain.management';
-import { internalFetch } from '@gitroom/helpers/utils/internal.fetch';
 import acceptLanguage from 'accept-language';
 import {
   cookieName,
@@ -105,13 +104,25 @@ export async function proxy(request: NextRequest) {
     nextUrl.pathname.startsWith('/auth') ||
     nextUrl.pathname === '/login' ||
     nextUrl.pathname === '/signup';
+  const isInvitePath = nextUrl.pathname === '/auth/invite';
+  const isInviteAuthForm =
+    nextUrl.pathname === '/auth' ||
+    nextUrl.pathname === '/auth/login' ||
+    nextUrl.pathname === '/login' ||
+    nextUrl.pathname === '/signup';
 
   // If the URL is logout, delete the cookie and redirect to login
   if (nextUrl.href.indexOf('/auth/logout') > -1) {
+    const afterLogout = org
+      ? `/auth?org=${encodeURIComponent(org)}`
+      : '/login';
     const response = NextResponse.redirect(
-      new URL('/login', nextUrl.href)
+      new URL(afterLogout, nextUrl.href)
     );
     clearAuthCookie(response);
+    if (org) {
+      setOrgCookie(response, org);
+    }
     return response;
   }
 
@@ -146,53 +157,23 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(authPath);
   }
 
-  try {
-    if (org && authCookie) {
-      const joinResponse = await internalFetch('/user/join-org', {
-        body: JSON.stringify({
-          org,
-        }),
-        method: 'POST',
-      });
-      const payload = await joinResponse.json().catch(() => ({}));
-      const id = payload?.id;
-      if (payload?.reason === 'email_mismatch') {
-        const redirect = NextResponse.redirect(
-          new URL(`/auth?org=${encodeURIComponent(org)}`, nextUrl.href)
-        );
-        clearAuthCookie(redirect);
-        setOrgCookie(redirect, org);
-        return redirect;
-      }
-      if (!joinResponse.ok || !id) {
-        return NextResponse.redirect(
-          new URL('/overview?invite=invalid', nextUrl.href)
-        );
-      }
-      const redirect = NextResponse.redirect(
-        new URL(`/overview?added=true`, nextUrl.href)
-      );
-      redirect.cookies.set('showorg', id, {
-        ...securedCookie(),
-        expires: new Date(Date.now() + 15 * 60 * 1000),
-      });
-      return redirect;
+  if (org) {
+    if (isInvitePath || (isInviteAuthForm && !authCookie)) {
+      setOrgCookie(topResponse, org);
+      return topResponse;
     }
-  } catch (err) {
-    console.log('err', err);
-    return NextResponse.redirect(
-      new URL('/overview?invite=error', nextUrl.href)
+    const redirect = NextResponse.redirect(
+      new URL(`/auth/invite?org=${encodeURIComponent(org)}`, nextUrl.href)
     );
+    setOrgCookie(redirect, org);
+    return redirect;
   }
 
   // If the url is a public auth page and the cookie exists, redirect to /overview
-  if (isPublicAuthPath && authCookie) {
+  if (isPublicAuthPath && authCookie && !isInvitePath) {
     return NextResponse.redirect(new URL(`/overview${url}`, nextUrl.href));
   }
   if (isPublicAuthPath && !authCookie) {
-    if (org) {
-      setOrgCookie(topResponse, org);
-    }
     return topResponse;
   }
   if (nextUrl.pathname === '/') {

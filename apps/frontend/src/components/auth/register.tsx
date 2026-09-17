@@ -19,6 +19,7 @@ import {
   inviteAuthHref,
   primaryButtonClassName,
   readFormValue,
+  readInviteEmail,
   useHarloAuthRedirect,
 } from '@gitroom/frontend/components/auth/harlo-auth-fields';
 import useCookie from 'react-use-cookie';
@@ -132,7 +133,7 @@ export function RegisterAfter({
         </p>
       </div>
       <div className="mt-7">
-        {inviteToken && <HarloInviteHint />}
+        {inviteToken && <HarloInviteHint email={readInviteEmail(inviteToken)} />}
         {!isAfterProvider && isGeneral && !genericOauth && <HarloGoogleButton />}
         {!isAfterProvider && isGeneral && !genericOauth && <HarloOrDivider />}
         <form className="space-y-3" onSubmit={onSubmit}>

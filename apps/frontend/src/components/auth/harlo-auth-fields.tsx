@@ -12,11 +12,33 @@ export function inviteAuthHref(path: string, org?: string | null) {
   return `${path}${separator}org=${encodeURIComponent(org)}`;
 }
 
-export function HarloInviteHint() {
+export function readInviteEmail(org?: string | null) {
+  if (!org) {
+    return '';
+  }
+  try {
+    const payload = org.split('.')[1];
+    if (!payload) {
+      return '';
+    }
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      '='
+    );
+    const parsed = JSON.parse(atob(padded)) as { email?: string };
+    return String(parsed.email || '').trim();
+  } catch {
+    return '';
+  }
+}
+
+export function HarloInviteHint({ email }: { email?: string }) {
   return (
     <div className="mb-4 rounded-[12px] border border-[#D6E0FF] bg-[#F4F7FF] px-3 py-3 text-[13px] leading-5 text-[#3A4660]">
-      You were invited to a workspace. Sign in or create an account with the
-      invited email to join.
+      {email
+        ? `You were invited to a workspace. Continue with ${email} to join.`
+        : 'You were invited to a workspace. Sign in or create an account with the invited email to join.'}
     </div>
   );
 }
