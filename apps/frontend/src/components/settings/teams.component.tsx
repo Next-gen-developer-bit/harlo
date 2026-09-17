@@ -8,7 +8,10 @@ import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useRouter } from 'next/navigation';
-import { useOrganizations } from '@gitroom/frontend/components/layout/use.organizations';
+import {
+  useOrganizations,
+  type UserOrganization,
+} from '@gitroom/frontend/components/layout/use.organizations';
 import { useClickAway } from '@uidotdev/usehooks';
 import clsx from 'clsx';
 import {
@@ -368,14 +371,12 @@ const CreateTeamModal = ({
   const workspaceRef = useClickAway<HTMLDivElement>(() => setWorkspaceOpen(false));
   const accountRef = useClickAway<HTMLDivElement>(() => setAccountOpen(false));
 
-  const workspaceOptions = useMemo(
-    () =>
-      (organizations || []).map((org: { id: string; name: string }) => ({
-        id: org.id,
-        name: org.name,
-      })),
-    [organizations]
-  );
+  const workspaceOptions = useMemo((): UserOrganization[] => {
+    return (organizations || []).map((org) => ({
+      id: org.id,
+      name: org.name,
+    }));
+  }, [organizations]);
 
   const availableAccounts = integrations.filter(
     (item) => !selectedAccounts.includes(item.id)
