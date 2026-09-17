@@ -1,11 +1,6 @@
 'use client';
 
-import React, {
-  FC,
-  useCallback,
-  useMemo,
-  useState,
-} from 'react';
+import React, { FC, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
@@ -285,7 +280,9 @@ const NavItem: FC<{
 }> = ({ icon, label, path, match }) => {
   const pathname = usePathname();
   const search = useSearchParams();
-  const href = search.toString() ? `${pathname}?${search.toString()}` : pathname;
+  const href = search.toString()
+    ? `${pathname}?${search.toString()}`
+    : pathname;
   const isActive = match ? match(href) : pathname === path;
 
   return (
@@ -476,8 +473,19 @@ const CreateWorkspaceModal: FC<{
         <div className="cwm-card" onClick={(e) => e.stopPropagation()}>
           <div className="cwm-header">
             <div className="cwm-icon-ring">
-              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              <svg
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                />
               </svg>
             </div>
             <div className="cwm-title">Create Workspace</div>
@@ -504,7 +512,11 @@ const CreateWorkspaceModal: FC<{
             </div>
           </div>
           <div className="cwm-footer">
-            <button className="cwm-btn cwm-btn-cancel" onClick={onClose} disabled={loading}>
+            <button
+              className="cwm-btn cwm-btn-cancel"
+              onClick={onClose}
+              disabled={loading}
+            >
               Cancel
             </button>
             <button
@@ -521,7 +533,6 @@ const CreateWorkspaceModal: FC<{
   );
 };
 
-
 export const Sidebar: FC = () => {
   const router = useRouter();
   const modals = useModals();
@@ -532,11 +543,16 @@ export const Sidebar: FC = () => {
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
 
-  const workspaceRef = useClickAway<HTMLDivElement>(() => setWorkspaceOpen(false));
+  const workspaceRef = useClickAway<HTMLDivElement>(() =>
+    setWorkspaceOpen(false)
+  );
   const accountRef = useClickAway<HTMLDivElement>(() => setAccountOpen(false));
 
   const otherWorkspaces = useMemo(
-    () => (organizations || []).filter((org: { id: string }) => org.id !== user?.orgId),
+    () =>
+      (organizations || []).filter(
+        (org: { id: string }) => org.id !== user?.orgId
+      ),
     [organizations, user?.orgId]
   );
 
@@ -546,7 +562,8 @@ export const Sidebar: FC = () => {
       closeOnClickOutside: true,
       withCloseButton: false,
       classNames: {
-        modal: 'w-[95%] max-w-[1000px] text-textColor p-0 bg-transparent shadow-none',
+        modal:
+          'w-[95%] max-w-[1000px] text-textColor p-0 bg-transparent shadow-none',
       },
       children: <CreatePostModal />,
     });
@@ -629,8 +646,12 @@ export const Sidebar: FC = () => {
                 <img src="/harlo-icon-dark.png" alt="" />
               </div>
               <div className="pb-ws-info">
-                <div className="pb-ws-name">{user?.orgName || 'My Workspace'}</div>
-                <div className="pb-ws-plan">{planLabel(user?.tier?.current)} Plan</div>
+                <div className="pb-ws-name">
+                  {user?.orgName || 'My Workspace'}
+                </div>
+                <div className="pb-ws-plan">
+                  {planLabel(user?.tier?.current)} Plan
+                </div>
               </div>
             </button>
             <button
@@ -638,13 +659,26 @@ export const Sidebar: FC = () => {
               onClick={() => setWorkspaceOpen((open) => !open)}
               aria-label="Switch workspace"
             >
-              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              <svg
+                className="w-4 h-4 text-slate-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </button>
           </div>
           {workspaceOpen && (
-            <div className="pb-menu" style={{ top: '100%', left: 14, right: 14 }}>
+            <div
+              className="pb-menu"
+              style={{ top: '100%', left: 14, right: 14 }}
+            >
               <div className="pb-menu-label">Workspaces</div>
               {otherWorkspaces.map((org: { id: string; name: string }) => (
                 <button key={org.id} onClick={changeWorkspace(org.id)}>
@@ -659,8 +693,18 @@ export const Sidebar: FC = () => {
         {/* Create Post CTA */}
         <div className="pb-create-wrap">
           <button className="pb-create-btn" onClick={handleCreatePost}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+                d="M12 4v16m8-8H4"
+              />
             </svg>
             Create Post
           </button>
@@ -676,7 +720,12 @@ export const Sidebar: FC = () => {
               label="Bulk Tools"
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 002-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 002-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
                 </svg>
               }
             />
@@ -694,7 +743,12 @@ export const Sidebar: FC = () => {
               }
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
                 </svg>
               }
             />
@@ -704,7 +758,12 @@ export const Sidebar: FC = () => {
               match={(p) => p.includes('state=all')}
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                  />
                 </svg>
               }
             />
@@ -714,7 +773,12 @@ export const Sidebar: FC = () => {
               match={(p) => p.includes('state=scheduled')}
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               }
             />
@@ -724,7 +788,12 @@ export const Sidebar: FC = () => {
               match={(p) => p.includes('state=published')}
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               }
             />
@@ -734,7 +803,12 @@ export const Sidebar: FC = () => {
               match={(p) => p.includes('state=failed')}
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                  />
                 </svg>
               }
             />
@@ -744,7 +818,12 @@ export const Sidebar: FC = () => {
               match={(p) => p.includes('state=draft')}
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
                 </svg>
               }
             />
@@ -753,7 +832,12 @@ export const Sidebar: FC = () => {
               label="Analytics"
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 012-2h2a2 2 0 012 2v64 4 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 19v-6a2 2 0 012-2h2a2 2 0 012 2v64 4 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v12"
+                  />
                 </svg>
               }
             />
@@ -767,7 +851,32 @@ export const Sidebar: FC = () => {
               label="Social Accounts"
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                  />
+                </svg>
+              }
+            />
+            <NavItem
+              path="/integrations"
+              label="Integrations"
+              icon={
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8.5 12a3.5 3.5 0 015-3.03M15.5 12a3.5 3.5 0 01-5 3.03M9 7l1.5 2L8 10m7 4l1 2.5L13.5 16"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 3a9 9 0 110 18 9 9 0 010-18z"
+                  />
                 </svg>
               }
             />
@@ -776,7 +885,12 @@ export const Sidebar: FC = () => {
               label="Teams"
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
                 </svg>
               }
             />
@@ -790,8 +904,18 @@ export const Sidebar: FC = () => {
               label="Settings"
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
                 </svg>
               }
             />
@@ -800,7 +924,12 @@ export const Sidebar: FC = () => {
               label="API Keys"
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                  />
                 </svg>
               }
             />
@@ -809,7 +938,12 @@ export const Sidebar: FC = () => {
               label="Billing"
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  />
                 </svg>
               }
             />
@@ -818,11 +952,16 @@ export const Sidebar: FC = () => {
           {/* Support */}
           <div className="pb-group">
             <div className="pb-sec">Support</div>
-            
+
             <button className="pb-nav" onClick={openFeedback}>
               <span className="pb-nav-icon">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                  />
                 </svg>
               </span>
               <span>Share Feedback</span>
@@ -833,7 +972,12 @@ export const Sidebar: FC = () => {
               label="Referral"
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               }
             />
@@ -843,7 +987,12 @@ export const Sidebar: FC = () => {
               label="Docs"
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                  />
                 </svg>
               }
             />
@@ -851,22 +1000,48 @@ export const Sidebar: FC = () => {
         </div>
 
         {/* User Profile Footer */}
-        <div className="pb-user-footer" ref={accountRef} onClick={() => setAccountOpen((open) => !open)}>
+        <div
+          className="pb-user-footer"
+          ref={accountRef}
+          onClick={() => setAccountOpen((open) => !open)}
+        >
           <img
-            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.email || user?.name || 'Harlo Social')}`}
+            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+              user?.email || user?.name || 'Harlo Social'
+            )}`}
             alt="User"
             className="pb-user-avatar"
           />
           <div className="pb-user-info">
-            <div className="pb-user-name">{user?.name || user?.email || 'Account'}</div>
-            <div className="pb-user-email">{planLabel(user?.tier?.current)} Plan</div>
+            <div className="pb-user-name">
+              {user?.name || user?.email || 'Account'}
+            </div>
+            <div className="pb-user-email">
+              {planLabel(user?.tier?.current)} Plan
+            </div>
           </div>
-          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+          <svg
+            className="w-4 h-4 text-slate-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
           {accountOpen && (
-            <div className="pb-menu" style={{ bottom: '100%', left: 14, right: 14 }}>
-              <Link href="/settings" onClick={(event) => event.stopPropagation()}>
+            <div
+              className="pb-menu"
+              style={{ bottom: '100%', left: 14, right: 14 }}
+            >
+              <Link
+                href="/settings"
+                onClick={(event) => event.stopPropagation()}
+              >
                 Profile
               </Link>
               <button

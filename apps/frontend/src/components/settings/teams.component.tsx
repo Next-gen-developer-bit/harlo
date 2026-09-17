@@ -14,6 +14,7 @@ import {
 } from '@gitroom/frontend/components/layout/use.organizations';
 import { useClickAway } from '@uidotdev/usehooks';
 import clsx from 'clsx';
+import copy from 'copy-to-clipboard';
 import {
   PLATFORM_LABELS,
   channelKindLabel,
@@ -60,7 +61,9 @@ const roleClass = (role?: string) => {
 };
 
 const memberName = (member: TeamMember) => {
-  const full = [member.user.name, member.user.lastName].filter(Boolean).join(' ');
+  const full = [member.user.name, member.user.lastName]
+    .filter(Boolean)
+    .join(' ');
   return full || member.user.email.split('@')[0];
 };
 
@@ -104,18 +107,26 @@ export const TeamsComponent = () => {
   const { data, mutate } = useSWR('/api/teams', loadTeam, {
     revalidateOnFocus: true,
   });
-  const { data: integrations } = useSWR(
-    'connections-list',
-    loadIntegrations,
-    { revalidateOnFocus: true }
-  );
+  const { data: integrations } = useSWR('connections-list', loadIntegrations, {
+    revalidateOnFocus: true,
+  });
 
   const isGated = user?.tier?.current === 'FREE' || !user?.tier?.team_members;
   const members = data || [];
-  const invitedMembers = members.filter((member) => member.user.id !== user?.id);
+  const invitedMembers = members.filter(
+    (member) => member.user.id !== user?.id
+  );
   const hasTeam = invitedMembers.length > 0;
   const query = searchQuery.toLowerCase().trim();
-  const visible = !query || (user?.orgName || 'Workspace').toLowerCase().includes(query);
+  const visible =
+    !query ||
+    (user?.orgName || 'Workspace').toLowerCase().includes(query) ||
+    members.some((member) =>
+      [memberName(member), member.user.email]
+        .join(' ')
+        .toLowerCase()
+        .includes(query)
+    );
 
   const openCreateTeam = useCallback(() => {
     modals.openModal({
@@ -146,9 +157,13 @@ export const TeamsComponent = () => {
       ) {
         return;
       }
-      await fetch(`/settings/team/${toRemove.user.id}`, {
+      const response = await fetch(`/settings/team/${toRemove.user.id}`, {
         method: 'DELETE',
       });
+      if (!response.ok) {
+        toast.show('Could not remove this member', 'warning');
+        return;
+      }
       toast.show('Member removed', 'success');
       await mutate();
     },
@@ -195,8 +210,18 @@ export const TeamsComponent = () => {
               onClick={openCreateTeam}
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm whitespace-nowrap"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.5"
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
               New team
             </button>
@@ -227,7 +252,12 @@ export const TeamsComponent = () => {
         {!hasTeam || !visible ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-16">
             <div className="w-24 h-24 mb-5 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
-              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-12 h-12"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -368,7 +398,9 @@ const CreateTeamModal = ({
   const [accountOpen, setAccountOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const workspaceRef = useClickAway<HTMLDivElement>(() => setWorkspaceOpen(false));
+  const workspaceRef = useClickAway<HTMLDivElement>(() =>
+    setWorkspaceOpen(false)
+  );
   const accountRef = useClickAway<HTMLDivElement>(() => setAccountOpen(false));
 
   const workspaceOptions = useMemo((): UserOrganization[] => {
@@ -412,34 +444,55 @@ const CreateTeamModal = ({
   };
 
   const submit = async () => {
-    if (!name.trim()) {
-      toast.show('Enter a team name', 'warning');
+    if (!pendingInvites.length) {
+      toast.show('Add at least one member to invite', 'warning');
       return;
     }
     setLoading(true);
     try {
+      let allEmailsSent = true;
+      let emailConfigured = true;
+      const inviteLinks: string[] = [];
       for (const invite of pendingInvites) {
         const response = await fetch('/settings/team', {
           method: 'POST',
           body: JSON.stringify({
             email: invite.email,
-            role: requireApproval ? 'USER' : invite.role,
+            role: invite.role,
             sendEmail: true,
           }),
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-          toast.show(payload?.message || `Failed to invite ${invite.email}`, 'warning');
+          toast.show(
+            payload?.message || `Failed to invite ${invite.email}`,
+            'warning'
+          );
           setLoading(false);
           return;
         }
+        if (payload?.url) {
+          inviteLinks.push(payload.url);
+        }
+        allEmailsSent = allEmailsSent && Boolean(payload?.emailed);
+        emailConfigured = emailConfigured && Boolean(payload?.emailConfigured);
       }
-      toast.show(
-        pendingInvites.length
-          ? 'Team updated and invitations sent'
-          : 'Team saved',
-        'success'
-      );
+      if (inviteLinks.length) {
+        copy(inviteLinks.join('\n'));
+      }
+      if (allEmailsSent) {
+        toast.show('Team invitations sent and links copied', 'success');
+      } else if (emailConfigured) {
+        toast.show(
+          'Some emails could not be sent. The invitation link was copied.',
+          'warning'
+        );
+      } else {
+        toast.show(
+          'Email is not configured. The invitation link was copied.',
+          'warning'
+        );
+      }
       await onCreated();
     } catch {
       toast.show('Failed to create team', 'warning');
@@ -449,16 +502,53 @@ const CreateTeamModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/40 flex items-start justify-center overflow-y-auto px-4 py-10" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[200] bg-black/40 flex items-start justify-center overflow-y-auto px-4 py-10"
+      onClick={onClose}
+    >
       <div
-        className="w-full max-w-[640px] bg-white rounded-2xl shadow-2xl my-auto"
+        className="my-auto w-full max-w-[680px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
         onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-team-title"
       >
-        <div className="px-6 pt-6 pb-4 border-b border-slate-100">
-          <h2 className="text-xl font-bold text-slate-900">Create team</h2>
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 pb-4 pt-6">
+          <h2
+            id="create-team-title"
+            className="text-xl font-bold text-slate-900"
+          >
+            Create team
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Close create team"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
         </div>
 
         <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-3 text-xs leading-5 text-blue-700">
+            Member invitations are applied to{' '}
+            <strong>{user?.orgName || 'the current workspace'}</strong>. Team
+            naming and scoped workspace/account access are currently a setup
+            preview.
+          </div>
           <label className="block">
             <span className="block text-sm font-medium text-slate-700 mb-1.5">
               Team name
@@ -467,7 +557,8 @@ const CreateTeamModal = ({
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Growth Team"
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500"
+              disabled
+              className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
             />
           </label>
 
@@ -480,7 +571,8 @@ const CreateTeamModal = ({
               maxLength={500}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="For marketers and collaborators managing content, campaigns and approvals across Harlo Social."
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 min-h-[88px] resize-none focus:outline-none focus:border-blue-500"
+              disabled
+              className="min-h-[88px] w-full cursor-not-allowed resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
             />
             <div className="text-right text-[11px] text-slate-400 mt-1">
               {description.length}/500
@@ -490,7 +582,10 @@ const CreateTeamModal = ({
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className="text-sm font-medium text-slate-800">
-                Require approval before publishing
+                Require approval before publishing{' '}
+                <span className="text-[10px] font-semibold text-slate-400">
+                  Coming soon
+                </span>
               </div>
               <div className="text-xs text-slate-500 mt-0.5">
                 Posts from this team will need to be approved before going live.
@@ -499,8 +594,9 @@ const CreateTeamModal = ({
             <button
               type="button"
               onClick={() => setRequireApproval((value) => !value)}
+              disabled
               className={clsx(
-                'w-11 h-6 rounded-full relative transition-colors',
+                'w-11 h-6 rounded-full relative transition-colors cursor-not-allowed opacity-60',
                 requireApproval ? 'bg-blue-600' : 'bg-slate-200'
               )}
               aria-pressed={requireApproval}
@@ -523,7 +619,8 @@ const CreateTeamModal = ({
                 <button
                   type="button"
                   onClick={() => setWorkspaceOpen((value) => !value)}
-                  className="text-sm text-slate-500 border border-slate-200 rounded-lg px-3 py-1.5"
+                  disabled
+                  className="cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-400"
                 >
                   Select workspaces
                 </button>
@@ -538,7 +635,9 @@ const CreateTeamModal = ({
                       >
                         <span>{org.name}</span>
                         {selectedWorkspaces.includes(org.id) && (
-                          <span className="text-blue-600 text-xs">Selected</span>
+                          <span className="text-blue-600 text-xs">
+                            Selected
+                          </span>
                         )}
                       </button>
                     ))}
@@ -581,7 +680,8 @@ const CreateTeamModal = ({
                 <button
                   type="button"
                   onClick={() => setAccountOpen((value) => !value)}
-                  className="text-sm text-slate-500 border border-slate-200 rounded-lg px-3 py-1.5"
+                  disabled
+                  className="cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-400"
                 >
                   Add account
                 </button>
@@ -597,7 +697,10 @@ const CreateTeamModal = ({
                           key={account.id}
                           type="button"
                           onClick={() => {
-                            setSelectedAccounts((current) => [...current, account.id]);
+                            setSelectedAccounts((current) => [
+                              ...current,
+                              account.id,
+                            ]);
                             setAccountOpen(false);
                           }}
                           className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
@@ -638,7 +741,9 @@ const CreateTeamModal = ({
                         </div>
                         <div className="text-xs text-slate-400">
                           {channelKindLabel(account.identifier) ||
-                            PLATFORM_LABELS[platformFamily(account.identifier)] ||
+                            PLATFORM_LABELS[
+                              platformFamily(account.identifier)
+                            ] ||
                             platformFamily(account.identifier)}
                         </div>
                       </div>
@@ -650,8 +755,9 @@ const CreateTeamModal = ({
                           current.filter((id) => id !== account.id)
                         )
                       }
-                      className="text-slate-400 hover:text-slate-700 px-1"
-                      aria-label="Remove account"
+                      disabled
+                      className="cursor-not-allowed px-1 text-slate-300"
+                      aria-label="Account scope is coming soon"
                     >
                       ⋮
                     </button>
@@ -761,6 +867,7 @@ const CreateTeamModal = ({
                         )
                       }
                       className="text-slate-400 hover:text-slate-700"
+                      aria-label={`Remove invitation for ${invite.email}`}
                     >
                       ×
                     </button>
@@ -771,7 +878,7 @@ const CreateTeamModal = ({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+        <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
           <button
             type="button"
             onClick={onClose}
@@ -785,7 +892,7 @@ const CreateTeamModal = ({
             disabled={loading}
             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2.5 rounded-xl"
           >
-            {loading ? 'Creating…' : 'Create team'}
+            {loading ? 'Sending…' : 'Send invitations'}
           </button>
         </div>
       </div>

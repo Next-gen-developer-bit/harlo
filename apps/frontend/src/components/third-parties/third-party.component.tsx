@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useClickAway } from '@uidotdev/usehooks';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { useRouter } from 'next/navigation';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
@@ -57,12 +58,13 @@ const accountHandle = (account: any) => {
 
 export const ThirdPartyComponent = () => {
   const fetch = useFetch();
+  const router = useRouter();
   const toaster = useToaster();
   const user = useUser();
   const { data: organizations } = useOrganizations();
   const [searchQuery, setSearchQuery] = useState('');
   const [platformFilter, setPlatformFilter] = useState('all');
-  const [workspaceFilter, setWorkspaceFilter] = useState('all');
+  const [workspaceFilter, setWorkspaceFilter] = useState('current');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const loadIntegrations = useCallback(async () => {
@@ -74,11 +76,11 @@ export const ThirdPartyComponent = () => {
     }
   }, [fetch]);
 
-  const { data: connectedIntegrations, mutate } = useSWR(
-    'connections-list',
-    loadIntegrations,
-    { revalidateOnFocus: true }
-  );
+  const {
+    data: connectedIntegrations,
+    isLoading,
+    mutate,
+  } = useSWR('connections-list', loadIntegrations, { revalidateOnFocus: true });
 
   const connectAccount = useAddProvider(() => mutate());
   const connectedList = connectedIntegrations || [];
@@ -86,7 +88,9 @@ export const ThirdPartyComponent = () => {
 
   const handleDisconnect = useCallback(
     async (id: string, name: string) => {
-      if (!(await deleteDialog(`Are you sure you want to disconnect ${name}?`))) {
+      if (
+        !(await deleteDialog(`Are you sure you want to disconnect ${name}?`))
+      ) {
         return;
       }
       try {
@@ -110,7 +114,9 @@ export const ThirdPartyComponent = () => {
   const startOAuth = useCallback(
     async (identifier: string, refresh?: string) => {
       const params = refresh ? `?refresh=${encodeURIComponent(refresh)}` : '';
-      const oauthRes = await fetch(`/integrations/social/${identifier}${params}`);
+      const oauthRes = await fetch(
+        `/integrations/social/${identifier}${params}`
+      );
       const data = await oauthRes.json();
       if (data?.url) {
         window.location.href = data.url;
@@ -121,10 +127,32 @@ export const ThirdPartyComponent = () => {
     [fetch, toaster]
   );
 
+  const setAccountEnabled = useCallback(
+    async (id: string, enabled: boolean) => {
+      const response = await fetch(
+        `/integrations/${enabled ? 'enable' : 'disable'}`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ id }),
+        }
+      );
+      if (!response.ok) {
+        toaster.show(
+          `Could not ${enabled ? 'enable' : 'disable'} this account`,
+          'warning'
+        );
+        return;
+      }
+      toaster.show(`Account ${enabled ? 'enabled' : 'disabled'}`, 'success');
+      await mutate();
+    },
+    [fetch, mutate, toaster]
+  );
+
   const changeWorkspace = useCallback(
     async (id: string) => {
-      if (!id || id === user?.orgId) {
-        setWorkspaceFilter(id || 'all');
+      if (!id || id === 'current' || id === user?.orgId) {
+        setWorkspaceFilter('current');
         return;
       }
       await fetch('/user/change-org', {
@@ -166,12 +194,9 @@ export const ThirdPartyComponent = () => {
   }, [connectedList, platformFilter, searchQuery]);
 
   const groupedAccounts = useMemo(() => {
-    const groups = new Map<string, any[]>();
-    for (const account of filteredAccounts) {
-      const key = account.customer?.name || workspaceName;
-      groups.set(key, [...(groups.get(key) || []), account]);
-    }
-    return Array.from(groups.entries());
+    return filteredAccounts.length
+      ? ([[workspaceName, filteredAccounts]] as Array<[string, any[]]>)
+      : [];
   }, [filteredAccounts, workspaceName]);
 
   return (
@@ -194,8 +219,18 @@ export const ThirdPartyComponent = () => {
           onClick={connectAccount}
           className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm shrink-0"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2.5"
+              d="M12 4v16m8-8H4"
+            />
           </svg>
           Connect Account
         </button>
@@ -221,7 +256,7 @@ export const ThirdPartyComponent = () => {
               />
             ))}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
             <div className="relative w-full sm:w-56">
               <svg
                 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"
@@ -248,20 +283,22 @@ export const ThirdPartyComponent = () => {
               value={workspaceFilter}
               onChange={(event) => {
                 const value = event.target.value;
-                if (value === 'all') {
-                  setWorkspaceFilter('all');
+                if (value === 'current') {
+                  setWorkspaceFilter('current');
                   return;
                 }
                 changeWorkspace(value);
               }}
-              className="bg-white border border-slate-200 text-sm font-medium text-slate-700 px-3 py-2 rounded-xl focus:outline-none min-w-[160px]"
+              className="min-w-[160px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none"
             >
-              <option value="all">All workspaces</option>
-              {(organizations || []).map((org: { id: string; name: string }) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
+              <option value="current">Current: {workspaceName}</option>
+              {(organizations || [])
+                .filter((org: { id: string }) => org.id !== user?.orgId)
+                .map((org: { id: string; name: string }) => (
+                  <option key={org.id} value={org.id}>
+                    Switch to {org.name}
+                  </option>
+                ))}
             </select>
           </div>
         </div>
@@ -279,7 +316,17 @@ export const ThirdPartyComponent = () => {
               </tr>
             </thead>
             <tbody>
-              {groupedAccounts.length === 0 && (
+              {isLoading && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-5 py-16 text-center text-sm text-slate-400"
+                  >
+                    Loading connected accounts…
+                  </td>
+                </tr>
+              )}
+              {!isLoading && groupedAccounts.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-5 py-16 text-center">
                     <div className="text-sm font-semibold text-slate-900 mb-1">
@@ -305,7 +352,9 @@ export const ThirdPartyComponent = () => {
                         <div
                           className={clsx(
                             'w-7 h-7 rounded-full text-white text-[11px] font-bold flex items-center justify-center',
-                            AVATAR_COLORS[groupName.length % AVATAR_COLORS.length]
+                            AVATAR_COLORS[
+                              groupName.length % AVATAR_COLORS.length
+                            ]
                           )}
                         >
                           {initials(groupName)}
@@ -324,6 +373,8 @@ export const ThirdPartyComponent = () => {
                     const kind = channelKindLabel(account.identifier);
                     const status = account.refreshNeeded
                       ? 'Reconnect'
+                      : account.inBetweenSteps
+                      ? 'Setup required'
                       : account.disabled
                       ? 'Disabled'
                       : 'Connected';
@@ -424,6 +475,18 @@ export const ThirdPartyComponent = () => {
                                     )
                                 : undefined
                             }
+                            onContinue={
+                              account.inBetweenSteps
+                                ? () =>
+                                    router.push(
+                                      `/launches?added=${account.identifier}&continue=${account.id}`
+                                    )
+                                : undefined
+                            }
+                            enabled={!account.disabled}
+                            onToggleEnabled={() =>
+                              setAccountEnabled(account.id, account.disabled)
+                            }
                             onDisconnect={() =>
                               handleDisconnect(account.id, account.name)
                             }
@@ -458,7 +521,7 @@ const FilterChip = ({
   <button
     onClick={onClick}
     className={clsx(
-      'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm border transition-colors',
+      'inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm border transition-colors',
       active
         ? 'bg-blue-50 border-blue-200 text-blue-700 font-semibold'
         : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -466,7 +529,9 @@ const FilterChip = ({
   >
     {icon && <img src={icon} alt="" className="w-3.5 h-3.5 object-contain" />}
     {label}
-    <span className={clsx('text-xs', active ? 'text-blue-500' : 'text-slate-400')}>
+    <span
+      className={clsx('text-xs', active ? 'text-blue-500' : 'text-slate-400')}
+    >
       {count}
     </span>
   </button>
@@ -477,12 +542,18 @@ const AccountActions = ({
   onToggle,
   onClose,
   onReconnect,
+  onContinue,
+  enabled,
+  onToggleEnabled,
   onDisconnect,
 }: {
   open: boolean;
   onToggle: () => void;
   onClose: () => void;
   onReconnect?: () => void;
+  onContinue?: () => void;
+  enabled: boolean;
+  onToggleEnabled: () => void;
   onDisconnect: () => void;
 }) => {
   const ref = useClickAway<HTMLDivElement>(() => {
@@ -515,6 +586,26 @@ const AccountActions = ({
               Reconnect
             </button>
           )}
+          {onContinue && (
+            <button
+              className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-blue-50"
+              onClick={() => {
+                onClose();
+                onContinue();
+              }}
+            >
+              Complete setup
+            </button>
+          )}
+          <button
+            className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+            onClick={() => {
+              onClose();
+              onToggleEnabled();
+            }}
+          >
+            {enabled ? 'Disable' : 'Enable'}
+          </button>
           <button
             className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50"
             onClick={() => {
