@@ -59,14 +59,16 @@ export function Login() {
           if (cancelled) {
             return;
           }
-          if (login.status === 400) {
+          if (!login.ok) {
             setError((await login.text()) || 'Could not sign in with Google');
             setLoading(false);
             return;
           }
-          if (login.ok && redirectAfterAuth(login)) {
+          if (redirectAfterAuth(login)) {
             return;
           }
+          window.location.href = '/overview';
+          return;
         }
 
         // Try Supabase Auth exchange
@@ -79,14 +81,16 @@ export function Login() {
           if (cancelled) {
             return;
           }
-          if (login.status === 400) {
+          if (!login.ok) {
             setError((await login.text()) || 'Could not sign in with Google');
             setLoading(false);
             return;
           }
-          if (login.ok && redirectAfterAuth(login)) {
+          if (redirectAfterAuth(login)) {
             return;
           }
+          window.location.href = '/overview';
+          return;
         } catch (supabaseErr) {
           // If not direct Google code, try backend Google exchange as fallback
           if (!isDirectGoogleCode) {
@@ -101,7 +105,11 @@ export function Login() {
             if (cancelled) {
               return;
             }
-            if (login.ok && redirectAfterAuth(login)) {
+            if (login.ok) {
+              if (redirectAfterAuth(login)) {
+                return;
+              }
+              window.location.href = '/overview';
               return;
             }
           }

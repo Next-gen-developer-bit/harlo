@@ -198,7 +198,7 @@ export function useHarloAuthRedirect() {
         }`;
         return true;
       }
-      if (response.headers.get('reload')) {
+      if (response.headers.get('reload') || response.ok) {
         window.location.href = `${app}/overview`;
         return true;
       }
