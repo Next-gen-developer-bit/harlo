@@ -125,7 +125,12 @@ export function HarloGoogleButton() {
     } catch {
       // Fall back to the Nest Google OAuth client if Supabase Auth is not set.
     }
-    const link = await (await fetchData('/auth/oauth/GOOGLE')).text();
+    const redirectUri = `${window.location.origin}/login`;
+    const link = await (
+      await fetchData(
+        `/auth/oauth/GOOGLE?redirect_uri=${encodeURIComponent(redirectUri)}`
+      )
+    ).text();
     window.location.href = link;
   }, [fetchData]);
 

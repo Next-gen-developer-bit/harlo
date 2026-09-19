@@ -32,6 +32,7 @@ export function Login() {
 
   useEffect(() => {
     const code = searchParams?.get('code');
+    const state = searchParams?.get('state');
     if (!code) {
       return;
     }
@@ -40,22 +41,73 @@ export function Login() {
       setLoading(true);
       setError('');
       try {
-        const accessToken = await exchangeSupabaseAuthCode(code);
-        const login = await fetchData('/auth/oauth/supabase', {
-          method: 'POST',
-          body: JSON.stringify({ accessToken }),
-        });
-        if (cancelled) {
-          return;
+        const redirectUri = `${window.location.origin}/login`;
+        const isDirectGoogleCode =
+          state === 'login' ||
+          code.startsWith('4/') ||
+          searchParams?.get('iss')?.includes('google');
+
+        if (isDirectGoogleCode) {
+          const login = await fetchData('/auth/oauth/google', {
+            method: 'POST',
+            body: JSON.stringify({
+              code,
+              redirect_uri: redirectUri,
+              ...(inviteToken ? { org: inviteToken } : {}),
+            }),
+          });
+          if (cancelled) {
+            return;
+          }
+          if (login.status === 400) {
+            setError((await login.text()) || 'Could not sign in with Google');
+            setLoading(false);
+            return;
+          }
+          if (login.ok && redirectAfterAuth(login)) {
+            return;
+          }
         }
-        if (login.status === 400) {
-          setError((await login.text()) || 'Could not sign in with Google');
-          setLoading(false);
-          return;
+
+        // Try Supabase Auth exchange
+        try {
+          const accessToken = await exchangeSupabaseAuthCode(code);
+          const login = await fetchData('/auth/oauth/supabase', {
+            method: 'POST',
+            body: JSON.stringify({ accessToken }),
+          });
+          if (cancelled) {
+            return;
+          }
+          if (login.status === 400) {
+            setError((await login.text()) || 'Could not sign in with Google');
+            setLoading(false);
+            return;
+          }
+          if (login.ok && redirectAfterAuth(login)) {
+            return;
+          }
+        } catch (supabaseErr) {
+          // If not direct Google code, try backend Google exchange as fallback
+          if (!isDirectGoogleCode) {
+            const login = await fetchData('/auth/oauth/google', {
+              method: 'POST',
+              body: JSON.stringify({
+                code,
+                redirect_uri: redirectUri,
+                ...(inviteToken ? { org: inviteToken } : {}),
+              }),
+            });
+            if (cancelled) {
+              return;
+            }
+            if (login.ok && redirectAfterAuth(login)) {
+              return;
+            }
+          }
+          throw supabaseErr;
         }
-        if (login.ok && redirectAfterAuth(login)) {
-          return;
-        }
+
         setError('Could not sign in with Google');
       } catch {
         if (!cancelled) {
@@ -69,7 +121,7 @@ export function Login() {
     return () => {
       cancelled = true;
     };
-  }, [fetchData, redirectAfterAuth, searchParams]);
+  }, [fetchData, redirectAfterAuth, searchParams, inviteToken]);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

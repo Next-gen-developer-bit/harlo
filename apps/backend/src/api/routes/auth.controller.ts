@@ -263,6 +263,73 @@ export class AuthController {
     }
   }
 
+  @Post('/oauth/google')
+  async googleOauth(
+    @Req() req: Request,
+    @Body('code') code: string,
+    @Body('redirect_uri') redirect_uri: string,
+    @Res({ passthrough: false }) response: Response,
+    @RealIP() ip: string,
+    @UserAgent() userAgent: string
+  ) {
+    try {
+      const getOrgFromCookie = this._authService.getOrgFromCookie(
+        req?.cookies?.org ||
+          (typeof (req.body as { org?: string })?.org === 'string'
+            ? (req.body as { org?: string }).org
+            : undefined)
+      );
+      const { jwt, addedOrg } = await this._authService.routeGoogleAuthCode(
+        code,
+        redirect_uri,
+        ip,
+        userAgent,
+        getOrgFromCookie
+      );
+
+      response.cookie('auth', jwt, {
+        domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+        ...(!process.env.NOT_SECURED
+          ? {
+              secure: true,
+              httpOnly: true,
+              sameSite: 'none',
+            }
+          : {}),
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+      });
+
+      if (process.env.NOT_SECURED) {
+        response.header('auth', jwt);
+      }
+
+      if (typeof addedOrg !== 'boolean' && addedOrg?.organizationId) {
+        response.cookie('showorg', addedOrg.organizationId, {
+          domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+          ...(!process.env.NOT_SECURED
+            ? {
+                secure: true,
+                httpOnly: true,
+                sameSite: 'none',
+              }
+            : {}),
+          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+        });
+
+        if (process.env.NOT_SECURED) {
+          response.header('showorg', addedOrg.organizationId);
+        }
+      }
+
+      response.header('reload', 'true');
+      response.status(200).json({
+        login: true,
+      });
+    } catch (e: any) {
+      response.status(400).send(e.message);
+    }
+  }
+
   @Post('/forgot')
   async forgot(@Body() body: ForgotPasswordDto) {
     try {

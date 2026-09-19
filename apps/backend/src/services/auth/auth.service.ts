@@ -334,6 +334,35 @@ export class AuthService {
     };
   }
 
+  async routeGoogleAuthCode(
+    code: string,
+    redirectUri: string,
+    ip: string,
+    userAgent: string,
+    addToOrg?:
+      | boolean
+      | { orgId: string; role: 'USER' | 'ADMIN'; id: string; email?: string }
+  ) {
+    const providerInstance = this._providerManager.getProvider('GOOGLE');
+    const token = await providerInstance.getToken(code, redirectUri);
+    const providerUser = await providerInstance.getUser(token);
+    if (!providerUser || !providerUser.email) {
+      throw new Error('Could not get Google user info');
+    }
+
+    const user = await this.loginOrRegisterKnownUser(
+      Provider.GOOGLE,
+      providerUser,
+      ip,
+      userAgent
+    );
+
+    return {
+      addedOrg: await this.maybeAddToOrg(user, addToOrg),
+      jwt: await this.jwt(user),
+    };
+  }
+
   private async loginOrRegisterKnownUser(
     provider: Provider,
     providerUser: { id: string; email: string },
@@ -346,6 +375,13 @@ export class AuthService {
     );
     if (user) {
       return user;
+    }
+
+    const existingByEmail = await this._userService.getUserByEmail(
+      providerUser.email
+    );
+    if (existingByEmail) {
+      return existingByEmail;
     }
 
     if (!(await this.canRegister(provider))) {
