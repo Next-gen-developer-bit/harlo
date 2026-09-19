@@ -70,3 +70,5 @@ apps/frontend/public/g.js
 .pnpm-store/
 .tmp/
 apps/backend/undefined/
+.vercel
+.env*

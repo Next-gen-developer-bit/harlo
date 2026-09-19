@@ -92,27 +92,6 @@ export function Login() {
           window.location.href = '/overview';
           return;
         } catch (supabaseErr) {
-          // If not direct Google code, try backend Google exchange as fallback
-          if (!isDirectGoogleCode) {
-            const login = await fetchData('/auth/oauth/google', {
-              method: 'POST',
-              body: JSON.stringify({
-                code,
-                redirect_uri: redirectUri,
-                ...(inviteToken ? { org: inviteToken } : {}),
-              }),
-            });
-            if (cancelled) {
-              return;
-            }
-            if (login.ok) {
-              if (redirectAfterAuth(login)) {
-                return;
-              }
-              window.location.href = '/overview';
-              return;
-            }
-          }
           throw supabaseErr;
         }
 

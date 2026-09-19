@@ -14,15 +14,15 @@ export function getSupabaseAuthClient() {
   if (!client) {
     client = createClient(url, key, {
       auth: {
-        persistSession: false,
+        // persistSession MUST be true so the SDK uses localStorage
+        // for the PKCE code_verifier.  When false, Supabase ignores
+        // the storage option and uses an in-memory store that is
+        // destroyed during the full-page redirect to Google.
+        // The persisted Supabase session in localStorage is harmless;
+        // the app manages its own JWT via the backend.
+        persistSession: true,
         flowType: 'pkce',
         detectSessionInUrl: false,
-        // Use localStorage so the PKCE code_verifier survives the
-        // full-page redirect to Google and back.  Without this,
-        // persistSession:false falls back to in-memory storage which
-        // is lost on navigation, causing exchangeCodeForSession to
-        // throw AuthPKCECodeVerifierMissingError.
-        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
       },
     });
   }
