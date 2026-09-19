@@ -16,6 +16,7 @@ import { AuthService } from '@gitroom/backend/services/auth/auth.service';
 import { ForgotReturnPasswordDto } from '@gitroom/nestjs-libraries/dtos/auth/forgot-return.password.dto';
 import { ForgotPasswordDto } from '@gitroom/nestjs-libraries/dtos/auth/forgot.password.dto';
 import { ResendActivationDto } from '@gitroom/nestjs-libraries/dtos/auth/resend-activation.dto';
+import { SupabaseOauthDto } from '@gitroom/nestjs-libraries/dtos/auth/supabase.oauth.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { getCookieUrlFromDomain } from '@gitroom/helpers/subdomain/subdomain.management';
 import { EmailService } from '@gitroom/nestjs-libraries/services/email.service';
@@ -152,6 +153,68 @@ export class AuthController {
       const { jwt, addedOrg } = await this._authService.routeAuth(
         body.provider,
         body,
+        ip,
+        userAgent,
+        getOrgFromCookie
+      );
+
+      response.cookie('auth', jwt, {
+        domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+        ...(!process.env.NOT_SECURED
+          ? {
+              secure: true,
+              httpOnly: true,
+              sameSite: 'none',
+            }
+          : {}),
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+      });
+
+      if (process.env.NOT_SECURED) {
+        response.header('auth', jwt);
+      }
+
+      if (typeof addedOrg !== 'boolean' && addedOrg?.organizationId) {
+        response.cookie('showorg', addedOrg.organizationId, {
+          domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+          ...(!process.env.NOT_SECURED
+            ? {
+                secure: true,
+                httpOnly: true,
+                sameSite: 'none',
+              }
+            : {}),
+          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+        });
+
+        if (process.env.NOT_SECURED) {
+          response.header('showorg', addedOrg.organizationId);
+        }
+      }
+
+      response.header('reload', 'true');
+      response.status(200).json({
+        login: true,
+      });
+    } catch (e: any) {
+      response.status(400).send(e.message);
+    }
+  }
+
+  @Post('/oauth/supabase')
+  async supabaseOauth(
+    @Req() req: Request,
+    @Body() body: SupabaseOauthDto,
+    @Res({ passthrough: false }) response: Response,
+    @RealIP() ip: string,
+    @UserAgent() userAgent: string
+  ) {
+    try {
+      const getOrgFromCookie = this._authService.getOrgFromCookie(
+        req?.cookies?.org
+      );
+      const { jwt, addedOrg } = await this._authService.routeSupabaseGoogle(
+        body.accessToken,
         ip,
         userAgent,
         getOrgFromCookie

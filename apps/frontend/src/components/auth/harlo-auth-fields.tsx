@@ -3,6 +3,7 @@
 import { FormEvent, ReactNode, useCallback, useState } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
+import { startSupabaseGoogleLogin } from '@gitroom/frontend/components/auth/supabase.google';
 
 export function inviteAuthHref(path: string, org?: string | null) {
   if (!org) {
@@ -118,6 +119,12 @@ export function HarloPasswordField({
 export function HarloGoogleButton() {
   const fetchData = useFetch();
   const startGoogle = useCallback(async () => {
+    try {
+      await startSupabaseGoogleLogin();
+      return;
+    } catch {
+      // Fall back to the Nest Google OAuth client if Supabase Auth is not set.
+    }
     const link = await (await fetchData('/auth/oauth/GOOGLE')).text();
     window.location.href = link;
   }, [fetchData]);

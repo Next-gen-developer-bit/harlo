@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
@@ -18,15 +18,58 @@ import {
   useHarloAuthRedirect,
 } from '@gitroom/frontend/components/auth/harlo-auth-fields';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
+import { exchangeSupabaseAuthCode } from '@gitroom/frontend/components/auth/supabase.google';
 
 export function Login() {
   const fetchData = useFetch();
   const redirectAfterAuth = useHarloAuthRedirect();
   const { genericOauth, isGeneral } = useVariables();
-  const inviteToken = useSearchParams()?.get('org');
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams?.get('org');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notActivated, setNotActivated] = useState(false);
+
+  useEffect(() => {
+    const code = searchParams?.get('code');
+    if (!code) {
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const accessToken = await exchangeSupabaseAuthCode(code);
+        const login = await fetchData('/auth/oauth/supabase', {
+          method: 'POST',
+          body: JSON.stringify({ accessToken }),
+        });
+        if (cancelled) {
+          return;
+        }
+        if (login.status === 400) {
+          setError((await login.text()) || 'Could not sign in with Google');
+          setLoading(false);
+          return;
+        }
+        if (login.ok && redirectAfterAuth(login)) {
+          return;
+        }
+        setError('Could not sign in with Google');
+      } catch {
+        if (!cancelled) {
+          setError('Could not sign in with Google');
+        }
+      }
+      if (!cancelled) {
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchData, redirectAfterAuth, searchParams]);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

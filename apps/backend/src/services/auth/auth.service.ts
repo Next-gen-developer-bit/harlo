@@ -312,6 +312,103 @@ export class AuthService {
     return providerInstance.generateLink(query);
   }
 
+  async routeSupabaseGoogle(
+    accessToken: string,
+    ip: string,
+    userAgent: string,
+    addToOrg?:
+      | boolean
+      | { orgId: string; role: 'USER' | 'ADMIN'; id: string; email?: string }
+  ) {
+    const providerUser = await this.getSupabaseAuthUser(accessToken);
+    const user = await this.loginOrRegisterKnownUser(
+      Provider.GOOGLE,
+      providerUser,
+      ip,
+      userAgent
+    );
+
+    return {
+      addedOrg: await this.maybeAddToOrg(user, addToOrg),
+      jwt: await this.jwt(user),
+    };
+  }
+
+  private async loginOrRegisterKnownUser(
+    provider: Provider,
+    providerUser: { id: string; email: string },
+    ip: string,
+    userAgent: string
+  ) {
+    const user = await this._userService.getUserByProvider(
+      providerUser.id,
+      provider
+    );
+    if (user) {
+      return user;
+    }
+
+    if (!(await this.canRegister(provider))) {
+      throw new Error('Registration is disabled');
+    }
+
+    const create = await this._organizationService.createOrgAndUser(
+      {
+        company: '',
+        email: providerUser.email,
+        password: '',
+        provider,
+        providerId: providerUser.id,
+        datafast_visitor_id: '',
+      },
+      ip,
+      userAgent
+    );
+
+    this._track('register', providerUser.email, '').catch(() => {});
+    await NewsletterService.register(providerUser.email);
+
+    return create.users[0].user;
+  }
+
+  private async getSupabaseAuthUser(accessToken: string) {
+    const url = (
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      ''
+    ).replace(/\/+$/, '');
+    const apiKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      '';
+
+    if (!url || !apiKey) {
+      throw new Error('Supabase is not configured');
+    }
+
+    const response = await fetch(`${url}/auth/v1/user`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Invalid Google session');
+    }
+
+    const data = (await response.json()) as { id?: string; email?: string };
+    if (!data.id || !data.email) {
+      throw new Error('Google account is missing an email');
+    }
+
+    return {
+      id: data.id,
+      email: data.email.toLowerCase(),
+    };
+  }
+
   async checkExists(provider: string, code: string, redirectUri?: string) {
     const providerInstance = this._providerManager.getProvider(provider);
     const token = await providerInstance.getToken(code, redirectUri);
