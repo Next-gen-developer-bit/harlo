@@ -20,6 +20,14 @@ export class UsersService {
     return this._usersRepository.getUserByEmail(email);
   }
 
+  getUserByEmailAndProvider(email: string, provider: Provider) {
+    return this._usersRepository.getUserByEmailAndProvider(email, provider);
+  }
+
+  linkProviderId(userId: string, providerId: string) {
+    return this._usersRepository.linkProviderId(userId, providerId);
+  }
+
   getUserById(id: string) {
     return this._usersRepository.getUserById(id);
   }

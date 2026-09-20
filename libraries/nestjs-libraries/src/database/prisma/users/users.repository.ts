@@ -128,6 +128,25 @@ export class UsersRepository {
     });
   }
 
+  getUserByEmailAndProvider(email: string, provider: Provider) {
+    return this._user.model.user.findFirst({
+      where: {
+        email: {
+          equals: email,
+          mode: 'insensitive',
+        },
+        providerName: provider,
+      },
+    });
+  }
+
+  linkProviderId(userId: string, providerId: string) {
+    return this._user.model.user.update({
+      where: { id: userId },
+      data: { providerId },
+    });
+  }
+
   getUserWithActiveSubscriptionByEmail(email: string, excludeUserId: string) {
     return this._user.model.user.findFirst({
       where: {

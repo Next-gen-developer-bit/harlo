@@ -174,38 +174,12 @@ export class AuthService {
       return user;
     }
 
-    if (!(await this.canRegister(provider))) {
-      throw new Error('Registration is disabled');
-    }
-
-    const create = await this._organizationService.createOrgAndUser(
-      {
-        company: body.company,
-        email: providerUser.email,
-        password: '',
-        provider,
-        providerId: providerUser.id,
-        datafast_visitor_id: body.datafast_visitor_id,
-      },
+    return this.loginOrRegisterKnownUser(
+      provider,
+      { id: providerUser.id, email: providerUser.email },
       ip,
       userAgent
     );
-
-    this._track('register', providerUser.email, body.datafast_visitor_id).catch(
-      (err) => {}
-    );
-
-    await NewsletterService.register(providerUser.email);
-
-    try {
-      if (providerInstance?.postRegistration) {
-        await providerInstance.postRegistration(body.providerToken, create.id);
-      }
-    } catch (err) {
-      // Don't fail registration if postRegistration fails
-    }
-
-    return create.users[0].user;
   }
 
   private async _track(
@@ -369,42 +343,66 @@ export class AuthService {
     ip: string,
     userAgent: string
   ) {
-    const user = await this._userService.getUserByProvider(
+    const email = providerUser.email.toLowerCase();
+
+    const byProviderId = await this._userService.getUserByProvider(
       providerUser.id,
       provider
     );
-    if (user) {
-      return user;
+    if (byProviderId) {
+      return byProviderId;
     }
 
-    const existingByEmail = await this._userService.getUserByEmail(
-      providerUser.email
+    const byGoogleEmail = await this._userService.getUserByEmailAndProvider(
+      email,
+      provider
     );
-    if (existingByEmail) {
-      return existingByEmail;
+    if (byGoogleEmail) {
+      if (providerUser.id && byGoogleEmail.providerId !== providerUser.id) {
+        await this._userService.linkProviderId(
+          byGoogleEmail.id,
+          providerUser.id
+        );
+      }
+      return byGoogleEmail;
+    }
+
+    const existingLocal = await this._userService.getUserByEmail(email);
+    if (existingLocal) {
+      return existingLocal;
     }
 
     if (!(await this.canRegister(provider))) {
       throw new Error('Registration is disabled');
     }
 
-    const create = await this._organizationService.createOrgAndUser(
-      {
-        company: '',
-        email: providerUser.email,
-        password: '',
-        provider,
-        providerId: providerUser.id,
-        datafast_visitor_id: '',
-      },
-      ip,
-      userAgent
-    );
+    try {
+      const create = await this._organizationService.createOrgAndUser(
+        {
+          company: '',
+          email,
+          password: '',
+          provider,
+          providerId: providerUser.id,
+          datafast_visitor_id: '',
+        },
+        ip,
+        userAgent
+      );
 
-    this._track('register', providerUser.email, '').catch(() => {});
-    await NewsletterService.register(providerUser.email);
+      this._track('register', email, '').catch(() => {});
+      await NewsletterService.register(email);
 
-    return create.users[0].user;
+      return create.users[0].user;
+    } catch (err: any) {
+      const existing =
+        (await this._userService.getUserByEmailAndProvider(email, provider)) ||
+        (await this._userService.getUserByEmail(email));
+      if (existing) {
+        return existing;
+      }
+      throw new Error('Could not complete Google sign-in. Please try again.');
+    }
   }
 
   private async getSupabaseAuthUser(accessToken: string) {
