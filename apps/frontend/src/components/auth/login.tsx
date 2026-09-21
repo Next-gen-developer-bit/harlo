@@ -41,9 +41,10 @@ export function Login() {
       setLoading(true);
       setError('');
       try {
+        const allowRegistration = searchParams?.get('auth_intent') === 'signup';
         const redirectUri = `${window.location.origin}/login`;
         const isDirectGoogleCode =
-          state === 'login' ||
+          !!state ||
           code.startsWith('4/') ||
           searchParams?.get('iss')?.includes('google');
 
@@ -52,6 +53,7 @@ export function Login() {
             method: 'POST',
             body: JSON.stringify({
               code,
+              state,
               redirect_uri: redirectUri,
               ...(inviteToken ? { org: inviteToken } : {}),
             }),
@@ -76,7 +78,10 @@ export function Login() {
           const accessToken = await exchangeSupabaseAuthCode(code);
           const login = await fetchData('/auth/oauth/supabase', {
             method: 'POST',
-            body: JSON.stringify({ accessToken }),
+            body: JSON.stringify({
+              accessToken,
+              register: allowRegistration,
+            }),
           });
           if (cancelled) {
             return;
@@ -146,14 +151,18 @@ export function Login() {
   return (
     <div>
       <div className="mt-7 text-center">
-        <h1 className="text-[28px] font-semibold tracking-[-0.4px]">Welcome back</h1>
+        <h1 className="text-[28px] font-semibold tracking-[-0.4px]">
+          Welcome back
+        </h1>
         <p className="mt-2 text-[14.5px] leading-6 text-[#60656C]">
           Sign in to continue managing your social media with Harlo.
         </p>
       </div>
       <div className="mt-7">
-        {inviteToken && <HarloInviteHint email={readInviteEmail(inviteToken)} />}
-        {isGeneral && !genericOauth && <HarloGoogleButton />}
+        {inviteToken && (
+          <HarloInviteHint email={readInviteEmail(inviteToken)} />
+        )}
+        {isGeneral && !genericOauth && <HarloGoogleButton intent="login" />}
         {isGeneral && !genericOauth && <HarloOrDivider />}
         <form className="space-y-3" onSubmit={onSubmit}>
           {error && <HarloAuthError>{error}</HarloAuthError>}
@@ -194,7 +203,11 @@ export function Login() {
               Forgot password?
             </Link>
           </div>
-          <button type="submit" disabled={loading} className={primaryButtonClassName}>
+          <button
+            type="submit"
+            disabled={loading}
+            className={primaryButtonClassName}
+          >
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>

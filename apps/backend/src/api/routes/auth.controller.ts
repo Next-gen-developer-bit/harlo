@@ -17,6 +17,7 @@ import { ForgotReturnPasswordDto } from '@gitroom/nestjs-libraries/dtos/auth/for
 import { ForgotPasswordDto } from '@gitroom/nestjs-libraries/dtos/auth/forgot.password.dto';
 import { ResendActivationDto } from '@gitroom/nestjs-libraries/dtos/auth/resend-activation.dto';
 import { SupabaseOauthDto } from '@gitroom/nestjs-libraries/dtos/auth/supabase.oauth.dto';
+import { GoogleOauthDto } from '@gitroom/nestjs-libraries/dtos/auth/google.oauth.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { getCookieUrlFromDomain } from '@gitroom/helpers/subdomain/subdomain.management';
 import { EmailService } from '@gitroom/nestjs-libraries/services/email.service';
@@ -217,6 +218,7 @@ export class AuthController {
         body.accessToken,
         ip,
         userAgent,
+        body.register === true,
         getOrgFromCookie
       );
 
@@ -266,13 +268,26 @@ export class AuthController {
   @Post('/oauth/google')
   async googleOauth(
     @Req() req: Request,
-    @Body('code') code: string,
-    @Body('redirect_uri') redirect_uri: string,
+    @Body() body: GoogleOauthDto,
     @Res({ passthrough: false }) response: Response,
     @RealIP() ip: string,
     @UserAgent() userAgent: string
   ) {
     try {
+      if (!req.cookies?.oauth_state || req.cookies.oauth_state !== body.state) {
+        throw new Error('Invalid Google sign-in state. Please try again.');
+      }
+      response.clearCookie('oauth_state', {
+        domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+        ...(!process.env.NOT_SECURED
+          ? {
+              secure: true,
+              httpOnly: true,
+              sameSite: 'none',
+            }
+          : {}),
+      });
+
       const getOrgFromCookie = this._authService.getOrgFromCookie(
         req?.cookies?.org ||
           (typeof (req.body as { org?: string })?.org === 'string'
@@ -280,8 +295,9 @@ export class AuthController {
             : undefined)
       );
       const { jwt, addedOrg } = await this._authService.routeGoogleAuthCode(
-        code,
-        redirect_uri,
+        body.code,
+        body.redirect_uri,
+        body.state,
         ip,
         userAgent,
         getOrgFromCookie
@@ -366,8 +382,29 @@ export class AuthController {
   }
 
   @Get('/oauth/:provider')
-  async oauthLink(@Param('provider') provider: string, @Query() query: any) {
-    return this._authService.oauthLink(provider, query);
+  async oauthLink(
+    @Param('provider') provider: string,
+    @Query() query: any,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    const link = await this._authService.oauthLink(provider, query);
+    try {
+      const state = new URL(link).searchParams.get('state');
+      if (state && state !== 'login') {
+        response.cookie('oauth_state', state, {
+          domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+          ...(!process.env.NOT_SECURED
+            ? {
+                secure: true,
+                httpOnly: true,
+                sameSite: 'none',
+              }
+            : {}),
+          expires: new Date(Date.now() + 10 * 60 * 1000),
+        });
+      }
+    } catch {}
+    return link;
   }
 
   @Post('/activate')

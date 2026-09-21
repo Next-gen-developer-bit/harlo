@@ -37,12 +37,15 @@ export function Register() {
   }, []);
   const load = useCallback(async () => {
     const { token } = await (
-      await fetchData(`/auth/oauth/${provider?.toUpperCase() || 'LOCAL'}/exists`, {
-        method: 'POST',
-        body: JSON.stringify({
-          code,
-        }),
-      })
+      await fetchData(
+        `/auth/oauth/${provider?.toUpperCase() || 'LOCAL'}/exists`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            code,
+          }),
+        }
+      )
     ).json();
     if (token) {
       setCode(token);
@@ -133,8 +136,12 @@ export function RegisterAfter({
         </p>
       </div>
       <div className="mt-7">
-        {inviteToken && <HarloInviteHint email={readInviteEmail(inviteToken)} />}
-        {!isAfterProvider && isGeneral && !genericOauth && <HarloGoogleButton />}
+        {inviteToken && (
+          <HarloInviteHint email={readInviteEmail(inviteToken)} />
+        )}
+        {!isAfterProvider && isGeneral && !genericOauth && (
+          <HarloGoogleButton intent="signup" />
+        )}
         {!isAfterProvider && isGeneral && !genericOauth && <HarloOrDivider />}
         <form className="space-y-3" onSubmit={onSubmit}>
           {error && <HarloAuthError>{error}</HarloAuthError>}

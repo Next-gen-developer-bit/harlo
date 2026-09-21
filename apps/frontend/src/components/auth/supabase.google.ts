@@ -2,6 +2,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 let client: SupabaseClient | null = null;
 
+export type GoogleAuthIntent = 'login' | 'signup';
+
 export function getSupabaseAuthClient() {
   const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/+$/, '');
   const key =
@@ -29,22 +31,25 @@ export function getSupabaseAuthClient() {
   return client;
 }
 
-export function supabaseGoogleRedirectTo() {
+export function supabaseGoogleRedirectTo(intent: GoogleAuthIntent) {
   if (typeof window === 'undefined') {
     return '';
   }
-  return `${window.location.origin}/login`;
+  const redirect = new URL('/login', window.location.origin);
+  redirect.searchParams.set('auth_intent', intent);
+  return redirect.toString();
 }
 
-export async function startSupabaseGoogleLogin() {
+export async function startSupabaseGoogleLogin(intent: GoogleAuthIntent) {
   const supabase = getSupabaseAuthClient();
   if (!supabase) {
     throw new Error('Supabase is not configured');
   }
+  await supabase.auth.signOut({ scope: 'local' });
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: supabaseGoogleRedirectTo(),
+      redirectTo: supabaseGoogleRedirectTo(intent),
       queryParams: {
         prompt: 'select_account',
       },

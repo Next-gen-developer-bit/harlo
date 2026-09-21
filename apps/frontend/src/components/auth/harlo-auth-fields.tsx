@@ -3,7 +3,10 @@
 import { FormEvent, ReactNode, useCallback, useState } from 'react';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
-import { startSupabaseGoogleLogin } from '@gitroom/frontend/components/auth/supabase.google';
+import {
+  GoogleAuthIntent,
+  startSupabaseGoogleLogin,
+} from '@gitroom/frontend/components/auth/supabase.google';
 
 export function inviteAuthHref(path: string, org?: string | null) {
   if (!org) {
@@ -108,7 +111,13 @@ export function HarloPasswordField({
               strokeWidth="1.7"
               strokeLinejoin="round"
             />
-            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
+            <circle
+              cx="12"
+              cy="12"
+              r="3"
+              stroke="currentColor"
+              strokeWidth="1.7"
+            />
           </svg>
         )}
       </button>
@@ -116,11 +125,15 @@ export function HarloPasswordField({
   );
 }
 
-export function HarloGoogleButton() {
+export function HarloGoogleButton({
+  intent = 'login',
+}: {
+  intent?: GoogleAuthIntent;
+}) {
   const fetchData = useFetch();
   const startGoogle = useCallback(async () => {
     try {
-      await startSupabaseGoogleLogin();
+      await startSupabaseGoogleLogin(intent);
       return;
     } catch {
       // Fall back to the Nest Google OAuth client if Supabase Auth is not set.
@@ -128,11 +141,13 @@ export function HarloGoogleButton() {
     const redirectUri = `${window.location.origin}/login`;
     const link = await (
       await fetchData(
-        `/auth/oauth/GOOGLE?redirect_uri=${encodeURIComponent(redirectUri)}`
+        `/auth/oauth/GOOGLE?redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}&auth_intent=${intent}`
       )
     ).text();
     window.location.href = link;
-  }, [fetchData]);
+  }, [fetchData, intent]);
 
   return (
     <button
@@ -140,7 +155,12 @@ export function HarloGoogleButton() {
       onClick={startGoogle}
       className="flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[13px] border border-[#DDE3E8] bg-white text-[14.5px] font-medium text-[#111] transition-all hover:border-[#C7D1D8]"
     >
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18" height="18">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 48 48"
+        width="18"
+        height="18"
+      >
         <path
           fill="#FFC107"
           d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"
@@ -180,7 +200,8 @@ export function useHarloAuthRedirect() {
   const { frontEndUrl, isGeneral } = useVariables();
   return useCallback(
     (response: Response) => {
-      const app = (frontEndUrl || '').replace(/\/+$/, '') || window.location.origin;
+      const app =
+        (frontEndUrl || '').replace(/\/+$/, '') || window.location.origin;
       const inviteToken = new URL(window.location.href).searchParams.get('org');
       if (response.headers.get('activate') === 'true') {
         window.location.href = `${app}/auth/activate`;

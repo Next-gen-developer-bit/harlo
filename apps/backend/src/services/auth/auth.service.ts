@@ -97,7 +97,8 @@ export class AuthService {
       provider,
       body as CreateOrgUserDto,
       ip,
-      userAgent
+      userAgent,
+      body instanceof CreateOrgUserDto
     );
 
     return {
@@ -157,7 +158,8 @@ export class AuthService {
     provider: Provider,
     body: CreateOrgUserDto,
     ip: string,
-    userAgent: string
+    userAgent: string,
+    allowRegistration: boolean
   ) {
     const providerInstance = this._providerManager.getProvider(provider);
     const providerUser = await providerInstance.getUser(body.providerToken);
@@ -178,7 +180,8 @@ export class AuthService {
       provider,
       { id: providerUser.id, email: providerUser.email },
       ip,
-      userAgent
+      userAgent,
+      allowRegistration
     );
   }
 
@@ -281,7 +284,7 @@ export class AuthService {
     return true;
   }
 
-  oauthLink(provider: string, query?: any) {
+  async oauthLink(provider: string, query?: any) {
     const providerInstance = this._providerManager.getProvider(provider);
     return providerInstance.generateLink(query);
   }
@@ -290,6 +293,7 @@ export class AuthService {
     accessToken: string,
     ip: string,
     userAgent: string,
+    allowRegistration: boolean,
     addToOrg?:
       | boolean
       | { orgId: string; role: 'USER' | 'ADMIN'; id: string; email?: string }
@@ -299,7 +303,8 @@ export class AuthService {
       Provider.GOOGLE,
       providerUser,
       ip,
-      userAgent
+      userAgent,
+      allowRegistration
     );
 
     return {
@@ -311,6 +316,7 @@ export class AuthService {
   async routeGoogleAuthCode(
     code: string,
     redirectUri: string,
+    state: string,
     ip: string,
     userAgent: string,
     addToOrg?:
@@ -318,7 +324,10 @@ export class AuthService {
       | { orgId: string; role: 'USER' | 'ADMIN'; id: string; email?: string }
   ) {
     const providerInstance = this._providerManager.getProvider('GOOGLE');
-    const token = await providerInstance.getToken(code, redirectUri);
+    const { token, allowRegistration } = await providerInstance.exchangeCode(
+      code,
+      { redirectUri, state }
+    );
     const providerUser = await providerInstance.getUser(token);
     if (!providerUser || !providerUser.email) {
       throw new Error('Could not get Google user info');
@@ -328,7 +337,8 @@ export class AuthService {
       Provider.GOOGLE,
       providerUser,
       ip,
-      userAgent
+      userAgent,
+      allowRegistration
     );
 
     return {
@@ -341,7 +351,8 @@ export class AuthService {
     provider: Provider,
     providerUser: { id: string; email: string },
     ip: string,
-    userAgent: string
+    userAgent: string,
+    allowRegistration: boolean
   ) {
     const email = providerUser.email.toLowerCase();
 
@@ -370,6 +381,12 @@ export class AuthService {
     const existingLocal = await this._userService.getUserByEmail(email);
     if (existingLocal) {
       return existingLocal;
+    }
+
+    if (!allowRegistration) {
+      throw new Error(
+        'No Harlo account exists for this Google account. Create an account first or choose another Google account.'
+      );
     }
 
     if (!(await this.canRegister(provider))) {
@@ -432,9 +449,24 @@ export class AuthService {
       throw new Error('Invalid Google session');
     }
 
-    const data = (await response.json()) as { id?: string; email?: string };
-    if (!data.id || !data.email) {
-      throw new Error('Google account is missing an email');
+    const data = (await response.json()) as {
+      id?: string;
+      email?: string;
+      email_confirmed_at?: string;
+      app_metadata?: {
+        provider?: string;
+        providers?: string[];
+      };
+    };
+    const providers = data.app_metadata?.providers || [];
+    if (
+      !data.id ||
+      !data.email ||
+      !data.email_confirmed_at ||
+      (data.app_metadata?.provider !== 'google' &&
+        !providers.includes('google'))
+    ) {
+      throw new Error('Invalid Google account');
     }
 
     return {
