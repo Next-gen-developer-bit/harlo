@@ -160,7 +160,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       return {
         type: 'bad-body',
         value:
-          'X API credits are depleted. Add billing in the X Developer Portal, then try again.',
+          'X could not publish this post right now. Please try again later.',
       };
     }
     if (body.includes('You are not permitted to perform this action')) {
@@ -204,7 +204,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
       return {
         type: 'bad-body',
         value: 'You are not allowed to create a post with duplicate content',
-      }
+      };
     }
 
     if (body.includes('usage-capped')) {
@@ -231,8 +231,7 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     if (body.includes('Your account is not permitted to access this feature')) {
       return {
         type: 'bad-body',
-        value:
-          'X blocked your request',
+        value: 'X blocked your request',
       };
     }
     if (body.includes('The Tweet contains an invalid URL.')) {
@@ -525,7 +524,9 @@ export class XProvider extends SocialAbstract implements SocialProvider {
   }
 
   private redirectUri() {
-    return `${process.env.X_URL || process.env.FRONTEND_URL}/integrations/social/x`;
+    return `${
+      process.env.X_URL || process.env.FRONTEND_URL
+    }/integrations/social/x`;
   }
 
   private isOAuth1AccessToken(accessToken: string) {
@@ -937,7 +938,11 @@ export class XProvider extends SocialAbstract implements SocialProvider {
     const stillProcessing: string[] = [];
     for (const mediaId of pendingData.processingIds || []) {
       let processing:
-        | { state: string; check_after_secs?: number; error?: { message?: string } }
+        | {
+            state: string;
+            check_after_secs?: number;
+            error?: { message?: string };
+          }
         | undefined;
       try {
         processing = await this.mediaProcessingStatus(client, mediaId);

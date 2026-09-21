@@ -23,6 +23,11 @@ dayjs.extend(weekOfYear);
 dayjs.extend(isSameOrAfter);
 dayjs.extend(utc);
 
+const withPublicPostError = <T extends { error?: string | null }>(post: T) => ({
+  ...post,
+  error: post.error ? readablePostError(post.error) : post.error,
+});
+
 @Injectable()
 export class PostsRepository {
   constructor(
@@ -162,10 +167,7 @@ export class PostsRepository {
           organizationId: orgId,
           ...(query.customer ? { customerId: query.customer } : {}),
         },
-        OR: [
-          { state: State.PUBLISHED },
-          { integration: { deletedAt: null } },
-        ],
+        OR: [{ state: State.PUBLISHED }, { integration: { deletedAt: null } }],
         deletedAt: null,
         parentPostId: null,
       },
@@ -198,7 +200,7 @@ export class PostsRepository {
       },
     });
 
-    return list.reduce((all, post) => {
+    return list.map(withPublicPostError).reduce((all, post) => {
       if (!post.intervalInDays) {
         return [...all, post];
       }
@@ -331,7 +333,7 @@ export class PostsRepository {
     ]);
 
     return {
-      posts,
+      posts: posts.map(withPublicPostError),
       total,
       page,
       limit,
@@ -441,9 +443,9 @@ export class PostsRepository {
       scheduled: countMap[State.QUEUE] || 0,
       posted: countMap[State.PUBLISHED] || 0,
       failed: countMap[State.ERROR] || 0,
-      upcoming,
-      failedPosts,
-      weekPosts,
+      upcoming: upcoming.map(withPublicPostError),
+      failedPosts: failedPosts.map(withPublicPostError),
+      weekPosts: weekPosts.map(withPublicPostError),
       dailyPosted,
     };
   }

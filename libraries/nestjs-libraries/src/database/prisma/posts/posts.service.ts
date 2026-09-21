@@ -53,6 +53,7 @@ import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integration
 import { AnalyticsSnapshotDto } from '@gitroom/nestjs-libraries/dtos/analytics/analytics.snapshot.dto';
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
 import { stripLinks } from '@gitroom/helpers/utils/strip.links';
+import { readablePostError } from '@gitroom/helpers/utils/publish.error';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
@@ -457,9 +458,7 @@ export class PostsService {
     }
 
     const sumAvailable = (values: Array<number | null>) => {
-      const present = values.filter(
-        (value): value is number => value !== null
-      );
+      const present = values.filter((value): value is number => value !== null);
       return present.length
         ? present.reduce((acc, value) => acc + value, 0)
         : null;
@@ -872,6 +871,7 @@ export class PostsService {
       posts: await Promise.all(
         (posts || []).map(async (post) => ({
           ...post,
+          error: post.error ? readablePostError(post.error) : post.error,
           image: await this.updateMedia(
             post.id,
             JSON.parse(post.image || '[]'),
@@ -910,6 +910,7 @@ export class PostsService {
       posts: await Promise.all(
         (posts || []).map(async (post) => ({
           ...post,
+          error: post.error ? readablePostError(post.error) : post.error,
           image: await this.updateMedia(
             post.id,
             JSON.parse(post.image || '[]'),

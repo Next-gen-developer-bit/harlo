@@ -35,12 +35,18 @@ export interface WorkspaceOverview {
 export const useWorkspaceOverview = () => {
   const fetch = useFetch();
 
-  const load = useCallback(async (path: string) => {
-    return (await (await fetch(path)).json()) as WorkspaceOverview;
-  }, [fetch]);
+  const load = useCallback(
+    async (path: string) => {
+      return (await (await fetch(path)).json()) as WorkspaceOverview;
+    },
+    [fetch]
+  );
 
   return useSWR('/posts/overview', load, {
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
+    refreshInterval: 10_000,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
   });
 };
