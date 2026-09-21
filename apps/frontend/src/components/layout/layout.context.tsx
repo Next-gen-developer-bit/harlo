@@ -23,7 +23,7 @@ export function setCookie(cname: string, cvalue: string, exdays: number) {
 }
 function LayoutContextInner(params: { children: ReactNode }) {
   const returnUrl = useReturnUrl();
-  const { backendUrl, isGeneral, isSecured, frontEndUrl } = useVariables();
+  const { backendUrl, isGeneral, isSecured } = useVariables();
   const afterRequest = useCallback(
     async (url: string, options: RequestInit, response: Response) => {
       if (
@@ -55,24 +55,28 @@ function LayoutContextInner(params: { children: ReactNode }) {
         setCookie('auth', '', -10);
         setCookie('showorg', '', -10);
         setCookie('impersonate', '', -10);
-        window.location.href = '/';
+        window.location.assign('/login');
         return true;
       }
-      const app = (frontEndUrl || '').replace(/\/+$/, '');
+      const app = window.location.origin;
       const reloadOrOnboarding =
         response?.headers?.get('reload') ||
         response?.headers?.get('onboarding');
       if (reloadOrOnboarding) {
         const getAndClear = returnUrl.getAndClear();
         if (getAndClear) {
-          window.location.href = getAndClear;
+          window.location.assign(getAndClear);
           return true;
         }
       }
       if (response?.headers?.get('onboarding')) {
-        window.location.href = `${app}${
-          isGeneral ? '/overview?onboarding=true' : '/analytics?onboarding=true'
-        }`;
+        window.location.assign(
+          `${app}${
+            isGeneral
+              ? '/overview?onboarding=true'
+              : '/analytics?onboarding=true'
+          }`
+        );
         return true;
       }
 
@@ -82,7 +86,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
         const authPath =
           path.startsWith('/auth') || path === '/login' || path === '/signup';
         if (authPath) {
-          window.location.href = `${app}/overview`;
+          window.location.assign(`${app}/overview`);
         } else {
           window.location.reload();
         }
@@ -107,7 +111,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
           setCookie('showorg', '', -10);
           setCookie('impersonate', '', -10);
         }
-        window.location.href = '/';
+        window.location.assign('/login');
       }
       if (response.status === 406) {
         if (
@@ -141,7 +145,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
       }
       return true;
     },
-    [frontEndUrl, isGeneral, isSecured, returnUrl]
+    [isGeneral, isSecured, returnUrl]
   );
   return (
     <FetchWrapperComponent baseUrl={backendUrl} afterRequest={afterRequest}>

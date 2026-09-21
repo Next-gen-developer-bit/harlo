@@ -71,6 +71,14 @@ export async function proxy(request: NextRequest) {
   }
 
   const org = nextUrl.searchParams.get('org');
+  const oauthCallback =
+    nextUrl.searchParams.has('code') || nextUrl.searchParams.has('error');
+
+  if (nextUrl.pathname === '/' && oauthCallback) {
+    return NextResponse.redirect(
+      new URL(`/login${nextUrl.search}`, nextUrl.href)
+    );
+  }
 
   if (
     (nextUrl.pathname === '/' && !org) ||
@@ -169,7 +177,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // If the url is a public auth page and the cookie exists, redirect to /overview
-  if (isPublicAuthPath && authCookie && !isInvitePath) {
+  if (isPublicAuthPath && authCookie && !isInvitePath && !oauthCallback) {
     return NextResponse.redirect(new URL(`/overview${url}`, nextUrl.href));
   }
   if (isPublicAuthPath && !authCookie) {

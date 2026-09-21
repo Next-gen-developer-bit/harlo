@@ -197,35 +197,38 @@ export function HarloOrDivider() {
 }
 
 export function useHarloAuthRedirect() {
-  const { frontEndUrl, isGeneral } = useVariables();
+  const { isGeneral } = useVariables();
   return useCallback(
     (response: Response) => {
-      const app =
-        (frontEndUrl || '').replace(/\/+$/, '') || window.location.origin;
+      const app = window.location.origin;
       const inviteToken = new URL(window.location.href).searchParams.get('org');
       if (response.headers.get('activate') === 'true') {
-        window.location.href = `${app}/auth/activate`;
+        window.location.assign(`${app}/auth/activate`);
         return true;
       }
       if (inviteToken && response.headers.get('reload')) {
-        window.location.href = `${app}/auth/invite?org=${encodeURIComponent(
-          inviteToken
-        )}`;
+        window.location.assign(
+          `${app}/auth/invite?org=${encodeURIComponent(inviteToken)}`
+        );
         return true;
       }
       if (response.headers.get('onboarding')) {
-        window.location.href = `${app}${
-          isGeneral ? '/overview?onboarding=true' : '/analytics?onboarding=true'
-        }`;
+        window.location.assign(
+          `${app}${
+            isGeneral
+              ? '/overview?onboarding=true'
+              : '/analytics?onboarding=true'
+          }`
+        );
         return true;
       }
       if (response.headers.get('reload') || response.ok) {
-        window.location.href = `${app}/overview`;
+        window.location.assign(`${app}/overview`);
         return true;
       }
       return false;
     },
-    [frontEndUrl, isGeneral]
+    [isGeneral]
   );
 }
 

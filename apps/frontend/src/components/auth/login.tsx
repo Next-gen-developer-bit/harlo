@@ -18,7 +18,11 @@ import {
   useHarloAuthRedirect,
 } from '@gitroom/frontend/components/auth/harlo-auth-fields';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
-import { exchangeSupabaseAuthCode } from '@gitroom/frontend/components/auth/supabase.google';
+import {
+  clearGoogleAuthIntent,
+  exchangeSupabaseAuthCode,
+  readGoogleAuthIntent,
+} from '@gitroom/frontend/components/auth/supabase.google';
 
 export function Login() {
   const fetchData = useFetch();
@@ -41,12 +45,13 @@ export function Login() {
       setLoading(true);
       setError('');
       try {
-        const allowRegistration = searchParams?.get('auth_intent') === 'signup';
+        const allowRegistration =
+          readGoogleAuthIntent(searchParams?.get('auth_intent')) === 'signup';
         const redirectUri = `${window.location.origin}/login`;
         const isDirectGoogleCode =
-          !!state ||
           code.startsWith('4/') ||
-          searchParams?.get('iss')?.includes('google');
+          /^[a-f0-9]{48}$/i.test(state || '') ||
+          (searchParams?.get('iss') || '').includes('google');
 
         if (isDirectGoogleCode) {
           const login = await fetchData('/auth/oauth/google', {
@@ -66,41 +71,36 @@ export function Login() {
             setLoading(false);
             return;
           }
+          clearGoogleAuthIntent();
           if (redirectAfterAuth(login)) {
             return;
           }
-          window.location.href = '/overview';
+          window.location.assign('/overview');
           return;
         }
 
-        // Try Supabase Auth exchange
-        try {
-          const accessToken = await exchangeSupabaseAuthCode(code);
-          const login = await fetchData('/auth/oauth/supabase', {
-            method: 'POST',
-            body: JSON.stringify({
-              accessToken,
-              register: allowRegistration,
-            }),
-          });
-          if (cancelled) {
-            return;
-          }
-          if (!login.ok) {
-            setError((await login.text()) || 'Could not sign in with Google');
-            setLoading(false);
-            return;
-          }
-          if (redirectAfterAuth(login)) {
-            return;
-          }
-          window.location.href = '/overview';
+        const accessToken = await exchangeSupabaseAuthCode(code);
+        const login = await fetchData('/auth/oauth/supabase', {
+          method: 'POST',
+          body: JSON.stringify({
+            accessToken,
+            register: allowRegistration,
+          }),
+        });
+        if (cancelled) {
           return;
-        } catch (supabaseErr) {
-          throw supabaseErr;
         }
-
-        setError('Could not sign in with Google');
+        if (!login.ok) {
+          setError((await login.text()) || 'Could not sign in with Google');
+          setLoading(false);
+          return;
+        }
+        clearGoogleAuthIntent();
+        if (redirectAfterAuth(login)) {
+          return;
+        }
+        window.location.assign('/overview');
+        return;
       } catch {
         if (!cancelled) {
           setError('Could not sign in with Google');
