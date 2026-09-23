@@ -55,6 +55,10 @@ services:
       TIKTOK_CLIENT_SECRET: ''
       PINTEREST_CLIENT_ID: ''
       PINTEREST_CLIENT_SECRET: ''
+      # Trial apps cannot create live pins. Use Sandbox until Standard access
+      # is approved, then switch this back to https://api.pinterest.com and
+      # reconnect the channel. A production token cannot call Sandbox.
+      PINTEREST_API_HOST: 'https://api-sandbox.pinterest.com'
       DRIBBBLE_CLIENT_ID: ''
       DRIBBBLE_CLIENT_SECRET: ''
       TUMBLR_CLIENT_ID: ''

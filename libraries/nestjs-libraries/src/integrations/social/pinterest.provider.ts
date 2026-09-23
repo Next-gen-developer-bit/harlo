@@ -13,6 +13,7 @@ import FormData from 'form-data';
 import { timer } from '@gitroom/helpers/utils/timer';
 import {
   BadBody,
+  NotEnoughScopes,
   RefreshToken,
   SocialAbstract,
   ValidityMedia,
@@ -213,7 +214,7 @@ export class PinterestProvider
 
   async refreshToken(refreshToken: string): Promise<AuthTokenDetails> {
     const { access_token, expires_in } = await (
-      await fetch('https://api.pinterest.com/v5/oauth/token', {
+      await fetch(`${this.pinterestHost()}/v5/oauth/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -231,7 +232,7 @@ export class PinterestProvider
     ).json();
 
     const { id, profile_image, username } = await (
-      await fetch('https://api.pinterest.com/v5/user_account', {
+      await fetch(`${this.pinterestHost()}/v5/user_account`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${access_token}`,
@@ -275,27 +276,51 @@ export class PinterestProvider
     codeVerifier: string;
     refresh: string;
   }) {
-    const { access_token, refresh_token, expires_in, scope } = await (
-      await fetch('https://api.pinterest.com/v5/oauth/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${Buffer.from(
-            `${process.env.PINTEREST_CLIENT_ID}:${process.env.PINTEREST_CLIENT_SECRET}`
-          ).toString('base64')}`,
-        },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          code: params.code,
-          redirect_uri: `${process.env.FRONTEND_URL}/integrations/social/pinterest`,
-        }),
-      })
-    ).json();
+    const tokenResponse = await fetch(`${this.pinterestHost()}/v5/oauth/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(
+          `${process.env.PINTEREST_CLIENT_ID}:${process.env.PINTEREST_CLIENT_SECRET}`
+        ).toString('base64')}`,
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: params.code,
+        redirect_uri: `${process.env.FRONTEND_URL}/integrations/social/pinterest`,
+        // Required for apps created before 25 Sep 2025. Newer apps ignore it.
+        continuous_refresh: 'true',
+      }),
+    });
+    const token = await tokenResponse.json().catch(() => ({}));
+    const { access_token, refresh_token, expires_in, scope } = token || {};
 
-    this.checkScopes(this.scopes, scope);
+    if (!access_token) {
+      const message =
+        token?.message ||
+        token?.error_description ||
+        token?.error ||
+        'Pinterest rejected the login. Check the app id, secret, and redirect URL, then connect again.';
+      throw new NotEnoughScopes(
+        typeof message === 'string'
+          ? message
+          : 'Pinterest rejected the login. Check the app id, secret, and redirect URL, then connect again.'
+      );
+    }
+
+    const granted = String(scope || '')
+      .split(/[\s,]+/)
+      .map((item) => decodeURIComponent(item).trim())
+      .filter(Boolean);
+    const missing = this.scopes.filter((item) => !granted.includes(item));
+    if (missing.length) {
+      throw new NotEnoughScopes(
+        `Pinterest did not grant: ${missing.join(', ')}`
+      );
+    }
 
     const { id, profile_image, username } = await (
-      await fetch('https://api.pinterest.com/v5/user_account', {
+      await fetch(`${this.pinterestHost()}/v5/user_account`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${access_token}`,
@@ -333,7 +358,7 @@ export class PinterestProvider
         }
 
         const response = await this.fetch(
-          `https://api.pinterest.com/v5/boards?${params.toString()}`,
+          `${this.pinterestHost()}/v5/boards?${params.toString()}`,
           {
             method: 'GET',
             headers: {
@@ -378,7 +403,7 @@ export class PinterestProvider
       return false;
     }
 
-    const response = await this.fetch('https://api.pinterest.com/v5/boards', {
+    const response = await this.fetch(`${this.pinterestHost()}/v5/boards`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -400,13 +425,18 @@ export class PinterestProvider
     };
   }
 
-  private pinterestHost(sandbox = false) {
-    if (sandbox) {
-      return 'https://api-sandbox.pinterest.com';
-    }
+  // Trial apps cannot create live pins. Point PINTEREST_API_HOST at
+  // https://api-sandbox.pinterest.com so OAuth and every API call use Sandbox.
+  // A production token cannot call Sandbox, so the channel must be reconnected
+  // after this host changes.
+  private pinterestHost() {
     return (
       process.env.PINTEREST_API_HOST || 'https://api.pinterest.com'
     ).replace(/\/$/, '');
+  }
+
+  private usingSandbox() {
+    return this.pinterestHost().includes('api-sandbox.pinterest.com');
   }
 
   private isTrialCreateBlocked(err: unknown) {
@@ -463,13 +493,9 @@ export class PinterestProvider
     };
   }
 
-  private async uploadVideo(
-    accessToken: string,
-    videoPath: string,
-    sandbox = false
-  ) {
+  private async uploadVideo(accessToken: string, videoPath: string) {
     const { upload_url, media_id, upload_parameters } = await (
-      await this.fetch(`${this.pinterestHost(sandbox)}/v5/media`, {
+      await this.fetch(`${this.pinterestHost()}/v5/media`, {
         method: 'POST',
         body: JSON.stringify({
           media_type: 'video',
@@ -495,16 +521,12 @@ export class PinterestProvider
     return media_id as string;
   }
 
-  private async waitForMedia(
-    accessToken: string,
-    mediaId: string,
-    sandbox = false
-  ) {
+  private async waitForMedia(accessToken: string, mediaId: string) {
     const started = Date.now();
     while (Date.now() - started < 8 * 60 * 1000) {
       const mediafile = await (
         await this.fetch(
-          `${this.pinterestHost(sandbox)}/v5/media/${mediaId}`,
+          `${this.pinterestHost()}/v5/media/${mediaId}`,
           {
             method: 'GET',
             headers: {
@@ -541,11 +563,10 @@ export class PinterestProvider
   private async createPin(
     accessToken: string,
     pendingData: PinterestPendingData,
-    sandbox = false,
     mediaId?: string
   ) {
     const created = await (
-      await this.fetch(`${this.pinterestHost(sandbox)}/v5/pins`, {
+      await this.fetch(`${this.pinterestHost()}/v5/pins`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -638,7 +659,7 @@ export class PinterestProvider
     try {
       mediafile = await (
         await this.fetch(
-          'https://api.pinterest.com/v5/media/' + pendingData.mediaId,
+          `${this.pinterestHost()}/v5/media/` + pendingData.mediaId,
           {
             method: 'GET',
             headers: {
@@ -694,18 +715,17 @@ export class PinterestProvider
 
     let pId: string;
     try {
-      pId = await this.createPin(accessToken, pendingData, false);
+      pId = await this.createPin(accessToken, pendingData);
     } catch (err) {
-      if (!this.isTrialCreateBlocked(err)) {
+      if (!this.isTrialCreateBlocked(err) || this.usingSandbox()) {
         throw err;
       }
 
-      // Production OAuth tokens cannot be used on api-sandbox.pinterest.com.
       throw new BadBody(
         'pinterest',
         (err as any)?.details?.[0]?.json || '{}',
         '{}',
-        'Pinterest Trial access cannot create live pins. Request Standard access in the Pinterest developer portal. Until it is approved, this pin cannot be published.'
+        'Pinterest Trial access cannot create live pins. Set PINTEREST_API_HOST to https://api-sandbox.pinterest.com, restart, and reconnect the channel. Sandbox pins are visible only to the account that created them.'
       );
     }
 
@@ -794,7 +814,7 @@ export class PinterestProvider
       all: { daily_metrics },
     } = await (
       await fetch(
-        `https://api.pinterest.com/v5/user_account/analytics?start_date=${since}&end_date=${until}`,
+        `${this.pinterestHost()}/v5/user_account/analytics?start_date=${since}&end_date=${until}`,
         {
           method: 'GET',
           headers: {
@@ -863,7 +883,7 @@ export class PinterestProvider
 
     try {
       const response = await fetch(
-        `https://api.pinterest.com/v5/pins/${pinId}/analytics?start_date=${since}&end_date=${today}&metric_types=IMPRESSION,PIN_CLICK,OUTBOUND_CLICK,SAVE,TOTAL_COMMENTS,TOTAL_REACTIONS`,
+        `${this.pinterestHost()}/v5/pins/${pinId}/analytics?start_date=${since}&end_date=${today}&metric_types=IMPRESSION,PIN_CLICK,OUTBOUND_CLICK,SAVE,TOTAL_COMMENTS,TOTAL_REACTIONS`,
         {
           method: 'GET',
           headers: {
