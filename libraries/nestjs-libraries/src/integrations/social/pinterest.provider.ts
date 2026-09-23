@@ -218,15 +218,13 @@ export class PinterestProvider
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${Buffer.from(
-            `${process.env.PINTEREST_CLIENT_ID}:${process.env.PINTEREST_CLIENT_SECRET}`
-          ).toString('base64')}`,
+          Authorization: this.pinterestBasicAuth(),
         },
         body: new URLSearchParams({
           grant_type: 'refresh_token',
           refresh_token: refreshToken,
           scope: this.scopes.join(','),
-          redirect_uri: `${process.env.FRONTEND_URL}/integrations/social/pinterest`,
+          redirect_uri: this.pinterestRedirectUri(),
         }),
       })
     ).json();
@@ -262,9 +260,9 @@ export class PinterestProvider
     ].join(',');
     return {
       url: `https://www.pinterest.com/oauth/?client_id=${
-        process.env.PINTEREST_CLIENT_ID
+        process.env.PINTEREST_CLIENT_ID?.trim()
       }&redirect_uri=${encodeURIComponent(
-        `${process.env.FRONTEND_URL}/integrations/social/pinterest`
+        this.pinterestRedirectUri()
       )}&response_type=code&scope=${encodeURIComponent(scope)}&state=${state}`,
       codeVerifier: makeId(10),
       state,
@@ -276,35 +274,54 @@ export class PinterestProvider
     codeVerifier: string;
     refresh: string;
   }) {
-    const tokenResponse = await fetch(`${this.pinterestHost()}/v5/oauth/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${Buffer.from(
-          `${process.env.PINTEREST_CLIENT_ID}:${process.env.PINTEREST_CLIENT_SECRET}`
-        ).toString('base64')}`,
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: params.code,
-        redirect_uri: `${process.env.FRONTEND_URL}/integrations/social/pinterest`,
-        // Required for apps created before 25 Sep 2025. Newer apps ignore it.
-        continuous_refresh: 'true',
-      }),
+    const tokenBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: params.code,
+      redirect_uri: this.pinterestRedirectUri(),
     });
-    const token = await tokenResponse.json().catch(() => ({}));
+    // Apps created before 25 Sep 2025 need continuous_refresh=true. Newer
+    // apps reject it - not always with a 401 (Pinterest also returns 400 or
+    // 409), so send it first and retry without it on any failed exchange.
+    const withRefresh = new URLSearchParams(tokenBody);
+    withRefresh.set('continuous_refresh', 'true');
+
+    const exchange = (body: URLSearchParams) =>
+      fetch(`${this.pinterestHost()}/v5/oauth/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: this.pinterestBasicAuth(),
+        },
+        body,
+      });
+
+    let tokenResponse = await exchange(withRefresh);
+    let token = await tokenResponse.json().catch(() => ({}));
+
+    if (!token?.access_token) {
+      tokenResponse = await exchange(tokenBody);
+      token = await tokenResponse.json().catch(() => ({}));
+    }
+
+    const rejectedStatus = tokenResponse.status;
     const { access_token, refresh_token, expires_in, scope } = token || {};
 
     if (!access_token) {
+      console.error(
+        `Pinterest token exchange failed (HTTP ${rejectedStatus}):`,
+        tokenResponse.statusText,
+        JSON.stringify(token)
+      );
       const message =
         token?.message ||
         token?.error_description ||
         token?.error ||
-        'Pinterest rejected the login. Check the app id, secret, and redirect URL, then connect again.';
+        'Pinterest rejected the login.';
+      const detail = typeof message === 'string' ? message : 'Pinterest rejected the login.';
       throw new NotEnoughScopes(
-        typeof message === 'string'
-          ? message
-          : 'Pinterest rejected the login. Check the app id, secret, and redirect URL, then connect again.'
+        rejectedStatus === 401
+          ? `${detail} Pinterest rejected the app id and secret on the harlo web service. On the Pinterest app page, generate a new secret and paste that new value into PINTEREST_CLIENT_SECRET, then connect again.`
+          : `${detail} (HTTP ${rejectedStatus})`
       );
     }
 
@@ -319,14 +336,24 @@ export class PinterestProvider
       );
     }
 
-    const { id, profile_image, username } = await (
-      await fetch(`${this.pinterestHost()}/v5/user_account`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
-    ).json();
+    let userAccount: { id?: string; profile_image?: string; username?: string };
+    try {
+      userAccount = await (
+        await fetch(`${this.pinterestHost()}/v5/user_account`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        })
+      ).json();
+    } catch (err) {
+      throw new NotEnoughScopes(
+        `Pinterest connected but the account lookup failed: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    }
+    const { id, profile_image, username } = userAccount || {};
 
     return {
       id: id,
@@ -432,7 +459,24 @@ export class PinterestProvider
   private pinterestHost() {
     return (
       process.env.PINTEREST_API_HOST || 'https://api.pinterest.com'
-    ).replace(/\/$/, '');
+    )
+      .trim()
+      .replace(/\/$/, '');
+  }
+
+  private pinterestRedirectUri() {
+    return `${(process.env.FRONTEND_URL || '').trim().replace(/\/$/, '')}/integrations/social/pinterest`;
+  }
+
+  private pinterestBasicAuth() {
+    const clientId = process.env.PINTEREST_CLIENT_ID?.trim();
+    const clientSecret = process.env.PINTEREST_CLIENT_SECRET?.trim();
+    if (!clientId || !clientSecret) {
+      throw new NotEnoughScopes(
+        'Pinterest app id or secret is missing on the harlo web service.'
+      );
+    }
+    return `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
   }
 
   private usingSandbox() {

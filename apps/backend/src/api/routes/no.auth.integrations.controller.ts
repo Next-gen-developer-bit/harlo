@@ -178,8 +178,14 @@ export class NoAuthIntegrationsController {
           });
         }
 
+        console.error(
+          `Authentication failed for ${integration}:`,
+          err instanceof Error ? err.stack : err
+        );
         return res({
-          error: 'Authentication failed',
+          error: `Authentication failed: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
           accessToken: '',
           id: '',
           name: '',
