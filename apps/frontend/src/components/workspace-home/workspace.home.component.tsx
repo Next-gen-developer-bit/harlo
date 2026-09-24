@@ -16,8 +16,6 @@ import { useWorkspaceOverview } from '@gitroom/frontend/components/workspace-hom
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
-import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
-
 const stripCaption = (content?: string) =>
   (content || '')
     .replace(/<[^>]*>/g, ' ')
@@ -159,33 +157,6 @@ export const WorkspaceHomeComponent = () => {
   return (
     <div className="min-h-full px-6 py-5 md:px-8 font-sans text-slate-800">
       <Onboarding />
-      <div className="mb-6 flex items-center justify-end gap-2">
-        <div className="relative w-full max-w-[280px]">
-          <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
-          </svg>
-          <input
-            readOnly
-            onClick={() => router.push('/launches?state=all')}
-            placeholder="Search posts, campaigns or accounts..."
-            className="h-10 w-full cursor-pointer rounded-full border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none placeholder:text-slate-400"
-          />
-        </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">
-          <NotificationComponent />
-        </div>
-        <button
-          type="button"
-          onClick={openCreatePost}
-          aria-label="Create post"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700"
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      </div>
-
       <p className="text-sm text-slate-500">{dayjs().format('dddd, D MMMM')}</p>
       <h1 className="mt-1 text-[32px] font-extrabold tracking-tight text-slate-900">
         Welcome back, {user?.name?.split(' ')[0] || 'there'} 👋
