@@ -240,22 +240,36 @@ export const Filters = () => {
 
   return (
     <div className="text-textColor flex flex-wrap gap-3 items-center justify-between select-none w-full mb-4">
-      <div className="flex items-center gap-2 min-w-0">
-        <h1 className="text-[22px] font-bold text-slate-900 tracking-tight truncate">
-          {isListView
-            ? calendar.listState === 'scheduled'
-              ? t('scheduled', 'Scheduled')
-              : calendar.listState === 'draft'
-              ? t('drafts', 'Drafts')
-              : calendar.listState === 'published'
-              ? t('posted', 'Posted')
-              : calendar.listState === 'failed'
-              ? t('failed', 'Failed')
-              : t('all_posts', 'All Posts')
-            : getDisplayText()}
-        </h1>
+      <div className="flex items-start gap-3 min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-[28px] font-extrabold text-slate-900 tracking-tight truncate">
+            {isListView
+              ? calendar.listState === 'scheduled'
+                ? t('scheduled_posts', 'Scheduled posts')
+                : calendar.listState === 'draft'
+                ? t('your_draft_posts', 'Your draft posts')
+                : calendar.listState === 'published'
+                ? t('published_posts', 'Published posts')
+                : calendar.listState === 'failed'
+                ? t('failed_posts', 'Failed posts')
+                : t('all_posts', 'All posts')
+              : t('calendar', 'Calendar')}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {isListView
+              ? calendar.listState === 'draft'
+                ? 'Pick up where you left off, make changes or schedule when you are ready.'
+                : calendar.listState === 'scheduled'
+                ? 'View and manage content that is planned and ready to publish.'
+                : 'View, manage and analyse all your content in one place.'
+              : 'Plan, schedule and manage your content across all channels.'}
+          </p>
+        </div>
         {!isListView && (
-          <div className="flex items-center text-slate-400">
+          <div className="flex items-center text-slate-400 pt-2">
+            <span className="px-1 text-sm font-medium text-slate-600">
+              {getDisplayText()}
+            </span>
             <button
               type="button"
               onClick={previous}

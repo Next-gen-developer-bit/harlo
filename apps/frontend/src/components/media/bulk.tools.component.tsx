@@ -219,10 +219,10 @@ export const BulkToolsComponent = () => {
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-            Media
+            Content Library
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Upload images and videos, connect channels, then schedule content.
+            Store, organise and reuse your content across all your channels.
           </p>
         </div>
 

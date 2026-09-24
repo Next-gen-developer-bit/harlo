@@ -9,7 +9,6 @@ import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { setCookie } from '@gitroom/frontend/components/layout/layout.context';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import { CreatePostModal } from '@gitroom/frontend/components/new-launch/create.post.modal';
 import { FeedbackModal } from '@gitroom/frontend/components/feedback/feedback.modal';
 import { useOrganizations } from '@gitroom/frontend/components/layout/use.organizations';
 import { useClickAway } from '@uidotdev/usehooks';
@@ -271,6 +270,72 @@ const SIDEBAR_STYLES = `
   text-transform: uppercase;
 }
 `;
+
+const iconHome = (
+  <svg {...{}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l9-8 9 8M5 10v10h14V10" />
+  </svg>
+);
+const iconGrid = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
+  </svg>
+);
+const iconPen = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  </svg>
+);
+const iconCalendar = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+const iconImage = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+const iconList = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+);
+const iconClock = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+const iconCheck = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+  </svg>
+);
+const iconAlert = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+  </svg>
+);
+const iconMegaphone = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5l6-2v14l-6-2H5V5h6zM15 9a3 3 0 010 6" />
+  </svg>
+);
+const iconUsers = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+const iconChart = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3" />
+  </svg>
+);
+const iconLink = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+  </svg>
+);
 
 const NavItem: FC<{
   icon: React.ReactNode;
@@ -556,19 +621,6 @@ export const Sidebar: FC = () => {
     [organizations, user?.orgId]
   );
 
-  const handleCreatePost = useCallback(() => {
-    modals.openModal({
-      id: 'create-post-modal',
-      closeOnClickOutside: true,
-      withCloseButton: false,
-      classNames: {
-        modal:
-          'w-[95%] max-w-[1000px] text-textColor p-0 bg-transparent shadow-none',
-      },
-      children: <CreatePostModal />,
-    });
-  }, [modals]);
-
   const openFeedback = useCallback(() => {
     modals.openModal({
       id: 'feedback-modal',
@@ -690,196 +742,63 @@ export const Sidebar: FC = () => {
           )}
         </div>
 
-        {/* Create Post CTA */}
-        <div className="pb-create-wrap">
-          <button className="pb-create-btn" onClick={handleCreatePost}>
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2.5"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Create Post
-          </button>
-        </div>
-
         {/* Scrollable Nav Items */}
         <div className="pb-scroll">
           {/* Main */}
           <div className="pb-group">
+            <NavItem path="/overview" label="Home" icon={iconHome} />
+            <NavItem path="/dashboard" label="Dashboard" icon={iconGrid} />
             <div className="pb-sec">Create</div>
+            <NavItem path="/compose" label="Compose" icon={iconPen} />
             <NavItem
-              path="/media"
-              label="Bulk Tools"
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 002-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              }
+              path="/launches"
+              label="Calendar"
+              match={(p) => p.startsWith('/launches') && !p.includes('state=')}
+              icon={iconCalendar}
             />
+            <NavItem path="/media" label="Content Library" icon={iconImage} />
+            <NavItem
+              path="/launches?state=draft"
+              label="Drafts"
+              match={(p) => p.includes('state=draft')}
+              icon={iconPen}
+            />
+            <NavItem path="/queue" label="Queue" icon={iconList} />
           </div>
 
-          {/* Content */}
           <div className="pb-group">
             <div className="pb-sec">Posts</div>
             <NavItem
-              path="/launches?display=month"
-              label="Calendar"
-              match={(p) =>
-                (p.startsWith('/launches') || p === '/launches') &&
-                !p.includes('state=')
-              }
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              }
-            />
-            <NavItem
               path="/launches?state=all"
-              label="All"
+              label="All Posts"
               match={(p) => p.includes('state=all')}
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                  />
-                </svg>
-              }
+              icon={iconList}
             />
             <NavItem
               path="/launches?state=scheduled"
               label="Scheduled"
               match={(p) => p.includes('state=scheduled')}
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              }
+              icon={iconClock}
             />
             <NavItem
               path="/launches?state=published"
-              label="Posted"
+              label="Published"
               match={(p) => p.includes('state=published')}
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              }
+              icon={iconCheck}
             />
             <NavItem
               path="/launches?state=failed"
               label="Failed"
               match={(p) => p.includes('state=failed')}
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-                  />
-                </svg>
-              }
-            />
-            <NavItem
-              path="/launches?state=draft"
-              label="Drafts"
-              match={(p) => p.includes('state=draft')}
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-              }
-            />
-            <NavItem
-              path="/analytics"
-              label="Analytics"
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 19v-6a2 2 0 012-2h2a2 2 0 012 2v64 4 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v12"
-                  />
-                </svg>
-              }
+              icon={iconAlert}
             />
           </div>
 
           {/* Workspace */}
           <div className="pb-group">
-            <div className="pb-sec">Workspace</div>
-            <NavItem
-              path="/third-party"
-              label="Social Accounts"
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                  />
-                </svg>
-              }
-            />
-            <NavItem
-              path="/integrations"
-              label="Integrations"
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M8.5 12a3.5 3.5 0 015-3.03M15.5 12a3.5 3.5 0 01-5 3.03M9 7l1.5 2L8 10m7 4l1 2.5L13.5 16"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 3a9 9 0 110 18 9 9 0 010-18z"
-                  />
-                </svg>
-              }
-            />
+            <div className="pb-sec">Manage</div>
+            <NavItem path="/campaigns" label="Campaigns" icon={iconMegaphone} />
+            <NavItem path="/workspaces" label="Workspaces" icon={iconGrid} />
             <NavItem
               path="/teams"
               label="Teams"
@@ -896,29 +815,16 @@ export const Sidebar: FC = () => {
             />
           </div>
 
+          {/* Analyse */}
+          <div className="pb-group">
+            <div className="pb-sec">Analyse</div>
+            <NavItem path="/analytics" label="Analytics" icon={iconChart} />
+            <NavItem path="/reports" label="Reports" icon={iconChart} />
+          </div>
           {/* Settings */}
           <div className="pb-group">
-            <div className="pb-sec">Configuration</div>
-            <NavItem
-              path="/settings"
-              label="Settings"
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              }
-            />
+            <div className="pb-sec">Settings</div>
+            <NavItem path="/third-party" label="Social Accounts" icon={iconLink} />
             <NavItem
               path="/api-keys"
               label="API Keys"
@@ -947,9 +853,28 @@ export const Sidebar: FC = () => {
                 </svg>
               }
             />
+            <NavItem
+              path="/settings"
+              label="Settings"
+              icon={
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              }
+            />
           </div>
 
-          {/* Support */}
           <div className="pb-group">
             <div className="pb-sec">Support</div>
 
@@ -984,7 +909,7 @@ export const Sidebar: FC = () => {
 
             <NavItem
               path="/docs"
-              label="Docs"
+              label="Help / Support"
               icon={
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path

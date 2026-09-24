@@ -175,11 +175,11 @@ export const TeamsComponent = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-[28px] leading-tight font-bold text-slate-900">
-            Teams
+            Work better, together.
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Invite members, assign roles and workspaces, and control who can
-            publish.
+            Manage your team members, roles and permissions across your
+            workspaces.
           </p>
         </div>
         <div className="flex items-center gap-3">
