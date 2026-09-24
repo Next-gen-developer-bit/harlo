@@ -279,9 +279,10 @@ export class PinterestProvider
       code: params.code,
       redirect_uri: this.pinterestRedirectUri(),
     });
-    // Apps created before 25 Sep 2025 need continuous_refresh=true. Newer
-    // apps reject it - not always with a 401 (Pinterest also returns 400 or
-    // 409), so send it first and retry without it on any failed exchange.
+    // Apps created after 25 Sep 2025 reject continuous_refresh; older apps need
+    // it. The authorization code is single-use, so a rejected first attempt can
+    // consume it and doom the retry. Try the plain exchange first (the modern
+    // default), and only fall back to continuous_refresh for older apps.
     const withRefresh = new URLSearchParams(tokenBody);
     withRefresh.set('continuous_refresh', 'true');
 
@@ -295,11 +296,11 @@ export class PinterestProvider
         body,
       });
 
-    let tokenResponse = await exchange(withRefresh);
+    let tokenResponse = await exchange(tokenBody);
     let token = await tokenResponse.json().catch(() => ({}));
 
     if (!token?.access_token) {
-      tokenResponse = await exchange(tokenBody);
+      tokenResponse = await exchange(withRefresh);
       token = await tokenResponse.json().catch(() => ({}));
     }
 
@@ -307,17 +308,27 @@ export class PinterestProvider
     const { access_token, refresh_token, expires_in, scope } = token || {};
 
     if (!access_token) {
+      const rawBody = (() => {
+        try {
+          return JSON.stringify(token);
+        } catch {
+          return '{}';
+        }
+      })();
       console.error(
         `Pinterest token exchange failed (HTTP ${rejectedStatus}):`,
         tokenResponse.statusText,
-        JSON.stringify(token)
+        rawBody
       );
       const message =
         token?.message ||
         token?.error_description ||
         token?.error ||
-        'Pinterest rejected the login.';
-      const detail = typeof message === 'string' ? message : 'Pinterest rejected the login.';
+        '';
+      const detail =
+        typeof message === 'string' && message
+          ? message
+          : `Pinterest rejected the login. Response: ${rawBody}`;
       throw new NotEnoughScopes(
         rejectedStatus === 401
           ? `${detail} Pinterest rejected the app id and secret on the harlo web service. On the Pinterest app page, generate a new secret and paste that new value into PINTEREST_CLIENT_SECRET, then connect again.`
