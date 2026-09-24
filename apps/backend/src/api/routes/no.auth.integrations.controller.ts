@@ -5,8 +5,11 @@ import {
   HttpException,
   Param,
   Post,
+  Query,
+  Res,
   UseFilters,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import { ConnectIntegrationDto } from '@gitroom/nestjs-libraries/dtos/integrations/connect.integration.dto';
 import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
@@ -337,6 +340,33 @@ export class NoAuthIntegrationsController {
       ...(returnURL ? { returnURL } : {}),
       ...(extensionToken ? { extensionToken } : {}),
     };
+  }
+
+  // The OAuth callback is the frontend page /integrations/social/:integration
+  // (a browser GET), which then POSTs the authorization code here. If a GET
+  // ever lands on this POST-only endpoint directly - a redirect URI that
+  // points here, or a manual navigation carrying a code/error - bounce it back
+  // to the frontend page so the normal handshake runs instead of a 404.
+  @Get('/social-connect/:integration')
+  async redirectToConnectPage(
+    @Param('integration') integration: string,
+    @Query() query: Record<string, string>,
+    @Res() res: Response
+  ) {
+    if (!query.code && !query.error) {
+      throw new HttpException('Not Found', 404);
+    }
+    const search = new URLSearchParams(
+      Object.entries(query).filter(
+        ([, v]) => v !== undefined && v !== null && v !== ''
+      ) as [string, string][]
+    ).toString();
+    const frontend = `${(
+      process.env.FRONTEND_URL || ''
+    )
+      .trim()
+      .replace(/\/$/, '')}/integrations/social/${integration}`;
+    return res.redirect(302, search ? `${frontend}?${search}` : frontend);
   }
 
   @Post('/public/provider/:id/connect')
