@@ -81,13 +81,23 @@ const SIDEBAR_STYLES = `
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0 12px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
 }
 .pb-scroll::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
+}
+.pb-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+  margin: 4px 0;
 }
 .pb-scroll::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
+}
+.pb-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 .pb-group {
   display: flex;
