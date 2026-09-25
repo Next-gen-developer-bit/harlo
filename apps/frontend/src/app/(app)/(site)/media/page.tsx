@@ -3,8 +3,8 @@ import { Metadata } from 'next';
 import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.side';
 
 export const metadata: Metadata = {
-  title: 'Bulk Tools - Harlo Social',
-  description: 'Upload and manage media assets and bulk video/image tools.',
+  title: 'Content Library - Harlo Social',
+  description: 'Store, organise and reuse your content across all your channels.',
 };
 
 export default async function Page() {

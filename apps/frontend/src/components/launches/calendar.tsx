@@ -582,9 +582,8 @@ export const MonthView = () => {
 };
 export const ListView = () => {
   const t = useT();
-  const user = useUser();
   const modal = useModals();
-  const { integrations, loading, listPosts, listState } = useCalendar();
+  const { loading, listPosts, listState } = useCalendar();
   const emptyMessage =
     listState === 'scheduled'
       ? t('no_upcoming_posts', 'No upcoming posts scheduled')
@@ -596,15 +595,7 @@ export const ListView = () => {
       ? t('no_failed_posts', 'No failed posts')
       : t('no_posts', 'No posts');
 
-  // Use shared post actions hook
-  const {
-    editPost,
-    deletePost,
-    moveToDraft,
-    copyDebugJson,
-    openStatistics,
-    openMissingRelease,
-  } = usePostActions();
+  const { editPost, deletePost } = usePostActions();
 
   // Group posts by date, then by destination group
   const groupedPosts = useMemo(() => {
@@ -715,45 +706,132 @@ export const ListView = () => {
     );
   }
 
+  const statusLabel = (state: State) => {
+    if (state === 'PUBLISHED') return 'Published';
+    if (state === 'ERROR') return 'Failed';
+    if (state === 'DRAFT') return 'Draft';
+    return 'Scheduled';
+  };
+
+  const statusClass = (state: State) => {
+    if (state === 'PUBLISHED') return 'bg-emerald-50 text-emerald-700';
+    if (state === 'ERROR') return 'bg-rose-50 text-rose-600';
+    if (state === 'DRAFT') return 'bg-slate-100 text-slate-600';
+    return 'bg-blue-50 text-blue-600';
+  };
+
   return (
-    <div className="flex flex-col gap-[10px] flex-1 relative">
-      <div className="absolute start-0 top-0 w-full h-full flex flex-col overflow-auto scrollbar scrollbar-thumb-fifth scrollbar-track-newBgColor">
-        {groupedPosts.map(([dateKey, datePosts]) => (
-          <Fragment key={dateKey}>
-            <div className="text-center text-[14px] min-h-[21px] text-textColor font-[500] mt-[10px]">
-              {newDayjs(dateKey).format(
-                isUSCitizen() ? 'dddd, MMMM D, YYYY' : 'dddd, D MMMM YYYY'
-              )}
-            </div>
-            <div className="flex flex-col gap-[10px] mb-[20px] px-[10px]">
-              {datePosts.map((group) => {
+    <div className="flex flex-1 min-h-0 w-full overflow-auto px-1 pb-6">
+      <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Post</th>
+              <th className="px-4 py-3 font-semibold">Platforms</th>
+              <th className="px-4 py-3 font-semibold">Date & time</th>
+              <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groupedPosts.flatMap(([, datePosts]) =>
+              datePosts.map((group) => {
                 const post = group[0];
+                const state = groupState(group);
+                const caption =
+                  stripHtmlValidation('none', post.content, false, true, false) ||
+                  t('no_content', 'Untitled post');
+                const thumb = postThumb(post.image);
+                const platforms = [
+                  ...new Set(
+                    group
+                      .map((item) => item.integration?.providerIdentifier)
+                      .filter(Boolean)
+                  ),
+                ] as string[];
                 return (
-                <CalendarItem
-                  key={post.group || post.id}
-                  display="day"
-                  isBeforeNow={false}
-                  date={newDayjs(post.publishDate)}
-                  state={groupState(group)}
-                  statistics={openStatistics(post.id)}
-                  missingRelease={openMissingRelease(post.id)}
-                  editPost={editPost(post, false)}
-                  duplicatePost={editPost(post, true)}
-                  moveToDraft={moveToDraft(post)}
-                  copyDebugJson={
-                    user?.isSuperAdmin ? copyDebugJson(post) : undefined
-                  }
-                  post={post}
-                  groupPosts={group}
-                  integrations={integrations}
-                  deletePost={deletePost(post)}
-                  showTime={true}
-                />
-              );
-              })}
-            </div>
-          </Fragment>
-        ))}
+                  <tr
+                    key={post.group || post.id}
+                    className="border-t border-slate-100 hover:bg-slate-50/70"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                          {thumb ? (
+                            <SafeImage
+                              src={thumb}
+                              alt=""
+                              width={40}
+                              height={40}
+                              className="h-10 w-10 object-cover"
+                            />
+                          ) : null}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-slate-900 max-w-[280px]">
+                            {caption}
+                          </div>
+                          <div className="truncate text-xs text-slate-400 max-w-[280px]">
+                            {post.integration?.name || 'Workspace'}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        {platforms.map((identifier) => (
+                          <SafeImage
+                            key={identifier}
+                            src={platformIconSrc(identifier)}
+                            alt={identifier}
+                            width={18}
+                            height={18}
+                            className="h-[18px] w-[18px] rounded-full"
+                          />
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                      {newDayjs(post.publishDate)
+                        .local()
+                        .format(
+                          isUSCitizen() ? 'MMM D, YYYY h:mm A' : 'D MMM YYYY HH:mm'
+                        )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={clsx(
+                          'inline-flex rounded-full px-2.5 py-1 text-xs font-medium',
+                          statusClass(state)
+                        )}
+                      >
+                        {statusLabel(state)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={editPost(post, false)}
+                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={deletePost(post)}
+                          className="rounded-lg px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

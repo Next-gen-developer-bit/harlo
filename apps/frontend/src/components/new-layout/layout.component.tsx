@@ -41,6 +41,7 @@ import { AttachToFeedbackIcon } from '@gitroom/frontend/components/new-layout/se
 import { TrialTracker } from '@gitroom/frontend/components/layout/gtm.component';
 import { setSentryUser } from '@gitroom/react/sentry/initialize.sentry.client';
 import { Sidebar } from '@gitroom/frontend/components/new-layout/sidebar.component';
+import { AppTopbar } from '@gitroom/frontend/components/new-layout/app.topbar';
 
 const jakartaSans = Plus_Jakarta_Sans({
   weight: ['600', '500', '700'],
@@ -124,6 +125,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                     className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col min-w-0 bg-[#f8fafc]"
                     style={{ background: '#f8fafc' }}
                   >
+                    <AppTopbar />
                     <div className="flex-1 flex flex-col">{children}</div>
                   </div>
                 </div>
