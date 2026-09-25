@@ -78,14 +78,15 @@ const SIDEBAR_STYLES = `
 /* ── Navigation List ── */
 .pb-scroll {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: scroll;
   overflow-x: hidden;
-  padding: 0 12px 14px;
+  padding: 0 6px 14px 12px;
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 #f1f5f9;
+  scrollbar-color: #94a3b8 #f1f5f9;
 }
 .pb-scroll::-webkit-scrollbar {
-  width: 5px;
+  width: 6px;
+  display: block;
 }
 .pb-scroll::-webkit-scrollbar-track {
   background: #f1f5f9;
@@ -93,20 +94,26 @@ const SIDEBAR_STYLES = `
   margin: 4px 0;
 }
 .pb-scroll::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #94a3b8;
   border-radius: 4px;
+  min-height: 40px;
 }
 .pb-scroll::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #64748b;
 }
 .pb-group {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+}
+.pb-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 8px 6px;
 }
 .pb-sec {
-  padding: 12px 12px 6px;
+  padding: 8px 12px 4px;
   font-size: 11px;
   font-weight: 600;
   color: #94a3b8 !important;
@@ -162,7 +169,7 @@ const SIDEBAR_STYLES = `
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  margin: 0 12px 8px;
+  margin: 4px 6px 4px;
   border-radius: 8px;
   font-size: 13.5px;
   font-weight: 500;
@@ -765,6 +772,8 @@ export const Sidebar: FC = () => {
             <NavItem path="/queue" label="Queue" icon={iconQueue} />
           </div>
 
+          <div className="pb-divider" />
+
           {/* MANAGE */}
           <div className="pb-group">
             <div className="pb-sec">Manage</div>
@@ -774,12 +783,16 @@ export const Sidebar: FC = () => {
             <NavItem path="/third-party" label="Social Accounts" icon={iconSocialAccounts} />
           </div>
 
+          <div className="pb-divider" />
+
           {/* ANALYTICS */}
           <div className="pb-group">
             <div className="pb-sec">Analytics</div>
             <NavItem path="/analytics" label="Overview" icon={iconOverview} />
             <NavItem path="/reports" label="Reports" icon={iconReports} />
           </div>
+
+          <div className="pb-divider" />
 
           {/* SETTINGS */}
           <div className="pb-group">
@@ -789,6 +802,8 @@ export const Sidebar: FC = () => {
             <NavItem path="/api-keys" label="API Keys" icon={iconApiKeys} />
           </div>
         </div>
+
+        <div className="pb-divider" style={{ margin: '0 12px' }} />
 
         {/* ── Help & Support (standalone, above footer) ── */}
         <Link href="/docs" className="pb-help-link">
