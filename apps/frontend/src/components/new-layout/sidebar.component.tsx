@@ -38,7 +38,7 @@ const SIDEBAR_STYLES = `
   height: 100%;
   background: #ffffff !important;
   color: #334155 !important;
-  border-right: 1px solid #e8ecf1;
+  border-right: 1px solid #e2e8f0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
   overflow: hidden;
@@ -75,31 +75,59 @@ const SIDEBAR_STYLES = `
   letter-spacing: -0.02em;
 }
 
-/* ── Navigation List ── */
+/* ── Navigation Container with Always-Visible Custom Scrollbar / Side Line ── */
+.pb-scroll-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
 .pb-scroll {
   flex: 1;
-  overflow-y: scroll;
+  height: 100%;
+  overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 6px 14px 12px;
-  scrollbar-width: thin;
-  scrollbar-color: #94a3b8 #f1f5f9;
+  padding: 0 16px 14px 12px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .pb-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.pb-scrollbar-rail {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  right: 4px;
   width: 6px;
-  display: block;
-}
-.pb-scroll::-webkit-scrollbar-track {
   background: #f1f5f9;
-  border-radius: 4px;
-  margin: 4px 0;
+  border-radius: 9999px;
+  cursor: pointer;
+  z-index: 10;
+  user-select: none;
+  transition: width 0.15s ease, background-color 0.15s ease;
 }
-.pb-scroll::-webkit-scrollbar-thumb {
+.pb-scrollbar-rail:hover {
+  width: 8px;
+  background: #e2e8f0;
+}
+.pb-scrollbar-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   background: #94a3b8;
-  border-radius: 4px;
-  min-height: 40px;
+  border-radius: 9999px;
+  cursor: grab;
+  transition: background-color 0.15s ease;
 }
-.pb-scroll::-webkit-scrollbar-thumb:hover {
+.pb-scrollbar-thumb:hover,
+.pb-scrollbar-thumb:active {
   background: #64748b;
+  cursor: grabbing;
 }
 .pb-group {
   display: flex;
@@ -731,6 +759,97 @@ export const Sidebar: FC = () => {
     }
   }, [fetch, isSecured]);
 
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [thumbHeight, setThumbHeight] = useState(48);
+  const [thumbTop, setThumbTop] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartY = React.useRef(0);
+  const dragStartScrollTop = React.useRef(0);
+
+  const updateScrollbar = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    const trackHeight = clientHeight - 12;
+    if (trackHeight <= 0) return;
+
+    if (scrollHeight <= clientHeight) {
+      setThumbHeight(Math.max(36, Math.min(80, trackHeight * 0.35)));
+      setThumbTop(0);
+      return;
+    }
+
+    const ratio = clientHeight / scrollHeight;
+    const calculatedThumbHeight = Math.max(32, Math.min(trackHeight - 20, trackHeight * ratio));
+    const availableTrackSpace = trackHeight - calculatedThumbHeight;
+    const scrollFraction = scrollTop / (scrollHeight - clientHeight);
+    const calculatedThumbTop = Math.max(0, Math.min(availableTrackSpace, scrollFraction * availableTrackSpace));
+
+    setThumbHeight(calculatedThumbHeight);
+    setThumbTop(calculatedThumbTop);
+  }, []);
+
+  React.useEffect(() => {
+    updateScrollbar();
+    window.addEventListener('resize', updateScrollbar);
+    return () => window.removeEventListener('resize', updateScrollbar);
+  }, [updateScrollbar]);
+
+  const handleRailClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget && (e.target as HTMLElement).classList.contains('pb-scrollbar-thumb')) {
+      return;
+    }
+    const rail = e.currentTarget;
+    const rect = rail.getBoundingClientRect();
+    const clickY = e.clientY - rect.top;
+    const el = scrollRef.current;
+    if (!el) return;
+    const trackHeight = rect.height;
+    const scrollRatio = clickY / trackHeight;
+    el.scrollTo({
+      top: scrollRatio * (el.scrollHeight - el.clientHeight),
+      behavior: 'smooth',
+    });
+  };
+
+  const handleThumbMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    dragStartY.current = e.clientY;
+    if (scrollRef.current) {
+      dragStartScrollTop.current = scrollRef.current.scrollTop;
+    }
+  };
+
+  React.useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const deltaY = e.clientY - dragStartY.current;
+      const trackHeight = el.clientHeight - 12;
+      const availableSpace = trackHeight - thumbHeight;
+      if (availableSpace <= 0) return;
+      const scrollableDist = el.scrollHeight - el.clientHeight;
+      if (scrollableDist <= 0) return;
+      const scrollDelta = (deltaY / availableSpace) * scrollableDist;
+      el.scrollTop = dragStartScrollTop.current + scrollDelta;
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, thumbHeight]);
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: SIDEBAR_STYLES }} />
@@ -745,61 +864,79 @@ export const Sidebar: FC = () => {
           />
         </Link>
 
-        {/* ── Scrollable Nav Items ── */}
-        <div className="pb-scroll">
-          {/* Home (no section header) */}
-          <div className="pb-group">
-            <NavItem path="/overview" label="Home" icon={iconHome} />
+        {/* ── Scrollable Nav Items with Always-Visible Rail ── */}
+        <div className="pb-scroll-wrap">
+          <div className="pb-scroll" ref={scrollRef} onScroll={updateScrollbar}>
+            {/* Home (no section header) */}
+            <div className="pb-group">
+              <NavItem path="/overview" label="Home" icon={iconHome} />
+            </div>
+
+            {/* CREATE */}
+            <div className="pb-group">
+              <div className="pb-sec">Create</div>
+              <NavItem path="/compose" label="Compose" icon={iconCompose} />
+              <NavItem
+                path="/launches"
+                label="Calendar"
+                match={(p) => p.startsWith('/launches') && !p.includes('state=')}
+                icon={iconCalendar}
+              />
+              <NavItem path="/media" label="Content Library" icon={iconContentLibrary} />
+              <NavItem
+                path="/launches?state=all"
+                label="Posts"
+                match={(p) => p.includes('state=all') || p.includes('state=draft') || p.includes('state=scheduled') || p.includes('state=published') || p.includes('state=failed')}
+                icon={iconPosts}
+              />
+              <NavItem path="/queue" label="Queue" icon={iconQueue} />
+            </div>
+
+            <div className="pb-divider" />
+
+            {/* MANAGE */}
+            <div className="pb-group">
+              <div className="pb-sec">Manage</div>
+              <NavItem path="/workspaces" label="Workspaces" icon={iconWorkspaces} />
+              <NavItem path="/campaigns" label="Campaigns" icon={iconCampaigns} />
+              <NavItem path="/teams" label="Team" icon={iconTeam} />
+              <NavItem path="/third-party" label="Social Accounts" icon={iconSocialAccounts} />
+            </div>
+
+            <div className="pb-divider" />
+
+            {/* ANALYTICS */}
+            <div className="pb-group">
+              <div className="pb-sec">Analytics</div>
+              <NavItem path="/analytics" label="Overview" icon={iconOverview} />
+              <NavItem path="/reports" label="Reports" icon={iconReports} />
+            </div>
+
+            <div className="pb-divider" />
+
+            {/* SETTINGS */}
+            <div className="pb-group">
+              <div className="pb-sec">Settings</div>
+              <NavItem path="/settings" label="General Settings" icon={iconGeneralSettings} />
+              <NavItem path="/billing" label="Billing & Plan" icon={iconBilling} />
+              <NavItem path="/api-keys" label="API Keys" icon={iconApiKeys} />
+            </div>
           </div>
 
-          {/* CREATE */}
-          <div className="pb-group">
-            <div className="pb-sec">Create</div>
-            <NavItem path="/compose" label="Compose" icon={iconCompose} />
-            <NavItem
-              path="/launches"
-              label="Calendar"
-              match={(p) => p.startsWith('/launches') && !p.includes('state=')}
-              icon={iconCalendar}
+          {/* Always-visible custom scrollbar rail / side line */}
+          <div
+            className="pb-scrollbar-rail"
+            onClick={handleRailClick}
+            title="Scroll"
+          >
+            <div
+              className="pb-scrollbar-thumb"
+              style={{
+                height: `${thumbHeight}px`,
+                transform: `translateY(${thumbTop}px)`,
+              }}
+              onMouseDown={handleThumbMouseDown}
             />
-            <NavItem path="/media" label="Content Library" icon={iconContentLibrary} />
-            <NavItem
-              path="/launches?state=all"
-              label="Posts"
-              match={(p) => p.includes('state=all') || p.includes('state=draft') || p.includes('state=scheduled') || p.includes('state=published') || p.includes('state=failed')}
-              icon={iconPosts}
-            />
-            <NavItem path="/queue" label="Queue" icon={iconQueue} />
-          </div>
-
-          <div className="pb-divider" />
-
-          {/* MANAGE */}
-          <div className="pb-group">
-            <div className="pb-sec">Manage</div>
-            <NavItem path="/workspaces" label="Workspaces" icon={iconWorkspaces} />
-            <NavItem path="/campaigns" label="Campaigns" icon={iconCampaigns} />
-            <NavItem path="/teams" label="Team" icon={iconTeam} />
-            <NavItem path="/third-party" label="Social Accounts" icon={iconSocialAccounts} />
-          </div>
-
-          <div className="pb-divider" />
-
-          {/* ANALYTICS */}
-          <div className="pb-group">
-            <div className="pb-sec">Analytics</div>
-            <NavItem path="/analytics" label="Overview" icon={iconOverview} />
-            <NavItem path="/reports" label="Reports" icon={iconReports} />
-          </div>
-
-          <div className="pb-divider" />
-
-          {/* SETTINGS */}
-          <div className="pb-group">
-            <div className="pb-sec">Settings</div>
-            <NavItem path="/settings" label="General Settings" icon={iconGeneralSettings} />
-            <NavItem path="/billing" label="Billing & Plan" icon={iconBilling} />
-            <NavItem path="/api-keys" label="API Keys" icon={iconApiKeys} />
           </div>
         </div>
 
