@@ -88,7 +88,7 @@ const SIDEBAR_STYLES = `
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 16px 14px 12px;
+  padding: 0 16px 48px 12px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -101,17 +101,25 @@ const SIDEBAR_STYLES = `
   position: absolute;
   top: 6px;
   bottom: 6px;
-  right: 4px;
-  width: 8px;
-  background: #f1f5f9;
-  border-radius: 9999px;
+  right: 2px;
+  width: 10px;
   cursor: pointer;
   z-index: 20;
   user-select: none;
   touch-action: none;
-  transition: background-color 0.15s ease;
+  display: flex;
+  justify-content: center;
 }
-.pb-scrollbar-rail:hover {
+.pb-scrollbar-track-bg {
+  width: 6px;
+  height: 100%;
+  background: #f1f5f9;
+  border-radius: 9999px;
+  position: relative;
+  transition: width 0.15s ease, background-color 0.15s ease;
+}
+.pb-scrollbar-rail:hover .pb-scrollbar-track-bg {
+  width: 8px;
   background: #e2e8f0;
 }
 .pb-scrollbar-thumb {
@@ -119,11 +127,9 @@ const SIDEBAR_STYLES = `
   top: 0;
   left: 0;
   width: 100%;
-  height: 48px;
   background: #94a3b8;
   border-radius: 9999px;
   cursor: grab;
-  user-select: none;
   touch-action: none;
   transition: background-color 0.15s ease;
 }
@@ -766,13 +772,15 @@ export const Sidebar: FC = () => {
   const railRef = React.useRef<HTMLDivElement>(null);
   const thumbRef = React.useRef<HTMLDivElement>(null);
 
-  const isDraggingRef = React.useRef(false);
-  const startYRef = React.useRef(0);
-  const startScrollTopRef = React.useRef(0);
   const [thumbHeight, setThumbHeight] = useState(48);
   const [thumbTop, setThumbTop] = useState(0);
 
+  const isDraggingRef = React.useRef(false);
+  const dragStartYRef = React.useRef(0);
+  const dragStartTopRef = React.useRef(0);
+
   const updateScrollbar = useCallback(() => {
+    if (isDraggingRef.current) return;
     const el = scrollRef.current;
     const rail = railRef.current;
     if (!el || !rail) return;
@@ -781,27 +789,21 @@ export const Sidebar: FC = () => {
     const trackHeight = rail.clientHeight;
     if (trackHeight <= 0) return;
 
-    const scrollRange = scrollHeight - clientHeight;
-
-    if (scrollRange <= 0) {
-      const defaultH = Math.max(40, Math.min(80, trackHeight * 0.35));
-      setThumbHeight(defaultH);
-      if (!isDraggingRef.current) {
-        setThumbTop(0);
-      }
+    const maxScroll = scrollHeight - clientHeight;
+    if (maxScroll <= 0) {
+      setThumbHeight(Math.max(40, Math.min(80, trackHeight * 0.35)));
+      setThumbTop(0);
       return;
     }
 
     const ratio = clientHeight / scrollHeight;
-    const h = Math.max(32, Math.min(trackHeight - 20, trackHeight * ratio));
+    const h = Math.max(36, Math.min(trackHeight - 20, trackHeight * ratio));
     const availableTrack = trackHeight - h;
-    const fraction = Math.max(0, Math.min(1, scrollTop / scrollRange));
+    const fraction = Math.max(0, Math.min(1, scrollTop / maxScroll));
     const top = fraction * availableTrack;
 
     setThumbHeight(h);
-    if (!isDraggingRef.current) {
-      setThumbTop(top);
-    }
+    setThumbTop(top);
   }, []);
 
   React.useEffect(() => {
@@ -810,38 +812,42 @@ export const Sidebar: FC = () => {
     return () => window.removeEventListener('resize', updateScrollbar);
   }, [updateScrollbar]);
 
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const rail = railRef.current;
     const el = scrollRef.current;
+    const rail = railRef.current;
     const thumb = thumbRef.current;
-    if (!rail || !el || !thumb) return;
+    if (!el || !rail || !thumb) return;
 
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    try {
+      rail.setPointerCapture(e.pointerId);
+    } catch {}
+
     isDraggingRef.current = true;
-    startYRef.current = e.clientY;
-    startScrollTopRef.current = el.scrollTop;
+    dragStartYRef.current = e.clientY;
 
-    if (e.target !== thumb) {
-      const rect = rail.getBoundingClientRect();
+    const rect = rail.getBoundingClientRect();
+    const trackHeight = rect.height;
+    const availableTrack = Math.max(0, trackHeight - thumbHeight);
+
+    if (e.target === thumb || thumb.contains(e.target as Node)) {
+      dragStartTopRef.current = thumbTop;
+    } else {
       const clickY = e.clientY - rect.top;
-      const availableTrack = rect.height - thumbHeight;
-      if (availableTrack > 0) {
-        const targetThumbTop = Math.max(0, Math.min(availableTrack, clickY - thumbHeight / 2));
-        const fraction = targetThumbTop / availableTrack;
-        const scrollRange = el.scrollHeight - el.clientHeight;
-        if (scrollRange > 0) {
-          el.scrollTop = fraction * scrollRange;
-        }
-        setThumbTop(targetThumbTop);
-        startScrollTopRef.current = el.scrollTop;
+      const targetTop = Math.max(0, Math.min(availableTrack, clickY - thumbHeight / 2));
+      setThumbTop(targetTop);
+      dragStartTopRef.current = targetTop;
+
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      if (maxScroll > 0 && availableTrack > 0) {
+        el.scrollTop = (targetTop / availableTrack) * maxScroll;
       }
     }
   };
 
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
     e.preventDefault();
     e.stopPropagation();
@@ -850,31 +856,29 @@ export const Sidebar: FC = () => {
     const rail = railRef.current;
     if (!el || !rail) return;
 
-    const deltaY = e.clientY - startYRef.current;
     const trackHeight = rail.clientHeight;
-    const availableTrack = trackHeight - thumbHeight;
+    const availableTrack = Math.max(0, trackHeight - thumbHeight);
     if (availableTrack <= 0) return;
 
-    const scrollRange = el.scrollHeight - el.clientHeight;
-    if (scrollRange > 0) {
-      const scrollDelta = (deltaY / availableTrack) * scrollRange;
-      const newScrollTop = Math.max(0, Math.min(scrollRange, startScrollTopRef.current + scrollDelta));
-      el.scrollTop = newScrollTop;
+    const deltaY = e.clientY - dragStartYRef.current;
+    const newTop = Math.max(0, Math.min(availableTrack, dragStartTopRef.current + deltaY));
+    setThumbTop(newTop);
 
-      const newFraction = newScrollTop / scrollRange;
-      setThumbTop(newFraction * availableTrack);
-    } else {
-      const visualTop = Math.max(0, Math.min(availableTrack, deltaY));
-      setThumbTop(visualTop);
+    const maxScroll = el.scrollHeight - el.clientHeight;
+    if (maxScroll > 0) {
+      el.scrollTop = (newTop / availableTrack) * maxScroll;
     }
   };
 
-  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
-    try {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {}
+    const rail = railRef.current;
+    if (rail) {
+      try {
+        rail.releasePointerCapture(e.pointerId);
+      } catch {}
+    }
     updateScrollbar();
   };
 
@@ -953,22 +957,24 @@ export const Sidebar: FC = () => {
 
           {/* Always-visible custom scrollbar rail / side line */}
           <div
-            className="pb-scrollbar-rail"
             ref={railRef}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
+            className="pb-scrollbar-rail"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             title="Scroll navigation"
           >
-            <div
-              className="pb-scrollbar-thumb"
-              ref={thumbRef}
-              style={{
-                height: `${thumbHeight}px`,
-                transform: `translateY(${thumbTop}px)`,
-              }}
-            />
+            <div className="pb-scrollbar-track-bg">
+              <div
+                ref={thumbRef}
+                className="pb-scrollbar-thumb"
+                style={{
+                  height: `${thumbHeight}px`,
+                  transform: `translateY(${thumbTop}px)`,
+                }}
+              />
+            </div>
           </div>
         </div>
 
