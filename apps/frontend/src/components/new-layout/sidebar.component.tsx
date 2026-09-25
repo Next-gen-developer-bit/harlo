@@ -29,11 +29,6 @@ const SIDEBAR_STYLES = `
   margin: 0;
   padding: 0;
 }
-#left-menu {
-  box-sizing: border-box !important;
-  max-height: 100vh !important;
-  overflow: hidden !important;
-}
 .pb-sidebar {
   display: flex;
   flex-direction: column;
@@ -41,9 +36,6 @@ const SIDEBAR_STYLES = `
   min-width: 240px;
   max-width: 240px;
   height: 100%;
-  max-height: 100%;
-  min-height: 0;
-  box-sizing: border-box;
   background: #ffffff !important;
   color: #334155 !important;
   border-right: 1px solid #e2e8f0;
@@ -86,25 +78,19 @@ const SIDEBAR_STYLES = `
 /* ── Navigation Container with Always-Visible Custom Scrollbar / Side Line ── */
 .pb-scroll-wrap {
   position: relative;
-  flex: 1 1 0%;
+  flex: 1;
   min-height: 0;
-  height: 0;
   display: flex;
   overflow: hidden;
 }
 .pb-scroll {
-  position: absolute;
-  inset: 0;
+  flex: 1;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 16px 32px 12px;
+  padding: 0 16px 48px 12px;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  touch-action: pan-y;
-  cursor: grab;
-}
-.pb-scroll:active {
-  cursor: grabbing;
 }
 .pb-scroll::-webkit-scrollbar {
   display: none;
@@ -896,49 +882,6 @@ export const Sidebar: FC = () => {
     updateScrollbar();
   };
 
-  const isContentDraggingRef = React.useRef(false);
-  const contentDragStartYRef = React.useRef(0);
-  const contentDragStartScrollTopRef = React.useRef(0);
-  const hasMovedRef = React.useRef(false);
-
-  const handleContentPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
-    const el = scrollRef.current;
-    if (!el) return;
-
-    isContentDraggingRef.current = true;
-    hasMovedRef.current = false;
-    contentDragStartYRef.current = e.clientY;
-    contentDragStartScrollTopRef.current = el.scrollTop;
-  };
-
-  const handleContentPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isContentDraggingRef.current) return;
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const deltaY = e.clientY - contentDragStartYRef.current;
-    if (Math.abs(deltaY) > 4) {
-      hasMovedRef.current = true;
-    }
-
-    el.scrollTop = contentDragStartScrollTopRef.current - deltaY;
-    updateScrollbar();
-  };
-
-  const handleContentPointerUp = () => {
-    isContentDraggingRef.current = false;
-    updateScrollbar();
-  };
-
-  const handleContentClickCapture = (e: React.MouseEvent) => {
-    if (hasMovedRef.current) {
-      e.preventDefault();
-      e.stopPropagation();
-      hasMovedRef.current = false;
-    }
-  };
-
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: SIDEBAR_STYLES }} />
@@ -955,16 +898,7 @@ export const Sidebar: FC = () => {
 
         {/* ── Scrollable Nav Items with Always-Visible Rail ── */}
         <div className="pb-scroll-wrap">
-          <div
-            className="pb-scroll"
-            ref={scrollRef}
-            onScroll={updateScrollbar}
-            onPointerDown={handleContentPointerDown}
-            onPointerMove={handleContentPointerMove}
-            onPointerUp={handleContentPointerUp}
-            onPointerCancel={handleContentPointerUp}
-            onClickCapture={handleContentClickCapture}
-          >
+          <div className="pb-scroll" ref={scrollRef} onScroll={updateScrollbar}>
             {/* Home (no section header) */}
             <div className="pb-group">
               <NavItem path="/overview" label="Home" icon={iconHome} />
