@@ -14,7 +14,13 @@ import { useOrganizations } from '@gitroom/frontend/components/layout/use.organi
 import { useClickAway } from '@uidotdev/usehooks';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SIDEBAR STYLES — Harlo Social Official Brand Identity (#2563EB Primary Blue)
+   SIDEBAR STYLES — Harlo Social Official Brand Identity
+   Matches the Harlo reference design exactly:
+   - Clean white background
+   - Section headers: uppercase, small, gray (#94a3b8)
+   - Active item: light blue bg (#eff6ff), blue text (#2563eb)
+   - Nav items: medium weight, #475569 text
+   - User footer at bottom with email + plan
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const SIDEBAR_STYLES = `
 .pb-sidebar,
@@ -32,7 +38,7 @@ const SIDEBAR_STYLES = `
   height: 100%;
   background: #ffffff !important;
   color: #334155 !important;
-  border-right: 1px solid #f1f5f9;
+  border-right: 1px solid #e8ecf1;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
   overflow: hidden;
@@ -43,96 +49,30 @@ const SIDEBAR_STYLES = `
 .pb-sidebar .pb-brand {
   display: flex;
   align-items: center;
-  padding: 18px 20px 14px;
+  gap: 8px;
+  padding: 20px 20px 16px;
   flex-shrink: 0;
   text-decoration: none;
 }
-.pb-sidebar .pb-brand-mark {
-  height: 28px;
-  width: auto;
-  display: block;
-}
-
-/* ── Workspace Box ── */
-.pb-ws-wrap {
-  position: relative;
-  padding: 0 14px 12px;
-}
-.pb-ws-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.pb-ws-box:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-}
-.pb-ws-avatar {
+.pb-sidebar .pb-brand-icon {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  overflow: hidden;
+  background: #1a1a2e;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: transparent;
 }
-.pb-ws-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
+.pb-sidebar .pb-brand-icon svg {
+  width: 16px;
+  height: 16px;
 }
-.pb-ws-info {
-  flex: 1;
-  text-align: left;
-  overflow: hidden;
-}
-.pb-ws-name {
-  font-size: 13px;
-  font-weight: 600;
+.pb-sidebar .pb-brand-name {
+  font-size: 20px;
+  font-weight: 700;
   color: #0f172a !important;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.pb-ws-plan {
-  font-size: 11px;
-  color: #64748b !important;
-}
-
-/* ── Create Post CTA ── */
-.pb-create-wrap {
-  padding: 0 14px 14px;
-}
-.pb-create-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 16px;
-  border-radius: 10px;
-  background: #2563eb !important;
-  color: #ffffff !important;
-  font-size: 13.5px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
-}
-.pb-create-btn:hover {
-  background: #1d4ed8 !important;
-  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.35);
+  letter-spacing: -0.02em;
 }
 
 /* ── Navigation List ── */
@@ -140,16 +80,23 @@ const SIDEBAR_STYLES = `
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 14px 14px;
+  padding: 0 12px 14px;
+}
+.pb-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.pb-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 .pb-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-bottom: 12px;
+  gap: 1px;
+  margin-bottom: 8px;
 }
 .pb-sec {
-  padding: 8px 10px 4px;
+  padding: 12px 12px 6px;
   font-size: 11px;
   font-weight: 600;
   color: #94a3b8 !important;
@@ -162,7 +109,7 @@ const SIDEBAR_STYLES = `
   gap: 10px;
   width: 100%;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 13.5px;
   font-weight: 500;
   color: #475569 !important;
@@ -170,6 +117,8 @@ const SIDEBAR_STYLES = `
   text-decoration: none;
   transition: all 0.12s ease;
   cursor: pointer;
+  border: none;
+  font-family: inherit;
 }
 .pb-nav:hover {
   background: #f8fafc;
@@ -183,7 +132,13 @@ const SIDEBAR_STYLES = `
 .pb-nav-icon {
   display: flex;
   align-items: center;
+  justify-content: center;
   color: #64748b;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.pb-nav-icon svg {
   width: 18px;
   height: 18px;
 }
@@ -191,16 +146,63 @@ const SIDEBAR_STYLES = `
   color: #2563eb !important;
 }
 
+/* ── Help & Support ── */
+.pb-help-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  margin: 0 12px 8px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #475569 !important;
+  background: transparent;
+  text-decoration: none;
+  transition: all 0.12s ease;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+.pb-help-link:hover {
+  background: #f8fafc;
+  color: #0f172a !important;
+}
+.pb-help-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.pb-help-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.pb-help-ext {
+  margin-left: auto;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+}
+.pb-help-ext svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* ── User Profile Footer ── */
 .pb-user-footer {
   position: relative;
   padding: 12px 14px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid #e8ecf1;
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
   transition: background 0.15s;
+  flex-shrink: 0;
 }
 .pb-user-footer:hover {
   background: #f8fafc;
@@ -210,25 +212,33 @@ const SIDEBAR_STYLES = `
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 .pb-user-info {
   flex: 1;
   overflow: hidden;
 }
-.pb-user-name {
+.pb-user-email {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: #0f172a !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.pb-user-email {
+.pb-user-plan {
   font-size: 11px;
   color: #64748b !important;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+.pb-user-chevron {
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.pb-user-chevron svg {
+  width: 16px;
+  height: 16px;
 }
 .pb-menu {
   position: absolute;
@@ -256,6 +266,7 @@ const SIDEBAR_STYLES = `
   text-align: left;
   text-decoration: none;
   cursor: pointer;
+  font-family: inherit;
 }
 .pb-menu button:hover,
 .pb-menu a:hover {
@@ -271,17 +282,15 @@ const SIDEBAR_STYLES = `
 }
 `;
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ICONS — Matching the Harlo reference design
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const iconHome = (
-  <svg {...{}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l9-8 9 8M5 10v10h14V10" />
-  </svg>
-);
-const iconGrid = (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
   </svg>
 );
-const iconPen = (
+const iconCompose = (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
   </svg>
@@ -291,52 +300,81 @@ const iconCalendar = (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
   </svg>
 );
-const iconImage = (
+const iconContentLibrary = (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
   </svg>
 );
-const iconList = (
+const iconPosts = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+  </svg>
+);
+const iconQueue = (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
   </svg>
 );
-const iconClock = (
+const iconWorkspaces = (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
   </svg>
 );
-const iconCheck = (
+const iconCampaigns = (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
   </svg>
 );
-const iconAlert = (
+const iconTeam = (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
   </svg>
 );
-const iconMegaphone = (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5l6-2v14l-6-2H5V5h6zM15 9a3 3 0 010 6" />
-  </svg>
-);
-const iconUsers = (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-  </svg>
-);
-const iconChart = (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3" />
-  </svg>
-);
-const iconLink = (
+const iconSocialAccounts = (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
   </svg>
 );
+const iconOverview = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  </svg>
+);
+const iconReports = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+  </svg>
+);
+const iconGeneralSettings = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+const iconBilling = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+  </svg>
+);
+const iconApiKeys = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+  </svg>
+);
+const iconHelpSupport = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+const iconExternalLink = (
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+  </svg>
+);
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NAV ITEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const NavItem: FC<{
   icon: React.ReactNode;
   label: string;
@@ -371,6 +409,7 @@ const planLabel = (current?: string) => {
       return 'Free';
   }
 };
+
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    CREATE WORKSPACE MODAL STYLES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -598,6 +637,9 @@ const CreateWorkspaceModal: FC<{
   );
 };
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SIDEBAR COMPONENT — Matches Harlo reference design exactly
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export const Sidebar: FC = () => {
   const router = useRouter();
   const modals = useModals();
@@ -605,12 +647,8 @@ export const Sidebar: FC = () => {
   const fetch = useFetch();
   const { isSecured } = useVariables();
   const { data: organizations } = useOrganizations();
-  const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
 
-  const workspaceRef = useClickAway<HTMLDivElement>(() =>
-    setWorkspaceOpen(false)
-  );
   const accountRef = useClickAway<HTMLDivElement>(() => setAccountOpen(false));
 
   const otherWorkspaces = useMemo(
@@ -680,251 +718,76 @@ export const Sidebar: FC = () => {
     <>
       <style dangerouslySetInnerHTML={{ __html: SIDEBAR_STYLES }} />
       <nav className="pb-sidebar">
+        {/* ── Brand Logo ── */}
         <Link href="/overview" className="pb-brand">
           <img
             src="/harlo-icon-wordmark-dark.png"
             alt="Harlo"
             className="pb-brand-mark"
+            style={{ height: 28, width: 'auto', display: 'block' }}
           />
         </Link>
 
-        <div className="pb-ws-wrap" ref={workspaceRef}>
-          <div className="pb-ws-box">
-            <button
-              className="flex items-center gap-2.5 flex-1 min-w-0 text-left bg-transparent border-0 p-0 cursor-pointer"
-              onClick={() => router.push('/overview')}
-            >
-              <div className="pb-ws-avatar">
-                <img src="/harlo-icon-dark.png" alt="" />
-              </div>
-              <div className="pb-ws-info">
-                <div className="pb-ws-name">
-                  {user?.orgName || 'My Workspace'}
-                </div>
-                <div className="pb-ws-plan">
-                  {planLabel(user?.tier?.current)} Plan
-                </div>
-              </div>
-            </button>
-            <button
-              className="p-1 rounded-md hover:bg-slate-100"
-              onClick={() => setWorkspaceOpen((open) => !open)}
-              aria-label="Switch workspace"
-            >
-              <svg
-                className="w-4 h-4 text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-          </div>
-          {workspaceOpen && (
-            <div
-              className="pb-menu"
-              style={{ top: '100%', left: 14, right: 14 }}
-            >
-              <div className="pb-menu-label">Workspaces</div>
-              {otherWorkspaces.map((org: { id: string; name: string }) => (
-                <button key={org.id} onClick={changeWorkspace(org.id)}>
-                  {org.name}
-                </button>
-              ))}
-              <button onClick={createWorkspace}>Create workspace</button>
-            </div>
-          )}
-        </div>
-
-        {/* Scrollable Nav Items */}
+        {/* ── Scrollable Nav Items ── */}
         <div className="pb-scroll">
-          {/* Main */}
+          {/* Home (no section header) */}
           <div className="pb-group">
             <NavItem path="/overview" label="Home" icon={iconHome} />
-            <NavItem path="/dashboard" label="Dashboard" icon={iconGrid} />
+          </div>
+
+          {/* CREATE */}
+          <div className="pb-group">
             <div className="pb-sec">Create</div>
-            <NavItem path="/compose" label="Compose" icon={iconPen} />
+            <NavItem path="/compose" label="Compose" icon={iconCompose} />
             <NavItem
               path="/launches"
               label="Calendar"
               match={(p) => p.startsWith('/launches') && !p.includes('state=')}
               icon={iconCalendar}
             />
-            <NavItem path="/media" label="Content Library" icon={iconImage} />
-            <NavItem
-              path="/launches?state=draft"
-              label="Drafts"
-              match={(p) => p.includes('state=draft')}
-              icon={iconPen}
-            />
-            <NavItem path="/queue" label="Queue" icon={iconList} />
-          </div>
-
-          <div className="pb-group">
-            <div className="pb-sec">Posts</div>
+            <NavItem path="/media" label="Content Library" icon={iconContentLibrary} />
             <NavItem
               path="/launches?state=all"
-              label="All Posts"
-              match={(p) => p.includes('state=all')}
-              icon={iconList}
+              label="Posts"
+              match={(p) => p.includes('state=all') || p.includes('state=draft') || p.includes('state=scheduled') || p.includes('state=published') || p.includes('state=failed')}
+              icon={iconPosts}
             />
-            <NavItem
-              path="/launches?state=scheduled"
-              label="Scheduled"
-              match={(p) => p.includes('state=scheduled')}
-              icon={iconClock}
-            />
-            <NavItem
-              path="/launches?state=published"
-              label="Published"
-              match={(p) => p.includes('state=published')}
-              icon={iconCheck}
-            />
-            <NavItem
-              path="/launches?state=failed"
-              label="Failed"
-              match={(p) => p.includes('state=failed')}
-              icon={iconAlert}
-            />
+            <NavItem path="/queue" label="Queue" icon={iconQueue} />
           </div>
 
-          {/* Workspace */}
+          {/* MANAGE */}
           <div className="pb-group">
             <div className="pb-sec">Manage</div>
-            <NavItem path="/campaigns" label="Campaigns" icon={iconMegaphone} />
-            <NavItem path="/workspaces" label="Workspaces" icon={iconGrid} />
-            <NavItem
-              path="/teams"
-              label="Teams"
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-              }
-            />
+            <NavItem path="/workspaces" label="Workspaces" icon={iconWorkspaces} />
+            <NavItem path="/campaigns" label="Campaigns" icon={iconCampaigns} />
+            <NavItem path="/teams" label="Team" icon={iconTeam} />
+            <NavItem path="/third-party" label="Social Accounts" icon={iconSocialAccounts} />
           </div>
 
-          {/* Analyse */}
+          {/* ANALYTICS */}
           <div className="pb-group">
-            <div className="pb-sec">Analyse</div>
-            <NavItem path="/analytics" label="Analytics" icon={iconChart} />
-            <NavItem path="/reports" label="Reports" icon={iconChart} />
+            <div className="pb-sec">Analytics</div>
+            <NavItem path="/analytics" label="Overview" icon={iconOverview} />
+            <NavItem path="/reports" label="Reports" icon={iconReports} />
           </div>
-          {/* Settings */}
+
+          {/* SETTINGS */}
           <div className="pb-group">
             <div className="pb-sec">Settings</div>
-            <NavItem path="/third-party" label="Social Accounts" icon={iconLink} />
-            <NavItem
-              path="/api-keys"
-              label="API Keys"
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-                  />
-                </svg>
-              }
-            />
-            <NavItem
-              path="/billing"
-              label="Billing"
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                  />
-                </svg>
-              }
-            />
-            <NavItem
-              path="/settings"
-              label="Settings"
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              }
-            />
-          </div>
-
-          <div className="pb-group">
-            <div className="pb-sec">Support</div>
-
-            <button className="pb-nav" onClick={openFeedback}>
-              <span className="pb-nav-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                  />
-                </svg>
-              </span>
-              <span>Share Feedback</span>
-            </button>
-
-            <NavItem
-              path="/referral"
-              label="Referral"
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              }
-            />
-
-            <NavItem
-              path="/docs"
-              label="Help / Support"
-              icon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                  />
-                </svg>
-              }
-            />
+            <NavItem path="/settings" label="General Settings" icon={iconGeneralSettings} />
+            <NavItem path="/billing" label="Billing & Plan" icon={iconBilling} />
+            <NavItem path="/api-keys" label="API Keys" icon={iconApiKeys} />
           </div>
         </div>
 
-        {/* User Profile Footer */}
+        {/* ── Help & Support (standalone, above footer) ── */}
+        <Link href="/docs" className="pb-help-link">
+          <span className="pb-help-icon">{iconHelpSupport}</span>
+          <span>Help & Support</span>
+          <span className="pb-help-ext">{iconExternalLink}</span>
+        </Link>
+
+        {/* ── User Profile Footer ── */}
         <div
           className="pb-user-footer"
           ref={accountRef}
@@ -938,26 +801,23 @@ export const Sidebar: FC = () => {
             className="pb-user-avatar"
           />
           <div className="pb-user-info">
-            <div className="pb-user-name">
-              {user?.name || user?.email || 'Account'}
-            </div>
             <div className="pb-user-email">
+              {user?.email || user?.name || 'Account'}
+            </div>
+            <div className="pb-user-plan">
               {planLabel(user?.tier?.current)} Plan
             </div>
           </div>
-          <svg
-            className="w-4 h-4 text-slate-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
+          <span className="pb-user-chevron">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </span>
           {accountOpen && (
             <div
               className="pb-menu"
@@ -973,10 +833,10 @@ export const Sidebar: FC = () => {
                 onClick={(event) => {
                   event.stopPropagation();
                   setAccountOpen(false);
-                  setWorkspaceOpen(true);
+                  openFeedback();
                 }}
               >
-                Switch workspace
+                Share Feedback
               </button>
               <button
                 onClick={(event) => {
