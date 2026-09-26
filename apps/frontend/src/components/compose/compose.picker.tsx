@@ -21,36 +21,18 @@ const integrationKey = (integration: Integrations) =>
 
 const TEXT_PLATFORMS = [
   'facebook',
-  'bluesky',
   'linkedin',
   'threads',
   'x',
   'instagram',
 ];
-const IMAGE_PLATFORMS = [
-  ...TEXT_PLATFORMS,
-  'pinterest',
-  'tiktok',
-  'youtube',
-  'gmb',
-];
+const IMAGE_PLATFORMS = [...TEXT_PLATFORMS, 'pinterest', 'tiktok'];
+const VIDEO_PLATFORMS = [...IMAGE_PLATFORMS, 'youtube'];
 const STORY_PLATFORMS = ['facebook', 'instagram'];
 
-const textIcons = [
-  'facebook',
-  'bluesky',
-  'linkedin',
-  'threads',
-  'twitter',
-  'instagram',
-];
-const imageIcons = [
-  ...textIcons,
-  'pinterest',
-  'tiktok',
-  'google-business',
-];
-const videoIcons = [...textIcons, 'pinterest', 'tiktok', 'youtube'];
+const textIcons = ['facebook', 'linkedin', 'threads', 'x', 'instagram'];
+const imageIcons = [...textIcons, 'pinterest', 'tiktok'];
+const videoIcons = [...imageIcons, 'youtube'];
 
 const cards: Array<{
   kind: ComposeKind;
@@ -94,7 +76,7 @@ export const ComposePicker = () => {
           : kind === 'text'
           ? TEXT_PLATFORMS
           : kind === 'video'
-          ? [...TEXT_PLATFORMS, 'pinterest', 'tiktok', 'youtube']
+          ? VIDEO_PLATFORMS
           : IMAGE_PLATFORMS;
       const matched = integrations.filter((integration) =>
         allowed.includes(integrationKey(integration))
