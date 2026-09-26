@@ -29,22 +29,13 @@ const SIDEBAR_STYLES = `
   margin: 0;
   padding: 0;
 }
-#left-menu {
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
 .pb-sidebar {
   display: flex;
   flex-direction: column;
   width: 240px;
   min-width: 240px;
   max-width: 240px;
-  flex: 1;
   height: 100%;
-  max-height: 100%;
-  min-height: 0;
   background: #ffffff !important;
   color: #334155 !important;
   border-right: 1px solid #e2e8f0;
@@ -87,18 +78,17 @@ const SIDEBAR_STYLES = `
 /* ── Navigation Container with Always-Visible Custom Scrollbar / Side Line ── */
 .pb-scroll-wrap {
   position: relative;
-  flex: 1 1 0%;
+  flex: 1;
   min-height: 0;
-  height: 0;
+  display: flex;
   overflow: hidden;
 }
-.pb-sidebar .pb-scroll {
-  position: absolute;
-  inset: 0;
+.pb-scroll {
+  flex: 1;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  overscroll-behavior: contain;
-  padding: 0 18px 24px 12px;
+  padding: 0 16px 48px 12px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -117,21 +107,19 @@ const SIDEBAR_STYLES = `
   z-index: 20;
   user-select: none;
   touch-action: none;
+  display: flex;
+  justify-content: center;
 }
-.pb-sidebar .pb-scrollbar-track-bg {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
+.pb-scrollbar-track-bg {
   width: 6px;
-  margin-left: -3px;
+  height: 100%;
   background: #f1f5f9;
   border-radius: 9999px;
-  transition: width 0.15s ease, margin-left 0.15s ease, background-color 0.15s ease;
+  position: relative;
+  transition: width 0.15s ease, background-color 0.15s ease;
 }
-.pb-sidebar .pb-scrollbar-rail:hover .pb-scrollbar-track-bg {
+.pb-scrollbar-rail:hover .pb-scrollbar-track-bg {
   width: 8px;
-  margin-left: -4px;
   background: #e2e8f0;
 }
 .pb-scrollbar-thumb {
@@ -139,7 +127,6 @@ const SIDEBAR_STYLES = `
   top: 0;
   left: 0;
   width: 100%;
-  min-height: 36px;
   background: #94a3b8;
   border-radius: 9999px;
   cursor: grab;
@@ -785,50 +772,45 @@ export const Sidebar: FC = () => {
   const railRef = React.useRef<HTMLDivElement>(null);
   const thumbRef = React.useRef<HTMLDivElement>(null);
 
+  const [thumbHeight, setThumbHeight] = useState(48);
+  const [thumbTop, setThumbTop] = useState(0);
+
   const isDraggingRef = React.useRef(false);
   const dragStartYRef = React.useRef(0);
-  const dragStartScrollRef = React.useRef(0);
+  const dragStartTopRef = React.useRef(0);
 
-  const syncThumb = useCallback(() => {
+  const updateScrollbar = useCallback(() => {
+    if (isDraggingRef.current) return;
     const el = scrollRef.current;
     const rail = railRef.current;
-    const thumb = thumbRef.current;
-    if (!el || !rail || !thumb) return;
+    if (!el || !rail) return;
 
+    const { scrollTop, scrollHeight, clientHeight } = el;
     const trackHeight = rail.clientHeight;
     if (trackHeight <= 0) return;
 
-    const { scrollTop, scrollHeight, clientHeight } = el;
-    const maxScroll = Math.max(0, scrollHeight - clientHeight);
-    const ratio = scrollHeight > 0 ? clientHeight / scrollHeight : 1;
-    const thumbHeight = Math.max(36, Math.min(trackHeight - 8, trackHeight * ratio));
-    const available = Math.max(1, trackHeight - thumbHeight);
-    const top = maxScroll > 0 ? (scrollTop / maxScroll) * available : 0;
+    const maxScroll = scrollHeight - clientHeight;
+    if (maxScroll <= 0) {
+      setThumbHeight(Math.max(40, Math.min(80, trackHeight * 0.35)));
+      setThumbTop(0);
+      return;
+    }
 
-    thumb.style.height = `${thumbHeight}px`;
-    thumb.style.transform = `translate3d(0, ${top}px, 0)`;
+    const ratio = clientHeight / scrollHeight;
+    const h = Math.max(36, Math.min(trackHeight - 20, trackHeight * ratio));
+    const availableTrack = trackHeight - h;
+    const fraction = Math.max(0, Math.min(1, scrollTop / maxScroll));
+    const top = fraction * availableTrack;
+
+    setThumbHeight(h);
+    setThumbTop(top);
   }, []);
 
   React.useEffect(() => {
-    const el = scrollRef.current;
-    const rail = railRef.current;
-    if (!el) return;
-
-    syncThumb();
-    el.addEventListener('scroll', syncThumb, { passive: true });
-    window.addEventListener('resize', syncThumb);
-
-    const observer = new ResizeObserver(() => syncThumb());
-    observer.observe(el);
-    if (rail) observer.observe(rail);
-    Array.from(el.children).forEach((child) => observer.observe(child));
-
-    return () => {
-      el.removeEventListener('scroll', syncThumb);
-      window.removeEventListener('resize', syncThumb);
-      observer.disconnect();
-    };
-  }, [syncThumb]);
+    updateScrollbar();
+    window.addEventListener('resize', updateScrollbar);
+    return () => window.removeEventListener('resize', updateScrollbar);
+  }, [updateScrollbar]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -841,56 +823,63 @@ export const Sidebar: FC = () => {
 
     try {
       rail.setPointerCapture(e.pointerId);
-    } catch {
-      // Pointer capture is unavailable for some synthetic events.
-    }
+    } catch {}
+
     isDraggingRef.current = true;
     dragStartYRef.current = e.clientY;
-    dragStartScrollRef.current = el.scrollTop;
 
     const rect = rail.getBoundingClientRect();
-    const thumbRect = thumb.getBoundingClientRect();
-    const onThumb = e.clientY >= thumbRect.top && e.clientY <= thumbRect.bottom;
-    if (onThumb) return;
+    const trackHeight = rect.height;
+    const availableTrack = Math.max(0, trackHeight - thumbHeight);
 
-    const maxScroll = el.scrollHeight - el.clientHeight;
-    const available = Math.max(1, rect.height - thumbRect.height);
-    const targetTop = Math.max(
-      0,
-      Math.min(available, e.clientY - rect.top - thumbRect.height / 2)
-    );
-    if (maxScroll > 0) {
-      el.scrollTop = (targetTop / available) * maxScroll;
+    if (e.target === thumb || thumb.contains(e.target as Node)) {
+      dragStartTopRef.current = thumbTop;
+    } else {
+      const clickY = e.clientY - rect.top;
+      const targetTop = Math.max(0, Math.min(availableTrack, clickY - thumbHeight / 2));
+      setThumbTop(targetTop);
+      dragStartTopRef.current = targetTop;
+
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      if (maxScroll > 0 && availableTrack > 0) {
+        el.scrollTop = (targetTop / availableTrack) * maxScroll;
+      }
     }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
     e.preventDefault();
+    e.stopPropagation();
 
     const el = scrollRef.current;
     const rail = railRef.current;
-    const thumb = thumbRef.current;
-    if (!el || !rail || !thumb) return;
+    if (!el || !rail) return;
 
-    const maxScroll = el.scrollHeight - el.clientHeight;
-    const available = Math.max(1, rail.clientHeight - thumb.offsetHeight);
-    if (maxScroll <= 0) return;
+    const trackHeight = rail.clientHeight;
+    const availableTrack = Math.max(0, trackHeight - thumbHeight);
+    if (availableTrack <= 0) return;
 
     const deltaY = e.clientY - dragStartYRef.current;
-    const startTop = (dragStartScrollRef.current / maxScroll) * available;
-    const nextTop = Math.max(0, Math.min(available, startTop + deltaY));
-    el.scrollTop = (nextTop / available) * maxScroll;
+    const newTop = Math.max(0, Math.min(availableTrack, dragStartTopRef.current + deltaY));
+    setThumbTop(newTop);
+
+    const maxScroll = el.scrollHeight - el.clientHeight;
+    if (maxScroll > 0) {
+      el.scrollTop = (newTop / availableTrack) * maxScroll;
+    }
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
     const rail = railRef.current;
-    if (rail?.hasPointerCapture(e.pointerId)) {
-      rail.releasePointerCapture(e.pointerId);
+    if (rail) {
+      try {
+        rail.releasePointerCapture(e.pointerId);
+      } catch {}
     }
-    syncThumb();
+    updateScrollbar();
   };
 
   return (
@@ -909,7 +898,7 @@ export const Sidebar: FC = () => {
 
         {/* ── Scrollable Nav Items with Always-Visible Rail ── */}
         <div className="pb-scroll-wrap">
-          <div className="pb-scroll" ref={scrollRef}>
+          <div className="pb-scroll" ref={scrollRef} onScroll={updateScrollbar}>
             {/* Home (no section header) */}
             <div className="pb-group">
               <NavItem path="/overview" label="Home" icon={iconHome} />
@@ -977,7 +966,14 @@ export const Sidebar: FC = () => {
             title="Scroll navigation"
           >
             <div className="pb-scrollbar-track-bg">
-              <div ref={thumbRef} className="pb-scrollbar-thumb" />
+              <div
+                ref={thumbRef}
+                className="pb-scrollbar-thumb"
+                style={{
+                  height: `${thumbHeight}px`,
+                  transform: `translateY(${thumbTop}px)`,
+                }}
+              />
             </div>
           </div>
         </div>
