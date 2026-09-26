@@ -1,25 +1,16 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { useModals } from '@gitroom/frontend/components/layout/new-modal';
+import { useRouter } from 'next/navigation';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { CreatePostModal } from '@gitroom/frontend/components/new-launch/create.post.modal';
 
 export const NewPost = () => {
-  const modal = useModals();
+  const router = useRouter();
   const t = useT();
 
   const createAPost = useCallback(() => {
-    modal.openModal({
-      id: 'create-post-modal',
-      closeOnClickOutside: true,
-      withCloseButton: false,
-      classNames: {
-        modal: 'w-[95%] max-w-[1000px] text-textColor p-0 bg-transparent shadow-none',
-      },
-      children: <CreatePostModal />,
-    });
-  }, [modal]);
+    router.push('/compose');
+  }, [router]);
 
   return (
     <button

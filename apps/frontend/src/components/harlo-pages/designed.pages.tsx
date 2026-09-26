@@ -1,12 +1,11 @@
 'use client';
 
-import { ReactNode, useCallback, useEffect, useRef } from 'react';
+import { ReactNode, useCallback } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
 import dayjs from 'dayjs';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
-import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import { CreatePostModal } from '@gitroom/frontend/components/new-launch/create.post.modal';
+import { ComposePicker } from '@gitroom/frontend/components/compose/compose.picker';
 import { useWorkspaceOverview } from '@gitroom/frontend/components/workspace-home/use.workspace.overview';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import { useOrganizations } from '@gitroom/frontend/components/layout/use.organizations';
@@ -55,20 +54,6 @@ const PrimaryLink = ({ href, children }: { href: string; children: ReactNode }) 
     {children}
   </Link>
 );
-
-const openComposer = (
-  modals: ReturnType<typeof useModals>
-) => {
-  modals.openModal({
-    id: 'create-post-modal',
-    closeOnClickOutside: true,
-    withCloseButton: false,
-    classNames: {
-      modal: 'w-[95%] max-w-[1000px] text-textColor p-0 bg-transparent shadow-none',
-    },
-    children: <CreatePostModal />,
-  });
-};
 
 const Stat = ({
   label,
@@ -154,49 +139,7 @@ export const DashboardPage = () => {
 };
 
 export const ComposePage = () => {
-  const modals = useModals();
-  const opened = useRef(false);
-  const open = useCallback(() => openComposer(modals), [modals]);
-
-  useEffect(() => {
-    if (opened.current) {
-      return;
-    }
-    opened.current = true;
-    open();
-  }, [open]);
-
-  return (
-    <div className={shell}>
-      <PageHeader
-        eyebrow="Compose"
-        title="Create your post"
-        subtitle="Share your ideas, reach your audience and bring your brand to life."
-        action={
-          <button
-            type="button"
-            onClick={open}
-            className="inline-flex h-10 items-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            Schedule post
-          </button>
-        }
-      />
-      <div className="rounded-2xl border border-slate-200 bg-white p-8">
-        <p className="text-sm text-slate-500">
-          Choose accounts, write the caption, add media, then publish now or
-          schedule it. The composer opens on this page.
-        </p>
-        <button
-          type="button"
-          onClick={open}
-          className="mt-4 text-sm font-semibold text-blue-600"
-        >
-          Open composer
-        </button>
-      </div>
-    </div>
-  );
+  return <ComposePicker />;
 };
 
 export const QueuePage = () => {

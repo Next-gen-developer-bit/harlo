@@ -2,25 +2,14 @@
 
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import { CreatePostModal } from '@gitroom/frontend/components/new-launch/create.post.modal';
 import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
 
 export const AppTopbar = () => {
   const router = useRouter();
-  const modals = useModals();
 
   const openCreatePost = useCallback(() => {
-    modals.openModal({
-      id: 'create-post-modal',
-      closeOnClickOutside: true,
-      withCloseButton: false,
-      classNames: {
-        modal: 'w-[95%] max-w-[1000px] text-textColor p-0 bg-transparent shadow-none',
-      },
-      children: <CreatePostModal />,
-    });
-  }, [modals]);
+    router.push('/compose');
+  }, [router]);
 
   return (
     <div className="sticky top-0 z-20 flex items-center justify-end gap-2 border-b border-slate-100 bg-[#f8fafc]/95 px-6 py-3 backdrop-blur md:px-8">

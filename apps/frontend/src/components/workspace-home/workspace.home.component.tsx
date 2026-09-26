@@ -10,8 +10,6 @@ import {
   formatMetric,
   usePublishedPostsAnalytics,
 } from '@gitroom/frontend/components/platform-analytics/use.published.posts.analytics';
-import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import { CreatePostModal } from '@gitroom/frontend/components/new-launch/create.post.modal';
 import { useWorkspaceOverview } from '@gitroom/frontend/components/workspace-home/use.workspace.overview';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
@@ -60,7 +58,6 @@ const StatusPill = ({ state }: { state?: string }) => {
 export const WorkspaceHomeComponent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const modals = useModals();
   const fetch = useFetch();
   const user = useUser();
   const { data: overview } = useWorkspaceOverview();
@@ -77,25 +74,16 @@ export const WorkspaceHomeComponent = () => {
   });
 
   const openCreatePost = useCallback(() => {
-    modals.openModal({
-      id: 'create-post-modal',
-      closeOnClickOutside: true,
-      withCloseButton: false,
-      classNames: {
-        modal: 'w-[95%] max-w-[1000px] text-textColor p-0 bg-transparent shadow-none',
-      },
-      children: <CreatePostModal />,
-    });
-  }, [modals]);
+    router.push('/compose');
+  }, [router]);
 
   useEffect(() => {
     if (openedCreate.current || searchParams.get('create') !== '1') {
       return;
     }
     openedCreate.current = true;
-    openCreatePost();
-    router.replace('/overview');
-  }, [openCreatePost, router, searchParams]);
+    router.replace('/compose');
+  }, [router, searchParams]);
 
   const accounts = integrations || [];
   const platforms = useMemo(

@@ -10,6 +10,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Integrations,
   useCalendar,
@@ -31,7 +32,6 @@ import 'dayjs/locale/tr';
 import 'dayjs/locale/vi';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
-import { CreatePostModal } from '@gitroom/frontend/components/new-launch/create.post.modal';
 import { FailureRecoveryModal } from '@gitroom/frontend/components/launches/failure.recovery.modal';
 import clsx from 'clsx';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
@@ -582,7 +582,7 @@ export const MonthView = () => {
 };
 export const ListView = () => {
   const t = useT();
-  const modal = useModals();
+  const router = useRouter();
   const { loading, listPosts, listState } = useCalendar();
   const emptyMessage =
     listState === 'scheduled'
@@ -672,18 +672,7 @@ export const ListView = () => {
             {emptyDetails.desc}
           </p>
           <button
-            onClick={() => {
-              modal.openModal({
-                id: 'create-post-modal',
-                closeOnClickOutside: true,
-                withCloseButton: false,
-                classNames: {
-                  modal:
-                    'w-[95%] max-w-[1000px] text-textColor p-0 bg-transparent shadow-none',
-                },
-                children: <CreatePostModal />,
-              });
-            }}
+            onClick={() => router.push('/compose')}
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs px-5 py-2.5 rounded-lg transition-colors shadow-sm inline-flex items-center gap-2"
           >
             <svg
