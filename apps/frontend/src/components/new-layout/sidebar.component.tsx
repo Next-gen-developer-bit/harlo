@@ -1,6 +1,7 @@
 'use client';
 
-import React, { FC, useCallback, useMemo, useState } from 'react';
+import React, { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
@@ -722,8 +723,25 @@ export const Sidebar: FC = () => {
   });
 
   const accountRef = useClickAway<HTMLDivElement>(() => setAccountOpen(false));
-  const homeRef = useClickAway<HTMLDivElement>(() => setHomeOpen(false));
+  const homeRef = React.useRef<HTMLDivElement>(null);
+  const homeMenuRef = React.useRef<HTMLDivElement>(null);
   const homeButtonRef = React.useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!homeOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        homeRef.current?.contains(target) ||
+        homeMenuRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setHomeOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [homeOpen]);
 
   const otherWorkspaces = useMemo(
     () =>
@@ -825,9 +843,9 @@ export const Sidebar: FC = () => {
     if (!homeOpen && homeButtonRef.current) {
       const rect = homeButtonRef.current.getBoundingClientRect();
       setHomeMenuStyle({
-        top: rect.bottom + 8,
+        top: rect.bottom + 10,
         left: rect.left,
-        width: Math.max(rect.width, 280),
+        width: 312,
       });
     }
     setHomeOpen((open) => !open);
@@ -1025,108 +1043,112 @@ export const Sidebar: FC = () => {
                     />
                   </svg>
                 </button>
-                {homeOpen ? (
-                  <div
-                    role="menu"
-                    className="fixed z-50 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
-                    style={homeMenuStyle}
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setHomeOpen(false);
-                        router.push('/overview');
-                      }}
-                      className="flex w-full items-center gap-3 rounded-xl bg-[#1e293b] px-3 py-3 text-left text-[15px] font-semibold text-white"
-                    >
-                      <span className="flex h-5 w-5 items-center justify-center text-white [&_svg]:h-5 [&_svg]:w-5">
-                        {iconHome}
-                      </span>
-                      <span className="truncate">
-                        {user?.orgName || 'Home'}
-                      </span>
-                    </button>
-                    {otherWorkspaces.length > 0 ? (
-                      <div className="mt-3">
-                        <div className="px-2 pb-2 text-[11px] font-semibold tracking-[0.08em] text-slate-400">
-                          PERSONAL
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          {otherWorkspaces.map((org: { id: string; name: string }) => (
-                            <div
-                              key={org.id}
-                              className="flex items-center gap-2 rounded-xl bg-slate-100 px-2 py-2"
-                            >
-                              <button
-                                type="button"
-                                onClick={changeWorkspace(org.id)}
-                                className="flex min-w-0 flex-1 items-center gap-3 px-1 text-left text-[15px] font-medium text-slate-800"
-                              >
-                                <svg
-                                  className="h-5 w-5 shrink-0 text-slate-700"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="1.8"
-                                    d="M8 7V6a2 2 0 012-2h4a2 2 0 012 2v1M4 9h16v9a2 2 0 01-2 2H6a2 2 0 01-2-2V9z"
-                                  />
-                                </svg>
-                                <span className="truncate">{org.name}</span>
-                              </button>
-                              <button
-                                type="button"
-                                aria-label={`Rename ${org.name}`}
-                                onClick={() => renameWorkspace(org)}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300"
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15.232 5.232l3.536 3.536M4 20h4l10.5-10.5a2.121 2.121 0 00-3-3L5 17v3z" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                aria-label={`Delete ${org.name}`}
-                                onClick={removeWorkspace(org)}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center text-red-500 hover:text-red-600"
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-7 0h8" />
-                                </svg>
-                              </button>
+                {homeOpen
+                  ? createPortal(
+                      <div
+                        ref={homeMenuRef}
+                        role="menu"
+                        className="fixed z-[80] rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.16)]"
+                        style={{
+                          top: homeMenuStyle.top,
+                          left: homeMenuStyle.left,
+                          width: homeMenuStyle.width,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setHomeOpen(false);
+                            router.push('/overview');
+                          }}
+                          className="flex w-full items-center gap-3 rounded-xl bg-[#1e293b] px-4 py-3 text-left text-[15px] font-semibold text-white"
+                        >
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center text-white [&_svg]:h-5 [&_svg]:w-5">
+                            {iconHome}
+                          </span>
+                          <span className="truncate">
+                            {user?.orgName || 'Home'}
+                          </span>
+                        </button>
+                        {otherWorkspaces.length > 0 ? (
+                          <div className="mt-4">
+                            <div className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                              Personal
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                    <div className="my-2 border-t border-slate-200" />
-                    <Link
-                      href="/workspaces"
-                      onClick={() => setHomeOpen(false)}
-                      className="flex items-center gap-3 rounded-lg px-2 py-2.5 text-[15px] font-medium text-slate-700 hover:bg-slate-50"
-                    >
-                      <svg className="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M10.325 4.317a1.724 1.724 0 013.35 0 1.724 1.724 0 002.573 1.066 1.724 1.724 0 012.36 2.36 1.724 1.724 0 001.065 2.572 1.724 1.724 0 010 3.35 1.724 1.724 0 00-1.066 2.573 1.724 1.724 0 01-2.36 2.36 1.724 1.724 0 00-2.572 1.065 1.724 1.724 0 01-3.35 0 1.724 1.724 0 00-2.573-1.066 1.724 1.724 0 01-2.36-2.36 1.724 1.724 0 00-1.065-2.572 1.724 1.724 0 010-3.35 1.724 1.724 0 001.066-2.573 1.724 1.724 0 012.36-2.36 1.724 1.724 0 002.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      Manage Workspaces
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={createWorkspace}
-                      className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-[15px] font-medium text-slate-700 hover:bg-slate-50"
-                    >
-                      <span className="flex h-5 w-5 items-center justify-center text-xl leading-none text-slate-700">
-                        +
-                      </span>
-                      New Workspace
-                    </button>
-                  </div>
-                ) : null}
+                            <div className="flex flex-col gap-2">
+                              {otherWorkspaces.map((org: { id: string; name: string }) => (
+                                <div
+                                  key={org.id}
+                                  className="flex items-center gap-2 rounded-xl bg-[#eef1f4] px-3 py-2.5"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={changeWorkspace(org.id)}
+                                    className="flex min-w-0 flex-1 items-center gap-3 text-left text-[15px] font-medium text-slate-800"
+                                  >
+                                    <svg
+                                      className="h-[18px] w-[18px] shrink-0 text-slate-700"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <rect x="3" y="7" width="18" height="13" rx="2" strokeWidth="1.8" />
+                                      <path strokeLinecap="round" strokeWidth="1.8" d="M8 7V6a2 2 0 012-2h4a2 2 0 012 2v1" />
+                                    </svg>
+                                    <span className="truncate">{org.name}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label={`Rename ${org.name}`}
+                                    onClick={() => renameWorkspace(org)}
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#d5dbe3] text-slate-600 hover:bg-[#c9d0da]"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15.232 5.232l3.536 3.536M4 20h4l10.5-10.5a2.121 2.121 0 00-3-3L5 17v3z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label={`Delete ${org.name}`}
+                                    onClick={removeWorkspace(org)}
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center text-red-500 hover:text-red-600"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-7 0h8" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                        <div className="mx-1 my-3 h-px bg-slate-200" />
+                        <Link
+                          href="/workspaces"
+                          onClick={() => setHomeOpen(false)}
+                          className="flex items-center gap-3 rounded-lg px-2 py-2.5 text-[15px] font-medium text-[#334155] hover:bg-slate-50"
+                        >
+                          <svg className="h-5 w-5 shrink-0 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M10.325 4.317a1.724 1.724 0 013.35 0 1.724 1.724 0 002.573 1.066 1.724 1.724 0 012.36 2.36 1.724 1.724 0 001.065 2.572 1.724 1.724 0 010 3.35 1.724 1.724 0 00-1.066 2.573 1.724 1.724 0 01-2.36 2.36 1.724 1.724 0 00-2.572 1.065 1.724 1.724 0 01-3.35 0 1.724 1.724 0 00-2.573-1.066 1.724 1.724 0 01-2.36-2.36 1.724 1.724 0 00-1.065-2.572 1.724 1.724 0 010-3.35 1.724 1.724 0 001.066-2.573 1.724 1.724 0 012.36-2.36 1.724 1.724 0 002.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Manage Workspaces
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={createWorkspace}
+                          className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-[15px] font-medium text-[#334155] hover:bg-slate-50"
+                        >
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[18px] leading-none text-slate-700">
+                            +
+                          </span>
+                          New Workspace
+                        </button>
+                      </div>,
+                      document.body
+                    )
+                  : null}
               </div>
             </div>
 
