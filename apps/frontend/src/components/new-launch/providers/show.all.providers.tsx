@@ -228,14 +228,14 @@ export const ShowAllProviders = forwardRef((props, ref) => {
           }}
         >
           {global?.[0]?.content?.length === 0 ? (
-            <div>
+            <div className="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed border-[#e6e8ee] bg-white px-6 text-center text-[13px] leading-5 text-[#94a3b8]">
               {t(
                 'start_writing_your_post',
-                'Start writing your post for a preview'
+                'Start writing your post to see a preview'
               )}
             </div>
           ) : (
-            <div className="border border-borderPreview rounded-[12px] shadow-previewShadow">
+            <div className="rounded-xl border border-[#e6e8ee] bg-white">
               <GeneralPreviewComponent maximumCharacters={100000000} />
             </div>
           )}

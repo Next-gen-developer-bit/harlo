@@ -94,12 +94,12 @@ export const SelectCurrent: FC = () => {
 
   return (
     <>
-      <div className="select-none left-0 absolute w-full z-[100] px-[20px]">
+      <div className="absolute left-0 z-[100] w-full select-none px-4">
         <div
           ref={contentRef}
           className={clsx(
-            'flex gap-[6px] w-full overflow-x-auto scrollbar scrollbar-thumb-tableBorder scrollbar-track-secondary',
-            locked && 'opacity-50 pointer-events-none'
+            'flex w-full gap-2 overflow-x-auto pb-1',
+            locked && 'pointer-events-none opacity-50'
           )}
         >
           <div
@@ -108,15 +108,13 @@ export const SelectCurrent: FC = () => {
               setCurrent('global');
             }}
             className={clsx(
-              'cursor-pointer flex gap-[8px] rounded-[8px] w-[40px] h-[40px] justify-center items-center bg-newBgLineColor',
+              'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-[#64748b]',
               current !== 'global'
-                ? 'text-[#A3A3A3]'
-                : 'border border-[#FC69FF] text-[#FC69FF]'
+                ? 'ring-1 ring-[#e6e8ee]'
+                : 'text-[#612BD3] ring-2 ring-[#612BD3]'
             )}
           >
-            <div>
-              <GlobalIcon />
-            </div>
+            <GlobalIcon />
           </div>
           {selectedIntegrations.map(({ integration }) => (
             <div
@@ -126,34 +124,34 @@ export const SelectCurrent: FC = () => {
               }}
               key={integration.id}
               className={clsx(
-                'border cursor-pointer relative flex gap-[8px] w-[40px] h-[40px] rounded-[8px] items-center bg-newBgLineColor justify-center',
+                'group relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white',
                 current === integration.id
-                  ? 'border-[#FC69FF] text-[#FC69FF]'
-                  : 'border-transparent'
+                  ? 'ring-2 ring-[#612BD3]'
+                  : 'ring-1 ring-[#e6e8ee]'
               )}
             >
-              <div
+              <button
+                type="button"
+                aria-label="Remove account"
                 onClick={removeSocial(integration)}
-                className="absolute justify-center items-center flex w-[8px] h-[8px] -top-[1px] -start-[3px] bg-red-500 rounded-full text-white text-[8px]"
+                className="absolute -end-1 -top-1 z-20 hidden h-4 w-4 items-center justify-center rounded-full border border-[#e6e8ee] bg-white text-[10px] leading-none text-[#64748b] group-hover:flex"
               >
-                X
-              </div>
+                ×
+              </button>
               <IsGlobal id={integration.id} />
               <div
                 {...{
                   'data-tooltip-id': 'tooltip',
                   'data-tooltip-content': integration.name,
                 }}
-                className={clsx(
-                  'relative w-full h-full rounded-full flex justify-center items-center filter transition-all duration-500'
-                )}
+                className="relative flex h-full w-full items-center justify-center rounded-full"
               >
                 <SafeImage
                   src={integration.picture || '/no-picture.jpg'}
-                  className="rounded-full min-w-[26px]"
+                  className="h-8 w-8 min-w-8 rounded-full object-cover"
                   alt={integration.identifier}
-                  width={26}
-                  height={26}
+                  width={32}
+                  height={32}
                   onError={(e) => {
                     e.currentTarget.src = '/no-picture.jpg';
                     e.currentTarget.srcset = '/no-picture.jpg';
@@ -162,13 +160,13 @@ export const SelectCurrent: FC = () => {
                 {integration.identifier === 'youtube' ? (
                   <img
                     src="/icons/platforms/youtube.svg"
-                    className="absolute z-10 bottom-[2px] end-[2px] min-w-[12px]"
+                    className="absolute bottom-0 end-0 z-10 h-3 w-3 rounded-[2px] bg-white"
                     width={12}
                   />
                 ) : (
                   <SafeImage
                     src={`/icons/platforms/${integration.identifier}.png`}
-                    className="min-w-[12px] min-h-[12px] rounded-[3px] absolute z-10 bottom-[6px] end-[6px]"
+                    className="absolute bottom-0 end-0 z-10 h-3 w-3 min-h-3 min-w-3 rounded-[2px] bg-white"
                     alt={integration.identifier}
                     width={12}
                     height={12}
@@ -179,7 +177,7 @@ export const SelectCurrent: FC = () => {
           ))}
         </div>
       </div>
-      <div className={clsx(hasScroll ? 'h-[55px]' : 'h-[40px]')} />
+      <div className={clsx(hasScroll ? 'h-11' : 'h-8')} />
     </>
   );
 };
@@ -203,7 +201,7 @@ export const IsGlobal: FC<{ id: string }> = ({ id }) => {
         'no_longer_global_mode',
         'No longer in global mode'
       )}
-      className="w-[8px] h-[8px] bg-[#FC69FF] -top-[1px] -end-[3px] absolute rounded-full"
+      className="absolute -end-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#612BD3]"
     />
   );
 };

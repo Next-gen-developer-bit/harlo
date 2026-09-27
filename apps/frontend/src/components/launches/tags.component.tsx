@@ -161,37 +161,26 @@ export const TagsComponentInner: FC<{
     <div
       ref={ref}
       className={clsx(
-        'border rounded-[8px] justify-center flex items-center relative h-[44px] text-[15px] font-[600] select-none',
-        isOpen ? 'border-[#612BD3]' : 'border-newTextColor/10'
+        'relative flex h-9 shrink-0 items-center whitespace-nowrap rounded-lg border bg-white px-3 text-[13px] font-semibold text-[#334155] select-none',
+        isOpen ? 'border-[#612BD3]' : 'border-[#e6e8ee]'
       )}
     >
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="px-[16px] justify-center flex gap-[8px] items-center h-full select-none flex-1"
+        className="flex h-full cursor-pointer items-center gap-2"
       >
-        <div className="cursor-pointer">
-          <TagIcon />
-        </div>
-        <div className="cursor-pointer flex gap-[4px]">
+        <TagIcon />
+        <span className="max-w-[140px] truncate">
           {tagValue.length === 0 ? (
-            t('add_new_tag', 'Add New Tag')
+            t('tags', 'Tags')
           ) : (
-            <>
-              <div
-                className="h-full flex justify-center items-center px-[8px] rounded-[4px]"
-                style={{ backgroundColor: tagValue[0].color }}
-              >
-                <span className="text-shadow-tags text-[#fff]">
-                  {tagValue[0].name}
-                </span>
-              </div>
-              {tagValue.length > 1 ? <span>+{tagValue.length - 1}</span> : null}
-            </>
+            tagValue[0].name
           )}
-        </div>
-        <div className="cursor-pointer">
-          <DropdownArrowIcon rotated={isOpen} />
-        </div>
+        </span>
+        {tagValue.length > 1 ? (
+          <span className="text-[12px] text-[#64748b]">+{tagValue.length - 1}</span>
+        ) : null}
+        <DropdownArrowIcon rotated={isOpen} />
       </div>
       {isOpen && (
         <div className="z-[300] absolute start-0 bottom-[100%] w-[240px] bg-newBgColorInner p-[12px] menu-shadow -translate-y-[10px] flex flex-col">

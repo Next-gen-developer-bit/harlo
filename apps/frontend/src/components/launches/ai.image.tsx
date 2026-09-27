@@ -147,7 +147,7 @@ export const AiImage: FC<{
       <div
         onClick={openImageModal}
         className={clsx(
-          'cursor-pointer h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]'
+          'flex h-8 cursor-pointer items-center justify-center rounded-md border border-[#e6e8ee] bg-white px-2.5 text-[#475569]'
         )}
       >
         {loading && (

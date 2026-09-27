@@ -45,7 +45,6 @@ import {
   MediaSettingsIcon,
   InsertMediaIcon,
   DesignMediaIcon,
-  VerticalDividerIcon,
   NoMediaIcon,
 } from '@gitroom/frontend/components/ui/icons';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
@@ -965,33 +964,26 @@ export const MultiMediaComponent: FC<{
             </ReactSortable>
           )}
         </div>
-        <div className="flex gap-[8px] px-[12px] border-t border-newColColor w-full b1 text-textColor">
+        <div className="flex w-full flex-col gap-2 border-t border-[#e6e8ee] px-3 py-2 text-[#475569]">
+          <div className="flex flex-wrap items-center gap-1.5">
           {!mediaNotAvailable && (
-            <div className="flex py-[10px] b2 items-center gap-[4px]">
+            <div className="flex items-center gap-1.5">
               <div
                 onClick={showModal}
-                className="cursor-pointer h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]"
+                className="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-[#e6e8ee] bg-white px-2.5"
               >
-                <div className="flex gap-[8px] items-center">
-                  <div>
-                    <InsertMediaIcon />
-                  </div>
-                  <div className="text-[10px] font-[600] maxMedia:hidden block">
-                    {t('insert_media', 'Insert Media')}
-                  </div>
+                <InsertMediaIcon />
+                <div className="hidden text-[12px] font-medium maxMedia:hidden sm:block">
+                  {t('insert_media', 'Insert Media')}
                 </div>
               </div>
               <div
                 onClick={designMedia}
-                className="cursor-pointer h-[30px] rounded-[6px] justify-center items-center flex bg-newColColor px-[8px]"
+                className="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-[#e6e8ee] bg-white px-2.5"
               >
-                <div className="flex gap-[5px] items-center">
-                  <div>
-                    <DesignMediaIcon />
-                  </div>
-                  <div className="text-[10px] font-[600] iconBreak:hidden block">
-                    {t('design_media', 'Design Media')}
-                  </div>
+                <DesignMediaIcon />
+                <div className="hidden text-[12px] font-medium iconBreak:hidden sm:block">
+                  {t('design_media', 'Design Media')}
                 </div>
               </div>
 
@@ -1005,21 +997,13 @@ export const MultiMediaComponent: FC<{
               )}
             </div>
           )}
-          {!mediaNotAvailable && (
-            <div className="text-newColColor h-full flex items-center">
-              <VerticalDividerIcon />
-            </div>
-          )}
           {!!toolBar && (
-            <div className="flex py-[10px] b2 items-center gap-[4px]">
+            <div className="flex items-center gap-1.5">
               {toolBar}
             </div>
           )}
-          {information && (
-            <div className="flex-1 justify-end flex py-[10px] b2 items-center gap-[4px]">
-              {information}
-            </div>
-          )}
+          </div>
+          {information && <div className="w-full">{information}</div>}
         </div>
       </div>
       <div className="text-[12px] text-red-400">{error}</div>

@@ -35,7 +35,7 @@ export const DatePicker: FC<{
   );
   return (
     <div
-      className="px-[16px] border border-newTextColor/10 rounded-[8px] justify-center flex gap-[8px] items-center relative h-[44px] text-[15px] font-[600] ml-[7px] select-none flex-1"
+      className="relative flex h-9 shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-[#e6e8ee] bg-white px-3 text-[13px] font-semibold text-[#334155]"
       onClick={changeShow}
       ref={ref}
     >
@@ -43,7 +43,7 @@ export const DatePicker: FC<{
         <CalendarIcon />
       </div>
       <div className="cursor-pointer">
-        {date.format(isUSCitizen() ? 'MM/DD/YYYY hh:mm A' : 'DD/MM/YYYY HH:mm')}
+        {date.format(isUSCitizen() ? 'MMM D, h:mm A' : 'D MMM, HH:mm')}
       </div>
       {open && (
         <div

@@ -108,10 +108,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const currentIntegrationText = useMemo(() => {
     if (current === 'global') {
       return (
-        <div className="flex items-center gap-[10px]">
-          <div className="relative">
-            <SettingsIcon size={15} className="text-white" />
-          </div>
+        <div className="flex items-center gap-2">
+          <SettingsIcon size={15} className="text-[#475569]" />
           <div>Settings</div>
         </div>
       );
@@ -128,8 +126,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             alt={currentIntegration.identifier}
           />
           <SettingsIcon
-            size={15}
-            className="text-white absolute -end-[5px] -bottom-[5px]"
+            size={12}
+            className="absolute -bottom-1 -end-1 text-[#475569]"
           />
         </div>
         <div>
@@ -714,30 +712,30 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   }, [global, selectedIntegrations, date, tags, saveDraftSilent]);
 
   return (
-    <div className="w-full h-full flex-1 p-[40px] flex relative">
-      <div className="flex flex-1 bg-newBgColorInner rounded-[20px] flex-col">
-        <div className="flex-1 flex">
-          <div className="flex flex-col flex-1 border-e border-newBorder">
-            <div className="bg-newBgColor h-[65px] rounded-s-[20px] !rounded-b-[0] flex items-center gap-[12px] px-[20px] text-[20px] font-[600]">
+    <div className="relative flex h-full w-full flex-1 p-4">
+      <div className="flex flex-1 flex-col rounded-2xl border border-[#e6e8ee] bg-white">
+        <div className="flex min-h-0 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col border-e border-[#e6e8ee]">
+            <div className="flex h-12 shrink-0 items-center gap-3 border-b border-[#e6e8ee] px-4 text-[15px] font-semibold text-[#0f172a]">
               {t('create_post_title', 'Create Post')}
               <CreationMethodBadge
                 creationMethod={existingData?.posts?.[0]?.creationMethod}
                 size="sm"
               />
             </div>
-            <div className="flex-1 flex flex-col gap-[16px]">
+            <div className="flex min-h-0 flex-1 flex-col">
               <div
-                className={clsx('flex-1 relative', showSettings && 'hidden')}
+                className={clsx('relative min-h-0 flex-1', showSettings && 'hidden')}
               >
                 <div
                   id="social-content"
-                  className="gap-[32px] flex flex-col pe-[8px] pt-[20px] ps-[20px] absolute top-0 left-0 w-full h-full overflow-x-hidden overflow-y-scroll scrollbar scrollbar-thumb-newColColor scrollbar-track-newBgColorInner"
+                  className="absolute left-0 top-0 flex h-full w-full flex-col gap-4 overflow-x-hidden overflow-y-auto px-4 py-4"
                 >
-                  <div className="flex w-full">
-                    <div className="flex flex-1">
+                  <div className="flex w-full items-start gap-3">
+                    <div className="min-w-0 flex-1">
                       <PicksSocialsComponent toolTip={true} />
                     </div>
-                    <div>
+                    <div className="shrink-0">
                       {!dummy && (
                         <SelectCustomer
                           onChange={changeCustomer}
@@ -746,57 +744,44 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-1 gap-[6px] flex-col">
+                  <div className="flex min-h-[280px] flex-1 flex-col gap-2">
                     <div>{!existingData.integration && <SelectCurrent />}</div>
-                    <div className="flex-1 flex">
+                    <div className="flex flex-1">
                       {!hide && <EditorWrapper totalPosts={1} value="" />}
                     </div>
-                    <div
-                      id="social-empty"
-                      className={clsx(
-                        'pb-[16px]'
-                        // current !== 'global' && 'hidden'
-                      )}
-                    />
+                    <div id="social-empty" className="pb-2" />
                   </div>
                 </div>
               </div>
               <div
                 id="wrapper-settings"
                 className={clsx(
-                  'pb-[20px] px-[20px] select-none',
-                  showSettings && 'flex-1 flex pt-[20px]',
+                  'shrink-0 px-4 pb-3',
+                  showSettings && 'flex min-h-0 flex-1 flex-col pt-3',
                   current === 'global' && 'hidden'
                 )}
               >
-                <div className="flex-1 flex flex-col rounded-[12px] gap-[12px] overflow-hidden bg-newSettings">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#e6e8ee] bg-white">
                   <div
                     onClick={() => setShowSettings(!showSettings)}
-                    className={clsx(
-                      'bg-[#612BD3] rounded-[12px] flex items-center gap-[8px] cursor-pointer p-[12px]',
-                      showSettings ? '!rounded-b-none' : ''
-                    )}
+                    className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-[#334155]"
                   >
-                    <div className="flex-1 text-[14px] font-[600] text-white">
-                      {currentIntegrationText}
-                    </div>
-                    <div>
-                      <ChevronDownIcon
-                        rotated={showSettings}
-                        className="text-white"
-                      />
-                    </div>
+                    <div className="min-w-0 flex-1">{currentIntegrationText}</div>
+                    <ChevronDownIcon
+                      rotated={showSettings}
+                      className="text-[#94a3b8]"
+                    />
                   </div>
                   <div
                     className={clsx(
-                      !showSettings ? 'hidden' : 'flex-1',
-                      'text-[14px] text-textColor font-[500] relative'
+                      !showSettings ? 'hidden' : 'min-h-0 flex-1',
+                      'relative text-[14px] font-medium text-[#334155]'
                     )}
                   >
-                    <div className="absolute left-0 top-0 w-full h-full flex flex-col overflow-x-hidden overflow-y-auto scrollbar scrollbar-thumb-newBgColorInner scrollbar-track-newColColor">
+                    <div className="absolute left-0 top-0 flex h-full w-full flex-col overflow-x-hidden overflow-y-auto border-t border-[#e6e8ee]">
                       <div
                         id="social-settings"
-                        className="flex flex-col gap-[20px] bg-newBgColor"
+                        className="flex flex-col gap-4 bg-white p-3"
                       />
                     </div>
                   </div>
@@ -807,25 +792,25 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               </div>
             </div>
           </div>
-          <div className="w-[580px] flex flex-col">
-            <div className="bg-newBgColor h-[65px] rounded-e-[20px] !rounded-b-[0] flex items-center px-[20px] text-[20px] font-[600]">
+          <div className="flex w-[400px] shrink-0 flex-col bg-[#fafbfc]">
+            <div className="flex h-12 shrink-0 items-center border-b border-[#e6e8ee] bg-white px-4 text-[15px] font-semibold text-[#0f172a]">
               <div className="flex-1">{t('post_preview', 'Post Preview')}</div>
-              <div className="cursor-pointer">
-                <CloseIcon onClick={askClose} className="text-[#A3A3A3]" />
-              </div>
+              <button type="button" className="cursor-pointer" onClick={askClose}>
+                <CloseIcon className="text-[#94a3b8]" />
+              </button>
             </div>
-            <div className="flex-1 relative">
+            <div className="relative min-h-0 flex-1">
               <Scrollable
-                scrollClasses="!pe-[20px]"
-                className="absolute top-0 p-[20px] pe-[8px] left-0 w-full h-full overflow-x-hidden overflow-y-scroll scrollbar scrollbar-thumb-newColColor scrollbar-track-newBgColorInner"
+                scrollClasses=""
+                className="absolute left-0 top-0 h-full w-full overflow-x-hidden overflow-y-auto p-4"
               >
                 <ShowAllProviders ref={ref} />
               </Scrollable>
             </div>
           </div>
         </div>
-        <div className="select-none h-[84px] py-[20px] border-t border-newBorder flex items-center">
-          <div className="flex-1 flex ps-[20px] gap-[8px]">
+        <div className="flex h-full w-full shrink-0 items-center gap-2 overflow-x-auto border-t border-[#e6e8ee] bg-white px-4 py-3">
+          <div className="flex shrink-0 items-center gap-2">
             {!dummy && (
               <TagsComponent
                 name="tags"
@@ -841,55 +826,58 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               <RepeatComponent repeat={repeater} onChange={setRepeater} />
             )}
           </div>
-          <div className="pe-[20px] flex items-center justify-end gap-[8px]">
+          <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
             {existingData?.integration && (
               <button
                 onClick={deletePost}
-                className="cursor-pointer flex text-[#FF3F3F] gap-[8px] items-center text-[15px] font-[600]"
+                className="flex h-9 cursor-pointer items-center gap-2 whitespace-nowrap px-2 text-[13px] font-semibold text-[#b42318]"
               >
-                <div>
-                  <TrashIcon />
-                </div>
-                <div>{t('delete_post', 'Delete Post')}</div>
+                <TrashIcon />
+                <span>{t('delete_post', 'Delete Post')}</span>
               </button>
             )}
             <DatePicker onChange={setDate} date={date} />
             {!addEditSets && (
-              <div className="flex items-center gap-[8px]">
-                <button
-                  disabled={
-                    selectedIntegrations.length === 0 ||
-                    loading ||
-                    locked ||
-                    existingData?.posts?.[0]?.state === 'PUBLISHED'
-                  }
-                  onClick={schedule('draft')}
-                  className="relative cursor-pointer disabled:cursor-not-allowed px-[20px] h-[44px] bg-btnSimple justify-center items-center flex rounded-[8px] text-[15px] font-[600]"
-                >
-                  {loading && (
-                    <div className="absolute left-[50%] top-[50%] -translate-y-[50%] -translate-x-[50%]">
-                      <div className="animate-spin h-[20px] w-[20px] border-4 border-textColor border-t-transparent rounded-full" />
-                    </div>
-                  )}
-                  <div className={clsx(loading && 'invisible')}>
-                    {t('save_as_draft', 'Save as Draft')}
+              <>
+              <button
+                disabled={
+                  selectedIntegrations.length === 0 ||
+                  loading ||
+                  locked ||
+                  existingData?.posts?.[0]?.state === 'PUBLISHED'
+                }
+                onClick={schedule('draft')}
+                className="relative flex h-9 cursor-pointer items-center justify-center whitespace-nowrap rounded-lg border border-[#e6e8ee] bg-white px-3 text-[13px] font-semibold text-[#334155] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading && (
+                  <div className="absolute left-[50%] top-[50%] -translate-x-[50%] -translate-y-[50%]">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#334155] border-t-transparent" />
                   </div>
-                </button>
-                {draftSaved && (
-                  <span className="text-[12px] text-slate-500">
-                    {selectedIntegrations.length
+                )}
+                <div className={clsx(loading && 'invisible')}>
+                  {t('save_as_draft', 'Save as Draft')}
+                </div>
+              </button>
+              {draftSaved && (
+                <span
+                  className="whitespace-nowrap text-[12px] text-[#64748b]"
+                  title={
+                    selectedIntegrations.length
                       ? t('draft_saved', 'Draft saved')
                       : t(
                           'draft_saved_on_device',
                           'Saved on this device. Select an account to keep it in Drafts.'
-                        )}
-                  </span>
-                )}
-              </div>
+                        )
+                  }
+                >
+                  {t('draft_saved', 'Saved')}
+                </span>
+              )}
+              </>
             )}
             {addEditSets && (
               <button
-                className="text-white text-[15px] font-[600] min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#612BD3] ps-[20px] pe-[16px]"
+                className="flex h-9 items-center justify-center whitespace-nowrap rounded-lg bg-[#612BD3] px-4 text-[13px] font-semibold text-white outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={
                   selectedIntegrations.length === 0 || loading || locked
                 }
@@ -905,33 +893,28 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                 disabled={
                   selectedIntegrations.length === 0 || loading || locked
                 }
-                className="flex h-[44px] items-center justify-center rounded-[8px] border border-newBorder bg-newBgColor px-[16px] text-[14px] font-[600] text-textColor hover:bg-newColColor disabled:cursor-not-allowed disabled:opacity-80"
+                className="flex h-9 items-center justify-center whitespace-nowrap rounded-lg border border-[#e6e8ee] bg-white px-3 text-[13px] font-semibold text-[#334155] hover:bg-[#f8f7fc] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {t('add_to_queue', 'Add to Queue')}
               </button>
             )}
             {!addEditSets && (
-              <div className="group cursor-pointer relative">
+              <div className="group relative">
                 <button
                   disabled={
                     selectedIntegrations.length === 0 || loading || locked
                   }
                   onClick={schedule('schedule')}
-                  className="text-white relative min-w-[180px] btnSub disabled:cursor-not-allowed disabled:opacity-80 outline-none gap-[8px] flex justify-center items-center h-[44px] rounded-[8px] bg-[#612BD3] ps-[20px] pe-[16px]"
+                  className="relative flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#612BD3] px-4 text-[13px] font-semibold text-white outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading && (
-                    <div className="absolute left-[50%] top-[50%] -translate-y-[50%] -translate-x-[50%]">
-                      <div className="animate-spin h-[20px] w-[20px] border-4 border-white border-t-transparent rounded-full" />
+                    <div className="absolute left-[50%] top-[50%] -translate-x-[50%] -translate-y-[50%]">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                     </div>
                   )}
-                  <div
-                    className={clsx(
-                      'text-[15px] font-[600]',
-                      loading && 'invisible'
-                    )}
-                  >
+                  <span className={clsx(loading && 'invisible')}>
                     {selectedIntegrations.length === 0
-                      ? t('check_circles_above', 'Check the circles above')
+                      ? t('check_circles_above', 'Select an account')
                       : dummy
                       ? t('create_output', 'Create output')
                       : !existingData?.integration
@@ -939,23 +922,21 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                       : existingData?.posts?.[0]?.state === 'DRAFT'
                       ? t('schedule', 'Schedule')
                       : t('update', 'Update')}
-                  </div>
+                  </span>
                   {!dummy && (
-                    <div className="flex justify-center items-center h-[20px] w-[20px] pt-[4px] arrow-change">
-                      <DropdownArrowSmallIcon className="group-hover:rotate-180 text-white" />
-                    </div>
+                    <DropdownArrowSmallIcon className="text-white group-hover:rotate-180" />
                   )}
                 </button>
 
                 {!dummy && (
-                  <div className="absolute bottom-[100%] -left-[12px] z-[300] hidden w-[220px] flex-col rounded-[8px] bg-newBgColorInner p-[12px] group-hover:flex group-focus-within:flex">
+                  <div className="absolute bottom-[calc(100%+8px)] right-0 z-[300] hidden w-[180px] flex-col rounded-lg border border-[#e6e8ee] bg-white p-1.5 shadow-sm group-hover:flex group-focus-within:flex">
                     <button
                       type="button"
                       onClick={schedule('now')}
                       disabled={
                         selectedIntegrations.length === 0 || loading || locked
                       }
-                      className="post-now flex h-[44px] w-full items-center justify-center rounded-[8px] bg-[#D82D7E] text-white disabled:cursor-not-allowed disabled:opacity-80"
+                      className="post-now flex h-9 w-full items-center justify-center rounded-md text-[13px] font-semibold text-[#612BD3] hover:bg-[#f8f7fc] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {t('post_now', 'Post Now')}
                     </button>

@@ -38,7 +38,7 @@ export const AComponent: FC<{
       data-tooltip-id="tooltip"
       data-tooltip-content="Link"
       onClick={mark}
-      className="select-none cursor-pointer rounded-[6px] w-[30px] h-[30px] bg-newColColor flex justify-center items-center"
+      className="flex h-8 w-8 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-[#e6e8ee] bg-white text-[#475569]"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

@@ -32,7 +32,7 @@ export const PicksSocialsComponent: FC<{ toolTip?: boolean }> = ({
     <div className={clsx('flex', locked && 'opacity-50 pointer-events-none')}>
       <div className="flex flex-1">
         <div className="innerComponent flex-1 flex">
-          <div className="flex flex-wrap gap-[12px] flex-1">
+          <div className="flex flex-1 flex-wrap gap-2">
             {integrations
               .filter((f) => {
                 if (exising.integration) {
@@ -57,42 +57,35 @@ export const PicksSocialsComponent: FC<{ toolTip?: boolean }> = ({
                       addOrRemoveSelectedIntegration(integration, {});
                     }}
                     className={clsx(
-                      'cursor-pointer border-[2px] relative rounded-full flex justify-center items-center bg-fifth filter transition-all duration-500',
+                      'relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white transition-all',
                       selectedIntegrations.findIndex(
                         (p) => p.integration.id === integration.id
                       ) === -1
-                        ? 'grayscale border-transparent'
-                        : 'border-[#622FF6]'
+                        ? 'opacity-60 ring-1 ring-[#e6e8ee]'
+                        : 'opacity-100 ring-2 ring-[#612BD3]'
                     )}
                   >
                     <ImageWithFallback
                       fallbackSrc="/no-picture.jpg"
                       src={integration.picture || '/no-picture.jpg'}
-                      className={clsx(
-                        'rounded-full transition-all min-w-[42px] border-[1.5px] min-h-[42px]',
-                        selectedIntegrations.findIndex(
-                          (p) => p.integration.id === integration.id
-                        ) === -1
-                          ? 'border-transparent'
-                          : 'border-[#000]'
-                      )}
+                      className="h-8 w-8 min-h-8 min-w-8 rounded-full object-cover"
                       alt={integration.identifier}
-                      width={42}
-                      height={42}
+                      width={32}
+                      height={32}
                     />
                     {integration.identifier === 'youtube' ? (
                       <img
                         src="/icons/platforms/youtube.svg"
-                        className="absolute z-10 bottom-0 -end-[5px] min-w-[16px]"
-                        width={16}
+                        className="absolute -bottom-0.5 -end-0.5 z-10 h-3.5 w-3.5 rounded-[3px] bg-white"
+                        width={14}
                       />
                     ) : (
                       <SafeImage
                         src={`/icons/platforms/${integration.identifier}.png`}
-                        className="rounded-[4px] absolute z-10 bottom-0 -end-[5px] min-w-[16px] min-h-[16px]"
+                        className="absolute -bottom-0.5 -end-0.5 z-10 h-3.5 w-3.5 min-h-[14px] min-w-[14px] rounded-[3px] bg-white"
                         alt={integration.identifier}
-                        width={16}
-                        height={16}
+                        width={14}
+                        height={14}
                       />
                     )}
                   </div>

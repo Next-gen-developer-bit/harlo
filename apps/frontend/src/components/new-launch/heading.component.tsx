@@ -13,7 +13,7 @@ export const HeadingComponent: FC<{
   };
 
   return (
-    <div className="select-none cursor-pointer rounded-[6px] w-[30px] h-[30px] bg-newColColor flex justify-center items-center group relative">
+    <div className="group relative flex h-8 w-8 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-[#e6e8ee] bg-white text-[#475569]">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="16"
@@ -32,7 +32,7 @@ export const HeadingComponent: FC<{
       <div
         data-tooltip-id="tooltip"
         data-tooltip-content="Title"
-        className="flex p-[10px] gap-[5px] -left-[50%] rounded-[6px] bottom-[100%] opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 bg-newColColor border border-newColColor z-[100] absolute transition-all"
+        className="absolute bottom-[100%] -left-1/2 z-[100] flex gap-[5px] rounded-md border border-[#e6e8ee] bg-white p-2 opacity-0 pointer-events-none transition-all group-hover:pointer-events-auto group-hover:opacity-100"
       >
         <div onClick={setHeading(1)}>
           <svg

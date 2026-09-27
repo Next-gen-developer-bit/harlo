@@ -360,10 +360,8 @@ export const EditorWrapper: FC<{
   return (
     <div
       className={clsx(
-        'relative flex-col gap-[20px] flex-1',
-        (items.length === 1 || !canEdit || !comments) && 'flex',
-        ((!canEdit && !isCreateSet) || !comments) &&
-          'bg-newSettings rounded-[12px]'
+        'relative flex flex-col gap-3 flex-1',
+        (items.length === 1 || !canEdit || !comments) && 'flex'
       )}
     >
       {isCreateSet && current !== 'global' && (
@@ -419,7 +417,7 @@ export const EditorWrapper: FC<{
         <div
           key={g.id}
           className={clsx(
-            'relative flex flex-col gap-[20px] flex-1 bg-newSettings',
+            'relative flex flex-1 flex-col gap-3 rounded-xl border border-[#e6e8ee] bg-white',
             index === 0 && 'rounded-t-[12px]',
             (index === items.length - 1 || !comments) && 'rounded-b-[12px]',
             !canEdit && !isCreateSet && 'blur-s',
@@ -695,7 +693,7 @@ export const Editor: FC<{
   }
 
   return (
-    <div className="flex flex-col gap-[20px] flex-1">
+    <div className="flex flex-1 flex-col gap-3">
       <div
         className={clsx(
           'relative flex-1 px-[12px] pt-[12px] pb-[12px] flex flex-col',
@@ -713,7 +711,7 @@ export const Editor: FC<{
             >
               {t('drop_files_here_to_upload', 'Drop your files here to upload')}
             </div>
-            <div className="px-[10px] pt-[10px] bg-newBgColorInner rounded-t-[6px] relative z-[99]">
+            <div className="relative z-[99] rounded-t-md bg-white px-3 pt-3">
               <OnlyEditor
                 value={props.value}
                 editorType={editorType}
@@ -722,8 +720,7 @@ export const Editor: FC<{
                 ref={editorRef}
               />
             </div>
-            <div
-              className="bg-newBgColorInner flex-1"
+            <div className="flex-1 bg-white"
               onClick={() => {
                 if (editorRef?.current?.editor?.isFocused) {
                   return;
@@ -746,8 +743,7 @@ export const Editor: FC<{
                 />
               </div>
             </div>
-            <div
-              className="w-full h-[46px] bg-newBgColorInner cursor-text"
+            <div className="h-[46px] w-full cursor-text bg-white"
               onClick={() => {
                 if (editorRef?.current?.editor?.isFocused) {
                   return;
@@ -755,7 +751,7 @@ export const Editor: FC<{
                 editorRef?.current?.editor?.commands?.focus('end');
               }}
             />
-            <div className="flex bg-newBgColorInner rounded-b-[6px] cursor-default">
+            <div className="flex cursor-default rounded-b-md bg-white">
               {setImages && (
                 <MultiMediaComponent
                   mediaNotAvailable={num > 0 && comments === 'no-media'}
@@ -776,7 +772,7 @@ export const Editor: FC<{
                     />
                   }
                   toolBar={
-                    <div className="flex gap-[5px]">
+                    <div className="flex items-center gap-1.5">
                       <SignatureBox editor={editorRef?.current?.editor} />
                       {editorType !== 'none' && (
                         <>
@@ -810,7 +806,7 @@ export const Editor: FC<{
                       <div
                         data-tooltip-id="tooltip"
                         data-tooltip-content={t('insert_emoji', 'Insert Emoji')}
-                        className="select-none cursor-pointer rounded-[6px] w-[30px] h-[30px] bg-newColColor flex justify-center items-center"
+                        className="flex h-8 w-8 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-[#e6e8ee] bg-white text-[#475569]"
                         onClick={() => setEmojiPickerOpen(!emojiPickerOpen)}
                       >
                         <EmojiIcon />

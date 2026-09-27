@@ -16,7 +16,7 @@ export const AddPostButton: FC<{
     <div className="flex">
       <div
         onClick={onClick}
-        className="select-none cursor-pointer h-[34px] rounded-[6px] flex bg-[#D82D7E] gap-[8px] justify-center items-center pl-[16px] pr-[20px] text-[13px] font-[600] mt-[12px]"
+        className="mt-3 flex h-8 cursor-pointer select-none items-center justify-center gap-1.5 rounded-md border border-[#e6e8ee] bg-white pl-3 pr-3.5 text-[13px] font-medium text-[#475569]"
       >
         <div>
           <svg
@@ -28,14 +28,14 @@ export const AddPostButton: FC<{
           >
             <path
               d="M8.00065 3.33301V12.6663M3.33398 7.99967H12.6673"
-              stroke="white"
+              stroke="currentColor"
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>
         </div>
-        <div className="!text-white">
+        <div>
           {t(
             ...(props.postComment === PostComment.ALL
               ? ['add_comment_or_post', 'Add comment or post']

@@ -76,25 +76,21 @@ export const RepeatComponent: FC<{
     <div
       ref={ref}
       className={clsx(
-        'border rounded-[8px] justify-center flex items-center relative h-[44px] text-[15px] font-[600] select-none',
-        isOpen ? 'border-[#612BD3]' : 'border-newTextColor/10',
+        'relative flex h-9 shrink-0 items-center whitespace-nowrap rounded-lg border bg-white px-3 text-[13px] font-semibold text-[#334155] select-none',
+        isOpen ? 'border-[#612BD3]' : 'border-[#e6e8ee]',
       )}
     >
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="px-[16px] justify-center flex gap-[8px] items-center h-full select-none flex-1"
+        className="flex h-full cursor-pointer items-center gap-2"
       >
-        <div className="cursor-pointer">
-          <RepeatIcon />
-        </div>
-        <div className="cursor-pointer">
+        <RepeatIcon />
+        <span>
           {repeat
-            ? `${t('repeat_post_every_label', 'Repeat Post Every')} ${everyLabel}`
-            : t('repeat_post_every', 'Repeat Post Every...')}
-        </div>
-        <div className="cursor-pointer">
-          <DropdownArrowIcon rotated={isOpen} />
-        </div>
+            ? `${t('every', 'Every')} ${everyLabel}`
+            : t('repeat', 'Repeat')}
+        </span>
+        <DropdownArrowIcon rotated={isOpen} />
       </div>
       {isOpen && (
         <div className="z-[300] absolute start-0 bottom-[100%] w-[240px] bg-newBgColorInner p-[12px] menu-shadow -translate-y-[10px] flex flex-col">
