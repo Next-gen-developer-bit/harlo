@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
 import dayjs from 'dayjs';
-import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { Onboarding } from '@gitroom/frontend/components/onboarding/onboarding';
 import {
   formatMetric,
@@ -59,7 +58,6 @@ export const WorkspaceHomeComponent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fetch = useFetch();
-  const user = useUser();
   const { data: overview } = useWorkspaceOverview();
   const { data: integrations } = useIntegrationList();
   const { data: analytics } = usePublishedPostsAnalytics(30);
@@ -118,69 +116,54 @@ export const WorkspaceHomeComponent = () => {
   const actions = [
     {
       label: 'Create a post',
-      className: 'bg-[#eef4ff] text-blue-600',
+      className: 'border-[#612BD3] bg-[#612BD3] text-white',
       icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z',
       onClick: openCreatePost,
     },
     {
       label: 'View calendar',
-      className: 'bg-[#f3e8ff] text-violet-600',
+      className: 'border-[#e6e8ee] bg-white text-[#334155] hover:bg-[#f8f7fc]',
       icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
       onClick: () => router.push('/launches'),
     },
     {
       label: 'Check analytics',
-      className: 'bg-[#fff1e8] text-orange-500',
+      className: 'border-[#e6e8ee] bg-white text-[#334155] hover:bg-[#f8f7fc]',
       icon: 'M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3',
       onClick: () => router.push('/analytics'),
     },
     {
       label: 'Manage campaigns',
-      className: 'bg-[#e8f8ef] text-emerald-600',
+      className: 'border-[#e6e8ee] bg-white text-[#334155] hover:bg-[#f8f7fc]',
       icon: 'M3 11l18-5v12L3 14v-3zM11.6 16.8a3 3 0 11-5.8-1.6',
       onClick: () => router.push('/campaigns'),
     },
   ];
 
   return (
-    <div className="min-h-full px-6 py-5 md:px-8 font-sans text-slate-800">
+    <div className="min-h-full bg-[#f7f8fa] px-6 py-6 font-sans text-slate-800 md:px-8">
       <Onboarding />
-      <p className="text-sm text-slate-500">{dayjs().format('dddd, D MMMM')}</p>
-      <h1 className="mt-1 text-[32px] font-extrabold tracking-tight text-slate-900">
-        Welcome back, {user?.name?.split(' ')[0] || 'there'} 👋
-      </h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Here&apos;s what&apos;s happening with your social media today.
-      </p>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          tint="bg-[#eef4ff]"
-          iconClass="text-blue-600"
           icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
           label="Scheduled Posts"
           value={String(overview?.scheduled || 0)}
           note="Waiting to publish"
         />
         <MetricCard
-          tint="bg-[#f4efff]"
-          iconClass="text-violet-600"
           icon="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3"
           label="Total Reach"
           value={formatMetric(impressions)}
           note="Last 30 days"
         />
         <MetricCard
-          tint="bg-[#fff4ec]"
-          iconClass="text-orange-500"
           icon="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
           label="Engagement Rate"
           value={engagementRate}
           note="Likes, comments and shares"
         />
         <MetricCard
-          tint="bg-[#e9f8ef]"
-          iconClass="text-emerald-600"
           icon="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
           label="Connected Accounts"
           value={String(accounts.length)}
@@ -188,14 +171,16 @@ export const WorkspaceHomeComponent = () => {
         />
       </div>
 
-      <h2 className="mb-3 mt-8 text-base font-bold text-slate-900">Quick Actions</h2>
+      <h2 className="mb-3 mt-8 text-[13px] font-semibold uppercase tracking-wide text-[#94a3b8]">
+        Quick Actions
+      </h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {actions.map((action) => (
           <button
             key={action.label}
             type="button"
             onClick={action.onClick}
-            className={`flex h-14 items-center justify-between rounded-2xl px-4 text-sm font-semibold ${action.className}`}
+            className={`flex h-12 items-center justify-between rounded-xl border px-4 text-[13px] font-semibold ${action.className}`}
           >
             <span className="flex items-center gap-2">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,17 +188,17 @@ export const WorkspaceHomeComponent = () => {
               </svg>
               {action.label}
             </span>
-            <span>›</span>
+            <span className="opacity-60">›</span>
           </button>
         ))}
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <div className="flex items-center justify-between px-5 py-4">
-            <h2 className="text-base font-bold text-slate-900">Recent Posts</h2>
-            <button type="button" onClick={() => router.push('/launches?state=all')} className="text-xs font-semibold text-blue-600">
-              View all →
+        <section className="overflow-hidden rounded-xl border border-[#e6e8ee] bg-white">
+          <div className="flex items-center justify-between border-b border-[#eef0f4] px-5 py-3.5">
+            <h2 className="text-[15px] font-semibold text-[#0f172a]">Recent Posts</h2>
+            <button type="button" onClick={() => router.push('/launches?state=all')} className="text-[12px] font-medium text-[#612BD3]">
+              View all
             </button>
           </div>
           <table className="w-full text-left">
@@ -275,11 +260,11 @@ export const WorkspaceHomeComponent = () => {
           </table>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white">
-          <div className="flex items-center justify-between px-5 py-4">
-            <h2 className="text-base font-bold text-slate-900">Upcoming Posts</h2>
-            <button type="button" onClick={() => router.push('/launches?state=scheduled')} className="text-xs font-semibold text-blue-600">
-              View all →
+        <section className="overflow-hidden rounded-xl border border-[#e6e8ee] bg-white">
+          <div className="flex items-center justify-between border-b border-[#eef0f4] px-5 py-3.5">
+            <h2 className="text-[15px] font-semibold text-[#0f172a]">Upcoming Posts</h2>
+            <button type="button" onClick={() => router.push('/launches?state=scheduled')} className="text-[12px] font-medium text-[#612BD3]">
+              View all
             </button>
           </div>
           <div className="divide-y divide-slate-100">
@@ -324,28 +309,24 @@ export const WorkspaceHomeComponent = () => {
 };
 
 const MetricCard = ({
-  tint,
-  iconClass,
   icon,
   label,
   value,
   note,
 }: {
-  tint: string;
-  iconClass: string;
   icon: string;
   label: string;
   value: string;
   note: string;
 }) => (
-  <div className={`rounded-2xl p-5 ${tint}`}>
-    <div className={`mb-3 ${iconClass}`}>
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <div className="rounded-xl border border-[#e6e8ee] bg-white p-4">
+    <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-[#f4f2fb] text-[#612BD3]">
+      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon} />
       </svg>
     </div>
-    <div className="text-xs font-medium text-slate-500">{label}</div>
-    <div className="mt-1 text-[28px] font-extrabold leading-none text-slate-900">{value}</div>
-    <div className="mt-2 text-[11px] font-medium text-slate-500">{note}</div>
+    <div className="text-[12px] font-medium text-[#64748b]">{label}</div>
+    <div className="mt-1 text-[26px] font-semibold leading-none tracking-tight text-[#0f172a]">{value}</div>
+    <div className="mt-2 text-[12px] text-[#94a3b8]">{note}</div>
   </div>
 );
