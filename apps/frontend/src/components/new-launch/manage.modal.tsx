@@ -5,7 +5,6 @@ import React, {
   ReactNode,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -33,8 +32,6 @@ import { CopilotPopup } from '@copilotkit/react-ui';
 import { DummyCodeComponent } from '@gitroom/frontend/components/new-launch/dummy.code.component';
 import { CreationMethodBadge } from '@gitroom/frontend/components/launches/creation.method.badge';
 import {
-  SettingsIcon,
-  ChevronDownIcon,
   CloseIcon,
   TrashIcon,
   DropdownArrowSmallIcon,
@@ -54,7 +51,6 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
   const [loading, setLoading] = useState(false);
   const toaster = useToaster();
   const modal = useModals();
-  const [showSettings, setShowSettings] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
   const { data: shortlinkPreferenceData } = useShortlinkPreference();
   const groupRef = useRef(existingData.group);
@@ -75,7 +71,6 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     integrations,
     setSelectedIntegrations,
     locked,
-    current,
     activateExitButton,
     setHide,
     global,
@@ -85,7 +80,6 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       setHide: state.setHide,
       date: state.date,
       setDate: state.setDate,
-      current: state.current,
       repeater: state.repeater,
       setRepeater: state.setRepeater,
       tags: state.tags,
@@ -104,38 +98,6 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       setHide(false);
     }
   }, [hide]);
-
-  const currentIntegrationText = useMemo(() => {
-    if (current === 'global') {
-      return (
-        <div className="flex items-center gap-2">
-          <SettingsIcon size={15} className="text-[#475569]" />
-          <div>Settings</div>
-        </div>
-      );
-    }
-
-    const currentIntegration = integrations.find((p) => p.id === current)!;
-
-    return (
-      <div className="flex items-center gap-[10px]">
-        <div className="relative">
-          <img
-            src={`/icons/platforms/${currentIntegration.identifier}.png`}
-            className="w-[20px] h-[20px] rounded-[4px]"
-            alt={currentIntegration.identifier}
-          />
-          <SettingsIcon
-            size={12}
-            className="absolute -bottom-1 -end-1 text-[#475569]"
-          />
-        </div>
-        <div>
-          {currentIntegration.name} {t('channel_settings', 'Settings')}
-        </div>
-      </div>
-    );
-  }, [current]);
 
   const changeCustomer = useCallback(
     (customer: string) => {
@@ -405,7 +367,6 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                 );
                 focus(item.id, 'fix');
                 setLoading(false);
-                setShowSettings(true);
                 return;
               }
 
@@ -418,7 +379,6 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                 );
                 focus(item.id, 'preview');
                 setLoading(false);
-                setShowSettings(false);
                 return;
               }
 
@@ -724,9 +684,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               />
             </div>
             <div className="flex min-h-0 flex-1 flex-col">
-              <div
-                className={clsx('relative min-h-0 flex-1', showSettings && 'hidden')}
-              >
+              <div className="relative min-h-0 flex-1">
                 <div
                   id="social-content"
                   className="absolute left-0 top-0 flex h-full w-full flex-col gap-4 overflow-x-hidden overflow-y-auto px-4 py-4"
@@ -753,46 +711,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                   </div>
                 </div>
               </div>
-              <div
-                id="wrapper-settings"
-                className={clsx(
-                  'relative z-0 shrink-0 px-4 pb-3',
-                  showSettings && 'flex min-h-0 flex-1 flex-col pt-3',
-                  current === 'global' && 'hidden'
-                )}
-              >
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#e6e8ee] bg-white">
-                  <div
-                    onClick={() => setShowSettings(!showSettings)}
-                    className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-[#334155]"
-                  >
-                    <div className="min-w-0 flex-1">{currentIntegrationText}</div>
-                    <ChevronDownIcon
-                      rotated={showSettings}
-                      className="text-[#94a3b8]"
-                    />
-                  </div>
-                  <div
-                    className={clsx(
-                      !showSettings ? 'hidden' : 'min-h-0 flex-1',
-                      'relative text-[14px] font-medium text-[#334155]'
-                    )}
-                  >
-                    <div className="absolute left-0 top-0 flex h-full w-full flex-col overflow-x-hidden overflow-y-auto border-t border-[#e6e8ee]">
-                      <div
-                        id="social-settings"
-                        className="flex flex-col gap-4 bg-white p-3"
-                      />
-                    </div>
-                  </div>
-                  <style>
-                    {`#social-settings [data-id="${current}"] {display: block !important;}`}
-                  </style>
-                </div>
-              </div>
             </div>
           </div>
-          <div className="flex w-[400px] shrink-0 flex-col bg-[#fafbfc]">
+          <div className="flex w-[460px] shrink-0 flex-col bg-[#fafbfc]">
             <div className="flex h-12 shrink-0 items-center border-b border-[#e6e8ee] bg-white px-4 text-[15px] font-semibold text-[#0f172a]">
               <div className="flex-1">{t('post_preview', 'Post Preview')}</div>
               <button type="button" className="cursor-pointer" onClick={askClose}>

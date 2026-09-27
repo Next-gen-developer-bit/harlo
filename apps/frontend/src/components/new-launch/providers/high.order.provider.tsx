@@ -19,9 +19,10 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
 import { InternalChannels } from '@gitroom/frontend/components/launches/internal.channels';
-import { createPortal } from 'react-dom';
-import clsx from 'clsx';
-import SafeImage from '@gitroom/react/helpers/safe.image';
+import {
+  PLATFORM_LABELS,
+  platformFamily,
+} from '@gitroom/frontend/components/launches/helpers/mvp.platforms';
 
 class Empty {
   @IsOptional()
@@ -69,7 +70,6 @@ export const withProvider = function <T extends object>(params: {
       global,
       date,
       isGlobal,
-      tab,
       setTotalChars,
       justCurrent,
       allIntegrations,
@@ -82,7 +82,6 @@ export const withProvider = function <T extends object>(params: {
     } = useLaunchStore(
       useShallow((state) => ({
         date: state.date,
-        tab: state.tab,
         global: state.global,
         dummy: state.dummy,
         internal: state.internal.find((p) => p.integration.id === props.id),
@@ -152,7 +151,7 @@ export const withProvider = function <T extends object>(params: {
         )
       ).json();
     }, [selectedIntegration.integration.identifier]);
-    const { data, isLoading } = useSWR(
+    const { data } = useSWR(
       `internal-${selectedIntegration.integration.identifier}`,
       getInternalPlugs,
       {
@@ -202,10 +201,16 @@ export const withProvider = function <T extends object>(params: {
             fix: () => {
               setCurrent(props.id);
               setHide(true);
+              document
+                .getElementById(`platform-section-${props.id}`)
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             },
             preview: () => {
               setCurrent(props.id);
               setHide(true);
+              document
+                .getElementById(`platform-section-${props.id}`)
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             },
           };
         },
@@ -224,6 +229,22 @@ export const withProvider = function <T extends object>(params: {
       [value]
     );
 
+    const characterLimit =
+      typeof maximumCharacters === 'number'
+        ? maximumCharacters
+        : maximumCharacters(
+            JSON.parse(
+              selectedIntegration.integration.additionalSettings || '[]'
+            )
+          );
+    const family = platformFamily(selectedIntegration.integration.identifier);
+    const platformLabel =
+      PLATFORM_LABELS[family] ||
+      selectedIntegration.integration.identifier.replace(/-/g, ' ');
+    const hasContent = !!value?.[0]?.content?.length || !!value?.[0]?.media?.length;
+    const showSettings =
+      !!SettingsComponent || (!!data?.internalPlugs?.length && !dummy);
+
     return (
       <IntegrationContext.Provider
         value={{
@@ -238,97 +259,53 @@ export const withProvider = function <T extends object>(params: {
         }}
       >
         <FormProvider {...form}>
-          <div
-            className={clsx(
-              'border border-borderPreview rounded-[12px] shadow-previewShadow',
-              !current && 'hidden'
-            )}
+          <section
+            id={`platform-section-${props.id}`}
+            className="mb-8 flex scroll-mt-4 flex-col gap-4"
           >
-            {current &&
-              (tab === 0 ||
-                (!SettingsComponent && !data?.internalPlugs?.length)) &&
-              !value?.[0]?.content?.length && (
-                <div>
+            <div className="flex items-center gap-3">
+              <img
+                src={`/icons/platforms/${selectedIntegration.integration.identifier}.png`}
+                alt=""
+                className="h-8 w-8 shrink-0 rounded-lg"
+              />
+              <div className="min-w-0">
+                <h2 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+                  {platformLabel}
+                </h2>
+                <p className="truncate text-sm font-medium text-slate-500">
+                  {selectedIntegration.integration.name}
+                </p>
+              </div>
+            </div>
+            {showSettings ? (
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                {SettingsComponent ? <SettingsComponent /> : null}
+                {!!data?.internalPlugs?.length && !dummy ? (
+                  <InternalChannels plugs={data.internalPlugs} />
+                ) : null}
+              </div>
+            ) : null}
+            <div className="relative overflow-hidden rounded-xl border border-[#e6e8ee] bg-white [&>div.absolute]:!relative [&>div.absolute]:!inset-auto [&>div.absolute]:!h-auto [&>div.absolute]:!w-full">
+              {hasContent ? (
+                CustomPreviewComponent ? (
+                  <CustomPreviewComponent maximumCharacters={characterLimit} />
+                ) : (
+                  <GeneralPreviewComponent
+                    maximumCharacters={characterLimit}
+                    forceAccount
+                  />
+                )
+              ) : (
+                <div className="flex min-h-[160px] items-center justify-center px-6 text-center text-[13px] leading-5 text-slate-400">
                   {t(
                     'start_writing_your_post',
                     'Start writing your post for a preview'
                   )}
                 </div>
               )}
-            {current &&
-              (tab === 0 ||
-                (!SettingsComponent && !data?.internalPlugs?.length)) &&
-              !!value?.[0]?.content?.length &&
-              (CustomPreviewComponent ? (
-                <CustomPreviewComponent
-                  maximumCharacters={
-                    typeof maximumCharacters === 'number'
-                      ? maximumCharacters
-                      : maximumCharacters(
-                          JSON.parse(
-                            selectedIntegration.integration
-                              .additionalSettings || '[]'
-                          )
-                        )
-                  }
-                />
-              ) : (
-                <GeneralPreviewComponent
-                  maximumCharacters={
-                    typeof maximumCharacters === 'number'
-                      ? maximumCharacters
-                      : maximumCharacters(
-                          JSON.parse(
-                            selectedIntegration.integration
-                              .additionalSettings || '[]'
-                          )
-                        )
-                  }
-                />
-              ))}
-            {(SettingsComponent || !!data?.internalPlugs?.length) &&
-              createPortal(
-                <div data-id={props.id} className={isGlobal ? 'bg-newSettings pb-[12px] px-[12px]' : 'hidden bg-newSettings px-[12px] pb-[12px]'}>
-                  {isGlobal && (
-                    <style>{`#wrapper-settings {display: flex !important} #social-empty {display: block !important;}`}</style>
-                  )}
-                  {isGlobal && (
-                    <div className="flex py-[20px] items-center gap-[15px]">
-                      <div className="relative">
-                        <SafeImage
-                          alt={selectedIntegration?.integration.name!}
-                          width={42}
-                          height={42}
-                          className="min-w-[42px] min-h-[42px] w-[42px] h-[42px] rounded-full"
-                          src={selectedIntegration?.integration.picture}
-                        />
-                        <SafeImage
-                          alt={selectedIntegration?.integration.identifier}
-                          width={16}
-                          height={16}
-                          className="rounded-[16px] min-w-[16px] min-h-[16px] w-[16px] h-[16px] absolute bottom-0 end-0"
-                          src={`/icons/platforms/${selectedIntegration?.integration.identifier}.png`}
-                        />
-                      </div>
-                      <div className="text-[20px]">{selectedIntegration?.integration.name}</div>
-                    </div>
-                  )}
-                  <SettingsComponent />
-                  {!!data?.internalPlugs?.length && !dummy && (
-                    <InternalChannels plugs={data?.internalPlugs} />
-                  )}
-                </div>,
-                document.querySelector('#social-settings') ||
-                  document.createElement('div')
-              )}
-            {current &&
-              !SettingsComponent &&
-              createPortal(
-                <style>{`#wrapper-settings {display: none !important;} #social-empty {display: block !important;}`}</style>,
-                document.querySelector('#social-settings') ||
-                  document.createElement('div')
-              )}
-          </div>
+            </div>
+          </section>
         </FormProvider>
       </IntegrationContext.Provider>
     );

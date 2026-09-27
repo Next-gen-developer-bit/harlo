@@ -26,9 +26,7 @@ import NostrProvider from '@gitroom/frontend/components/new-launch/providers/nos
 import VkProvider from '@gitroom/frontend/components/new-launch/providers/vk/vk.provider';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { useShallow } from 'zustand/react/shallow';
-import React, { FC, forwardRef, useEffect, useImperativeHandle } from 'react';
-import { GeneralPreviewComponent } from '@gitroom/frontend/components/launches/general.preview.component';
-import { IntegrationContext } from '@gitroom/frontend/components/launches/helpers/use.integration';
+import React, { FC, forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@gitroom/react/form/button';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { PostComment } from '@gitroom/frontend/components/new-launch/providers/high.order.provider';
@@ -180,16 +178,11 @@ export const Providers = [
   },
 ];
 export const ShowAllProviders = forwardRef((props, ref) => {
-  const { date, current, global, selectedIntegrations, allIntegrations } =
-    useLaunchStore(
-      useShallow((state) => ({
-        date: state.date,
-        selectedIntegrations: state.selectedIntegrations,
-        allIntegrations: state.integrations,
-        current: state.current,
-        global: state.global,
-      }))
-    );
+  const { selectedIntegrations } = useLaunchStore(
+    useShallow((state) => ({
+      selectedIntegrations: state.selectedIntegrations,
+    }))
+  );
 
   const t = useT();
 
@@ -213,34 +206,14 @@ export const ShowAllProviders = forwardRef((props, ref) => {
 
   return (
     <div className="w-full flex flex-col flex-1">
-      {current === 'global' && (
-        <IntegrationContext.Provider
-          value={{
-            date,
-            integration:
-              selectedIntegrations?.[0]?.integration || allIntegrations?.[0],
-            allIntegrations: selectedIntegrations.map((p) => p.integration),
-            value: global.map((p) => ({
-              id: p.id,
-              content: p.content,
-              image: p.media,
-            })),
-          }}
-        >
-          {global?.[0]?.content?.length === 0 ? (
-            <div className="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed border-[#e6e8ee] bg-white px-6 text-center text-[13px] leading-5 text-[#94a3b8]">
-              {t(
-                'start_writing_your_post',
-                'Start writing your post to see a preview'
-              )}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-[#e6e8ee] bg-white">
-              <GeneralPreviewComponent maximumCharacters={100000000} />
-            </div>
+      {selectedIntegrations.length === 0 ? (
+        <div className="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed border-[#e6e8ee] bg-white px-6 text-center text-[13px] leading-5 text-[#94a3b8]">
+          {t(
+            'start_writing_your_post',
+            'Start writing your post to see a preview'
           )}
-        </IntegrationContext.Provider>
-      )}
+        </div>
+      ) : null}
       {selectedIntegrations.map((integration) => {
         const { component: ProviderComponent } = Providers.find(
           (provider) =>

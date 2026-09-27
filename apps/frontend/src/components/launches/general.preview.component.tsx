@@ -10,9 +10,11 @@ import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validatio
 
 export const GeneralPreviewComponent: FC<{
   maximumCharacters?: number;
+  forceAccount?: boolean;
 }> = (props) => {
   const { value: topValue, integration } = useIntegration();
   const current = useLaunchStore((state) => state.current);
+  const showGlobal = current === 'global' && !props.forceAccount;
   const mediaDir = useMediaDirectory();
 
   const renderContent = topValue.map((p) => {
@@ -64,7 +66,7 @@ export const GeneralPreviewComponent: FC<{
               <div className="relative">
                 <img
                   src={
-                    current === 'global'
+                    showGlobal
                       ? '/no-picture.jpg'
                       : integration?.picture || '/no-picture.jpg'
                   }
@@ -72,7 +74,7 @@ export const GeneralPreviewComponent: FC<{
                   className="rounded-full relative z-[2]"
                 />
 
-                {current !== 'global' && (
+                {!showGlobal && (
                   <SafeImage
                     src={`/icons/platforms/${integration?.identifier}.png`}
                     className="min-w-[20px] min-h-[20px] rounded-full absolute z-10 -bottom-[5px] -end-[5px] border border-fifth"
@@ -89,7 +91,7 @@ export const GeneralPreviewComponent: FC<{
             <div className="flex-1 flex flex-col gap-[4px]">
               <div className="flex">
                 <div className="h-[22px] text-[15px] font-[700]">
-                  {current === 'global' ? 'Global Edit' : integration?.name}
+                  {showGlobal ? 'Global Edit' : integration?.name}
                 </div>
                 <div className="text-[15px] text-customColor26 mt-[1px] ms-[2px]">
                   <svg
@@ -105,9 +107,7 @@ export const GeneralPreviewComponent: FC<{
                   </svg>
                 </div>
                 <div className="text-[15px] font-[400] text-customColor27 ms-[4px]">
-                  {current === 'global'
-                    ? ''
-                    : integration?.display || '@username'}
+                  {showGlobal ? '' : integration?.display || '@username'}
                 </div>
               </div>
               <div
