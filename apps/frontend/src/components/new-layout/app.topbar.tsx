@@ -37,6 +37,9 @@ const titleForPath = (pathname: string, state: string | null) => {
   if (pathname === '/reports' || pathname.startsWith('/reports/')) {
     return 'Reports';
   }
+  if (pathname === '/settings' || pathname.startsWith('/settings/')) {
+    return 'Settings';
+  }
   if (pathname === '/launches' || pathname.startsWith('/launches/')) {
     return state && LIST_STATES.has(state) ? 'Posts' : 'Calendar';
   }
