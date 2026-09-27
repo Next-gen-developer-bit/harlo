@@ -1,19 +1,30 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
 
 export const AppTopbar = () => {
   const router = useRouter();
+  const pathname = usePathname();
+  const pageTitle =
+    pathname === '/media' || pathname?.startsWith('/media/')
+      ? 'Content Library'
+      : '';
 
   const openCreatePost = useCallback(() => {
     router.push('/compose');
   }, [router]);
 
   return (
-    <div className="sticky top-0 z-20 flex items-center justify-end gap-2 border-b border-slate-100 bg-[#f8fafc]/95 px-6 py-3 backdrop-blur md:px-8">
-      <div className="relative w-full max-w-[320px]">
+    <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-100 bg-[#f8fafc]/95 px-6 py-3 backdrop-blur md:px-8">
+      {pageTitle ? (
+        <h1 className="shrink-0 text-2xl font-bold tracking-tight text-gray-900">
+          {pageTitle}
+        </h1>
+      ) : null}
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+      <div className="relative w-[320px] max-w-[40vw]">
         <svg
           className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
           fill="none"
@@ -47,6 +58,7 @@ export const AppTopbar = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
         </svg>
       </button>
+      </div>
     </div>
   );
 };

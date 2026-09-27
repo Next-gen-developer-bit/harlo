@@ -4,7 +4,7 @@ import { isGeneralServerSide } from '@gitroom/helpers/utils/is.general.server.si
 
 export const metadata: Metadata = {
   title: 'Content Library - Harlo Social',
-  description: 'Store, organise and reuse your content across all your channels.',
+  description: 'Content Library',
 };
 
 export default async function Page() {

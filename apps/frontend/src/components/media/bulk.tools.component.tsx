@@ -192,7 +192,7 @@ export const BulkToolsComponent = () => {
   );
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-6xl p-8 pt-10 font-sans">
+    <div className="mx-auto min-h-screen w-full max-w-6xl p-8 pt-6 font-sans">
       <input
         ref={imageInputRef}
         type="file"
@@ -216,16 +216,7 @@ export const BulkToolsComponent = () => {
         }}
       />
 
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-            Content Library
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Store, organise and reuse your content across all your channels.
-          </p>
-        </div>
-
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
