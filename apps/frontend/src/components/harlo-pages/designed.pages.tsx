@@ -1,7 +1,8 @@
 'use client';
 
-import { ReactNode, useCallback } from 'react';
+import { ReactNode, useCallback, useState } from 'react';
 import Link from 'next/link';
+import { useClickAway } from '@uidotdev/usehooks';
 import useSWR from 'swr';
 import dayjs from 'dayjs';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
@@ -217,16 +218,136 @@ export const CampaignsPage = () => (
 
 export const WorkspacesPage = () => {
   const user = useUser();
+  const fetch = useFetch();
   const { data: organizations } = useOrganizations();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [name, setName] = useState('');
+  const menuRef = useClickAway<HTMLDivElement>(() => setMenuOpen(false));
+
+  const switchWorkspace = useCallback(
+    (id: string) => async () => {
+      if (!id || id === user?.orgId) {
+        setMenuOpen(false);
+        return;
+      }
+      await fetch('/user/change-org', {
+        method: 'POST',
+        body: JSON.stringify({ id }),
+      });
+      window.location.reload();
+    },
+    [fetch, user?.orgId]
+  );
+
+  const createWorkspace = useCallback(async () => {
+    const nextName = name.trim();
+    if (!nextName || creating) {
+      return;
+    }
+    setCreating(true);
+    try {
+      await fetch('/user/workspace', {
+        method: 'POST',
+        body: JSON.stringify({ name: nextName }),
+      });
+      window.location.href = '/overview';
+    } catch {
+      setCreating(false);
+    }
+  }, [creating, fetch, name]);
 
   return (
     <div className={shell}>
-      <PageHeader
-        eyebrow="Workspaces"
-        title={user?.orgName || 'Workspace'}
-        subtitle="Manage your brand, content, campaigns and team from one place."
-        action={<PrimaryLink href="/compose">Create post</PrimaryLink>}
-      />
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+          Workspaces
+        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((open) => !open)}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+            >
+              <span className="max-w-[220px] truncate">
+                {user?.orgName || 'Workspace'}
+              </span>
+              <svg
+                className="h-4 w-4 text-slate-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+            {menuOpen ? (
+              <div
+                role="menu"
+                className="absolute right-0 top-12 z-20 w-72 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+              >
+                {(organizations || []).map((org) => (
+                  <button
+                    key={org.id}
+                    type="button"
+                    role="menuitem"
+                    onClick={switchWorkspace(org.id)}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                  >
+                    <span className="truncate">{org.name}</span>
+                    {org.id === user?.orgId ? (
+                      <span className="shrink-0 text-xs font-medium text-blue-600">
+                        Current
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-xs font-medium text-slate-400">
+                        Switch
+                      </span>
+                    )}
+                  </button>
+                ))}
+                <div className="mt-1 border-t border-slate-100 p-2">
+                  <p className="mb-2 px-1 text-xs font-medium text-slate-500">
+                    Create workspace
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          createWorkspace();
+                        }
+                      }}
+                      placeholder="Workspace name"
+                      maxLength={64}
+                      className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 px-2.5 text-sm text-slate-800 outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={createWorkspace}
+                      disabled={!name.trim() || creating}
+                      className="h-9 shrink-0 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {creating ? 'Creating…' : 'Create'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <PrimaryLink href="/compose">Create post</PrimaryLink>
+        </div>
+      </div>
       <div className="grid gap-3">
         {(organizations || []).map((org) => (
           <div
@@ -236,14 +357,24 @@ export const WorkspacesPage = () => {
             <div>
               <div className="font-semibold text-slate-900">{org.name}</div>
               <div className="text-xs text-slate-400">
-                {org.id === user?.orgId ? 'Current workspace' : 'Switch from the sidebar'}
+                {org.id === user?.orgId
+                  ? 'Current workspace'
+                  : 'Available in this account'}
               </div>
             </div>
             {org.id === user?.orgId ? (
               <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600">
                 Active
               </span>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                onClick={switchWorkspace(org.id)}
+                className="text-sm font-semibold text-blue-600 hover:text-blue-700"
+              >
+                Switch
+              </button>
+            )}
           </div>
         ))}
       </div>
