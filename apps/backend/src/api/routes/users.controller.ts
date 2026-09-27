@@ -1,9 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpException,
+  Param,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -364,6 +367,31 @@ export class UsersController {
     }
 
     return workspace;
+  }
+
+  @Put('/workspace/:id')
+  async renameWorkspace(
+    @GetUserFromRequest() user: User,
+    @Param('id') id: string,
+    @Body() body: CreateWorkspaceDto
+  ) {
+    return this._orgService.renameWorkspaceForUser(user.id, id, body.name);
+  }
+
+  @Delete('/workspace/:id')
+  async deleteWorkspace(
+    @GetUserFromRequest() user: User,
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string
+  ) {
+    if (org?.id === id) {
+      throw new HttpException(
+        'Switch to another workspace before deleting this one',
+        400
+      );
+    }
+    await this._orgService.deleteWorkspaceForUser(user.id, id);
+    return { deleted: true };
   }
 
   @Post('/feedback')

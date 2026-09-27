@@ -12,6 +12,7 @@ import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { FeedbackModal } from '@gitroom/frontend/components/feedback/feedback.modal';
 import { useOrganizations } from '@gitroom/frontend/components/layout/use.organizations';
 import { useClickAway } from '@uidotdev/usehooks';
+import { useToaster } from '@gitroom/react/toaster/toaster';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    SIDEBAR STYLES — Harlo Social Official Brand Identity
@@ -604,8 +605,19 @@ const CREATE_WS_MODAL_STYLES = `
 const CreateWorkspaceModal: FC<{
   onClose: () => void;
   onSubmit: (name: string) => Promise<void>;
-}> = ({ onClose, onSubmit }) => {
-  const [name, setName] = useState('');
+  title?: string;
+  subtitle?: string;
+  submitLabel?: string;
+  initialName?: string;
+}> = ({
+  onClose,
+  onSubmit,
+  title = 'Create Workspace',
+  subtitle = 'Give your new workspace a name to get started.',
+  submitLabel = 'Create Workspace',
+  initialName = '',
+}) => {
+  const [name, setName] = useState(initialName);
   const [loading, setLoading] = useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -646,10 +658,8 @@ const CreateWorkspaceModal: FC<{
                 />
               </svg>
             </div>
-            <div className="cwm-title">Create Workspace</div>
-            <div className="cwm-subtitle">
-              Give your new workspace a name to get started.
-            </div>
+            <div className="cwm-title">{title}</div>
+            <div className="cwm-subtitle">{subtitle}</div>
           </div>
           <div className="cwm-body">
             <div className="cwm-field">
@@ -682,7 +692,7 @@ const CreateWorkspaceModal: FC<{
               onClick={handleSubmit}
               disabled={!name.trim() || loading}
             >
-              {loading ? 'Creating…' : 'Create Workspace'}
+              {loading ? 'Saving…' : submitLabel}
             </button>
           </div>
         </div>
@@ -700,10 +710,20 @@ export const Sidebar: FC = () => {
   const user = useUser();
   const fetch = useFetch();
   const { isSecured } = useVariables();
-  const { data: organizations } = useOrganizations();
+  const { data: organizations, mutate: mutateOrganizations } = useOrganizations();
+  const toast = useToaster();
+  const pathname = usePathname();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [homeOpen, setHomeOpen] = useState(false);
+  const [homeMenuStyle, setHomeMenuStyle] = useState({
+    top: 0,
+    left: 0,
+    width: 280,
+  });
 
   const accountRef = useClickAway<HTMLDivElement>(() => setAccountOpen(false));
+  const homeRef = useClickAway<HTMLDivElement>(() => setHomeOpen(false));
+  const homeButtonRef = React.useRef<HTMLButtonElement>(null);
 
   const otherWorkspaces = useMemo(
     () =>
@@ -736,7 +756,85 @@ export const Sidebar: FC = () => {
     [fetch]
   );
 
+  const renameWorkspace = useCallback(
+    (org: { id: string; name: string }) => {
+      setHomeOpen(false);
+      modals.openModal({
+        id: 'rename-workspace-modal',
+        closeOnClickOutside: true,
+        removeLayout: true,
+        children: (close) => (
+          <CreateWorkspaceModal
+            onClose={close}
+            title="Rename workspace"
+            subtitle="Update the name shown in your workspace list."
+            submitLabel="Save"
+            initialName={org.name}
+            onSubmit={async (name: string) => {
+              const response = await fetch(`/user/workspace/${org.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ name: name.trim() }),
+              });
+              if (!response.ok) {
+                toast.show('Could not rename this workspace', 'warning');
+                throw new Error('rename failed');
+              }
+              close();
+              if (org.id === user?.orgId) {
+                window.location.reload();
+                return;
+              }
+              await mutateOrganizations();
+            }}
+          />
+        ),
+      });
+    },
+    [fetch, modals, mutateOrganizations, toast, user?.orgId]
+  );
+
+  const removeWorkspace = useCallback(
+    (org: { id: string; name: string }) => async (event: React.MouseEvent) => {
+      event.stopPropagation();
+      setHomeOpen(false);
+      if (
+        !(await deleteDialog(
+          `Delete ${org.name}? Posts and connected accounts in that workspace will be removed.`,
+          'Yes, delete'
+        ))
+      ) {
+        return;
+      }
+      const response = await fetch(`/user/workspace/${org.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        toast.show(
+          'This workspace still has content and cannot be deleted',
+          'warning'
+        );
+        return;
+      }
+      toast.show('Workspace deleted', 'success');
+      await mutateOrganizations();
+    },
+    [fetch, mutateOrganizations, toast]
+  );
+
+  const toggleHomeMenu = useCallback(() => {
+    if (!homeOpen && homeButtonRef.current) {
+      const rect = homeButtonRef.current.getBoundingClientRect();
+      setHomeMenuStyle({
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: Math.max(rect.width, 280),
+      });
+    }
+    setHomeOpen((open) => !open);
+  }, [homeOpen]);
+
   const createWorkspace = useCallback(() => {
+    setHomeOpen(false);
     modals.openModal({
       id: 'create-workspace-modal',
       closeOnClickOutside: true,
@@ -899,9 +997,137 @@ export const Sidebar: FC = () => {
         {/* ── Scrollable Nav Items with Always-Visible Rail ── */}
         <div className="pb-scroll-wrap">
           <div className="pb-scroll" ref={scrollRef} onScroll={updateScrollbar}>
-            {/* Home (no section header) */}
+            {/* Home with workspace menu */}
             <div className="pb-group">
-              <NavItem path="/overview" label="Home" icon={iconHome} />
+              <div className="relative" ref={homeRef}>
+                <button
+                  type="button"
+                  ref={homeButtonRef}
+                  onClick={toggleHomeMenu}
+                  className={`pb-nav ${pathname === '/overview' ? 'pb-nav--active' : ''}`}
+                  aria-expanded={homeOpen}
+                  aria-haspopup="menu"
+                >
+                  <span className="pb-nav-icon">{iconHome}</span>
+                  <span className="min-w-0 flex-1 truncate text-left">Home</span>
+                  <svg
+                    className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${homeOpen ? '' : 'rotate-180'}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M5 15l7-7 7 7"
+                    />
+                  </svg>
+                </button>
+                {homeOpen ? (
+                  <div
+                    role="menu"
+                    className="fixed z-50 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
+                    style={homeMenuStyle}
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setHomeOpen(false);
+                        router.push('/overview');
+                      }}
+                      className="flex w-full items-center gap-3 rounded-xl bg-[#1e293b] px-3 py-3 text-left text-[15px] font-semibold text-white"
+                    >
+                      <span className="flex h-5 w-5 items-center justify-center text-white [&_svg]:h-5 [&_svg]:w-5">
+                        {iconHome}
+                      </span>
+                      <span className="truncate">
+                        {user?.orgName || 'Home'}
+                      </span>
+                    </button>
+                    {otherWorkspaces.length > 0 ? (
+                      <div className="mt-3">
+                        <div className="px-2 pb-2 text-[11px] font-semibold tracking-[0.08em] text-slate-400">
+                          PERSONAL
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {otherWorkspaces.map((org: { id: string; name: string }) => (
+                            <div
+                              key={org.id}
+                              className="flex items-center gap-2 rounded-xl bg-slate-100 px-2 py-2"
+                            >
+                              <button
+                                type="button"
+                                onClick={changeWorkspace(org.id)}
+                                className="flex min-w-0 flex-1 items-center gap-3 px-1 text-left text-[15px] font-medium text-slate-800"
+                              >
+                                <svg
+                                  className="h-5 w-5 shrink-0 text-slate-700"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="1.8"
+                                    d="M8 7V6a2 2 0 012-2h4a2 2 0 012 2v1M4 9h16v9a2 2 0 01-2 2H6a2 2 0 01-2-2V9z"
+                                  />
+                                </svg>
+                                <span className="truncate">{org.name}</span>
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Rename ${org.name}`}
+                                onClick={() => renameWorkspace(org)}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15.232 5.232l3.536 3.536M4 20h4l10.5-10.5a2.121 2.121 0 00-3-3L5 17v3z" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Delete ${org.name}`}
+                                onClick={removeWorkspace(org)}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center text-red-500 hover:text-red-600"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-7 0h8" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    <div className="my-2 border-t border-slate-200" />
+                    <Link
+                      href="/workspaces"
+                      onClick={() => setHomeOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-2 py-2.5 text-[15px] font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      <svg className="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M10.325 4.317a1.724 1.724 0 013.35 0 1.724 1.724 0 002.573 1.066 1.724 1.724 0 012.36 2.36 1.724 1.724 0 001.065 2.572 1.724 1.724 0 010 3.35 1.724 1.724 0 00-1.066 2.573 1.724 1.724 0 01-2.36 2.36 1.724 1.724 0 00-2.572 1.065 1.724 1.724 0 01-3.35 0 1.724 1.724 0 00-2.573-1.066 1.724 1.724 0 01-2.36-2.36 1.724 1.724 0 00-1.065-2.572 1.724 1.724 0 010-3.35 1.724 1.724 0 001.066-2.573 1.724 1.724 0 012.36-2.36 1.724 1.724 0 002.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Manage Workspaces
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={createWorkspace}
+                      className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-[15px] font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      <span className="flex h-5 w-5 items-center justify-center text-xl leading-none text-slate-700">
+                        +
+                      </span>
+                      New Workspace
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             {/* CREATE */}

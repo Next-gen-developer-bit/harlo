@@ -21,6 +21,41 @@ export class OrganizationService {
     return this._organizationRepository.createWorkspaceForUser(userId, name);
   }
 
+  async renameWorkspaceForUser(userId: string, orgId: string, name: string) {
+    await this.assertWorkspaceManager(userId, orgId);
+    return this._organizationRepository.renameWorkspace(orgId, name.trim());
+  }
+
+  async deleteWorkspaceForUser(userId: string, orgId: string) {
+    await this.assertWorkspaceManager(userId, orgId);
+    const orgs = await this._organizationRepository.getOrgsByUserId(userId);
+    const active = orgs.filter((org) => !org.users[0]?.disabled);
+    if (active.length <= 1) {
+      throw new HttpException('You need to keep at least one workspace', 400);
+    }
+    try {
+      await this._organizationRepository.deleteWorkspace(orgId);
+    } catch {
+      throw new HttpException(
+        'This workspace still has content and cannot be deleted',
+        400
+      );
+    }
+  }
+
+  private async assertWorkspaceManager(userId: string, orgId: string) {
+    const orgs = await this._organizationRepository.getOrgsByUserId(userId);
+    const match = orgs.find((org) => org.id === orgId);
+    const role = match?.users?.[0]?.role;
+    if (
+      !match ||
+      match.users?.[0]?.disabled ||
+      (role !== 'SUPERADMIN' && role !== 'ADMIN')
+    ) {
+      throw new HttpException('You cannot change this workspace', 403);
+    }
+  }
+
   async createOrgAndUser(
     body: Omit<CreateOrgUserDto, 'providerToken'> & { providerId?: string },
     ip: string,

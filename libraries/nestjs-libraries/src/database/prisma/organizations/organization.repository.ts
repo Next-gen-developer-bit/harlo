@@ -284,6 +284,20 @@ export class OrganizationRepository {
     return create;
   }
 
+  renameWorkspace(orgId: string, name: string) {
+    return this._organization.model.organization.update({
+      where: { id: orgId },
+      data: { name },
+      select: { id: true, name: true },
+    });
+  }
+
+  deleteWorkspace(orgId: string) {
+    return this._organization.model.organization.delete({
+      where: { id: orgId },
+    });
+  }
+
   async createWorkspaceForUser(userId: string, name: string) {
     return this._organization.model.organization.create({
       data: {
