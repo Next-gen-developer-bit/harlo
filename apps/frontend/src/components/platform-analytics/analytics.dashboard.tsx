@@ -496,18 +496,11 @@ export const AnalyticsDashboard = () => {
 
   return (
     <div className="min-h-full w-full px-5 py-7 font-sans md:px-7 xl:px-9">
-      <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+      <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
         <div>
-          <p className="mb-1 text-[11px] font-semibold text-slate-400">
+          <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
             Analytics
-          </p>
-          <h1 className="text-[28px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
-            See what&apos;s working.
           </h1>
-          <p className="mt-1.5 text-xs text-slate-500">
-            Track performance across your social media channels and turn
-            insights into growth.
-          </p>
           {resultLimitReached && (
             <p className="mt-1 text-[10px] text-amber-600">
               Metrics currently cover the 50 most recent published posts in this
