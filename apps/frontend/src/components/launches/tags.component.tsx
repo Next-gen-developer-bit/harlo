@@ -183,7 +183,7 @@ export const TagsComponentInner: FC<{
         <DropdownArrowIcon rotated={isOpen} />
       </div>
       {isOpen && (
-        <div className="z-[300] absolute start-0 bottom-[100%] w-[240px] bg-newBgColorInner p-[12px] menu-shadow -translate-y-[10px] flex flex-col">
+        <div className="absolute start-0 bottom-[calc(100%+8px)] z-[400] flex max-h-[240px] w-[240px] flex-col overflow-y-auto rounded-lg border border-[#e6e8ee] bg-white p-2 shadow-sm">
           {(data?.tags || [])
             .filter((p: any) => p?.id && String(p.name || '').trim())
             .map((p: any) => (

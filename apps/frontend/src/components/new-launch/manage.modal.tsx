@@ -713,9 +713,9 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-1 p-4">
-      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#e6e8ee] bg-white">
-        <div className="flex min-h-0 flex-1">
-          <div className="flex min-w-0 flex-1 flex-col border-e border-[#e6e8ee]">
+      <div className="flex h-full min-h-0 flex-1 flex-col rounded-2xl border border-[#e6e8ee] bg-white">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-e border-[#e6e8ee]">
             <div className="flex h-12 shrink-0 items-center gap-3 border-b border-[#e6e8ee] px-4 text-[15px] font-semibold text-[#0f172a]">
               {t('create_post_title', 'Create Post')}
               <CreationMethodBadge
@@ -756,7 +756,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               <div
                 id="wrapper-settings"
                 className={clsx(
-                  'shrink-0 px-4 pb-3',
+                  'relative z-0 shrink-0 px-4 pb-3',
                   showSettings && 'flex min-h-0 flex-1 flex-col pt-3',
                   current === 'global' && 'hidden'
                 )}
@@ -809,7 +809,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             </div>
           </div>
         </div>
-        <div className="flex w-full shrink-0 items-center gap-2 overflow-x-auto border-t border-[#e6e8ee] bg-white px-4 py-3">
+        <div className="relative z-30 flex w-full shrink-0 items-center gap-2 border-t border-[#e6e8ee] bg-white px-4 py-3">
           <div className="flex shrink-0 items-center gap-2">
             {!dummy && (
               <TagsComponent

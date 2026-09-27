@@ -51,6 +51,7 @@ export function useHasScroll(ref: RefObject<HTMLElement | null>): boolean {
 }
 
 export const SelectCurrent: FC = () => {
+  const t = useT();
   const modals = useDecisionModal();
   const {
     selectedIntegrations,
@@ -92,6 +93,10 @@ export const SelectCurrent: FC = () => {
     []
   );
 
+  if (selectedIntegrations.length < 2) {
+    return null;
+  }
+
   return (
     <>
       <div className="absolute left-0 z-[100] w-full select-none px-4">
@@ -107,14 +112,20 @@ export const SelectCurrent: FC = () => {
               setHide(true);
               setCurrent('global');
             }}
+            data-tooltip-id="tooltip"
+            data-tooltip-content={t(
+              'edit_all_accounts',
+              'Edit all accounts'
+            )}
             className={clsx(
-              'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-[#64748b]',
+              'flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-white px-2.5 text-[12px] font-semibold',
               current !== 'global'
-                ? 'ring-1 ring-[#e6e8ee]'
+                ? 'text-[#64748b] ring-1 ring-[#e6e8ee]'
                 : 'text-[#612BD3] ring-2 ring-[#612BD3]'
             )}
           >
-            <GlobalIcon />
+            <GlobalIcon size={14} />
+            <span>{t('all', 'All')}</span>
           </div>
           {selectedIntegrations.map(({ integration }) => (
             <div
