@@ -193,12 +193,12 @@ export const QueuePage = () => {
 
 export const CampaignsPage = () => (
   <div className={shell}>
-    <PageHeader
-      eyebrow="Campaigns"
-      title="Your campaigns"
-      subtitle="Plan, organise and track your social media campaigns."
-        action={<PrimaryLink href="/compose">Create post</PrimaryLink>}
-    />
+    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+        Campaigns
+      </h1>
+      <PrimaryLink href="/compose">Create post</PrimaryLink>
+    </div>
     <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
       <h2 className="text-lg font-semibold text-slate-900">No campaigns yet</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
@@ -256,12 +256,12 @@ export const ReportsPage = () => {
 
   return (
     <div className={shell}>
-      <PageHeader
-        eyebrow="Reports"
-        title="Performance report"
-        subtitle="A snapshot of the last 30 days across your connected channels."
-        action={<PrimaryLink href="/analytics">View insights</PrimaryLink>}
-      />
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+          Reports
+        </h1>
+        <PrimaryLink href="/analytics">View insights</PrimaryLink>
+      </div>
       <div className="grid gap-4 md:grid-cols-3">
         <Stat
           label="Impressions"

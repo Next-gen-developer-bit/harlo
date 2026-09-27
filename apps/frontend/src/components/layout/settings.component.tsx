@@ -43,10 +43,9 @@ export const SettingsPopup = () => {
     <div className="w-full max-w-5xl mx-auto p-8 pt-10 font-sans min-h-screen">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Settings</h1>
-        <p className="text-sm text-slate-500 mt-1 font-medium">
-          Manage your account profile, preferences, security, and connected apps
-        </p>
+        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+          Settings
+        </h1>
       </div>
 
       {/* Tabbed Card Navigation */}

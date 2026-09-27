@@ -21,7 +21,6 @@ import {
 } from '@gitroom/frontend/components/launches/helpers/mvp.platforms';
 import {
   AppPage,
-  PageHeader,
   Card,
   PrimaryButton,
   Icon,
@@ -227,16 +226,15 @@ export const ThirdPartyComponent = () => {
 
   return (
     <AppPage>
-      <PageHeader
-        eyebrow="Social Accounts"
-        title="Connect and manage your social accounts."
-        subtitle="Add, remove or manage the social media accounts for your workspaces. Connect multiple accounts to publish, analyse and collaborate from one place."
-      >
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+          Social Accounts
+        </h1>
         <PrimaryButton onClick={connectAccount}>
           <Icon path={ICONS.plus} className="h-4 w-4" />
           Connect Account
         </PrimaryButton>
-      </PageHeader>
+      </div>
 
       <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 xl:pb-0">

@@ -158,10 +158,9 @@ export const MainBillingComponent: FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Billing & Plans</h1>
-          <p className="text-sm text-slate-500 mt-1 font-medium">
-            Manage your subscription plan, billing portal, and payment details
-          </p>
+          <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+            Billing & Plans
+          </h1>
           {!billingEnabled && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mt-3 max-w-xl">
               Stripe is not connected yet. You can review plans here. Checkout

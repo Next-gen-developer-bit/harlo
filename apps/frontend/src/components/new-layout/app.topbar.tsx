@@ -19,7 +19,7 @@ export const AppTopbar = () => {
   return (
     <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-100 bg-[#f8fafc]/95 px-6 py-3 backdrop-blur md:px-8">
       {pageTitle ? (
-        <h1 className="shrink-0 text-2xl font-bold tracking-tight text-gray-900">
+        <h1 className="shrink-0 text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
           {pageTitle}
         </h1>
       ) : null}
