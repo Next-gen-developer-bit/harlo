@@ -280,17 +280,10 @@ export const TeamsComponent = () => {
   return (
     <AppPage>
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
-          <p className="mb-1 text-sm font-medium text-slate-500">Teams</p>
-          <h1 className="text-[30px] font-extrabold leading-tight tracking-tight text-slate-900">
-            Work better, together.
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Manage your team members, roles and permissions across your
-            workspaces.
-          </p>
-        </div>
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+          Team
+        </h1>
         <div className="flex flex-wrap items-center gap-2">
           {!isGated && (
             <PrimaryButton onClick={openCreateTeam}>

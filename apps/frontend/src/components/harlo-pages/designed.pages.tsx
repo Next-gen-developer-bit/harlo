@@ -155,12 +155,12 @@ export const QueuePage = () => {
 
   return (
     <div className={shell}>
-      <PageHeader
-        eyebrow="Queue"
-        title="Your content queue"
-        subtitle="Keep a consistent presence by sharing the posts already scheduled to publish."
-        action={<PrimaryLink href="/compose">Add to queue</PrimaryLink>}
-      />
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+          Queue
+        </h1>
+        <PrimaryLink href="/compose">Add to queue</PrimaryLink>
+      </div>
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <Stat label="Posts in your queue" value={isLoading ? '…' : posts.length} />
       </div>
