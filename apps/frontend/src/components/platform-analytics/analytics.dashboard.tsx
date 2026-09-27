@@ -498,9 +498,6 @@ export const AnalyticsDashboard = () => {
     <div className="min-h-full w-full px-5 py-7 font-sans md:px-7 xl:px-9">
       <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
         <div>
-          <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
-            Analytics
-          </h1>
           {resultLimitReached && (
             <p className="mt-1 text-[10px] text-amber-600">
               Metrics currently cover the 50 most recent published posts in this

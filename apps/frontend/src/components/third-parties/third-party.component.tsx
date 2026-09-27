@@ -226,10 +226,7 @@ export const ThirdPartyComponent = () => {
 
   return (
     <AppPage>
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
-          Social Accounts
-        </h1>
+      <div className="mb-6 flex justify-end">
         <PrimaryButton onClick={connectAccount}>
           <Icon path={ICONS.plus} className="h-4 w-4" />
           Connect Account

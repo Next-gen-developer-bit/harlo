@@ -1,16 +1,53 @@
 'use client';
 
 import { useCallback } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
+
+const LIST_STATES = new Set([
+  'all',
+  'draft',
+  'scheduled',
+  'published',
+  'failed',
+]);
+
+const titleForPath = (pathname: string, state: string | null) => {
+  if (pathname === '/media' || pathname.startsWith('/media/')) {
+    return 'Content Library';
+  }
+  if (pathname === '/queue' || pathname.startsWith('/queue/')) {
+    return 'Queue';
+  }
+  if (pathname === '/workspaces' || pathname.startsWith('/workspaces/')) {
+    return 'Workspaces';
+  }
+  if (pathname === '/campaigns' || pathname.startsWith('/campaigns/')) {
+    return 'Campaigns';
+  }
+  if (pathname === '/teams' || pathname.startsWith('/teams/')) {
+    return 'Team';
+  }
+  if (pathname === '/third-party' || pathname.startsWith('/third-party/')) {
+    return 'Social Accounts';
+  }
+  if (pathname === '/analytics' || pathname.startsWith('/analytics/')) {
+    return 'Analytics';
+  }
+  if (pathname === '/reports' || pathname.startsWith('/reports/')) {
+    return 'Reports';
+  }
+  if (pathname === '/launches' || pathname.startsWith('/launches/')) {
+    return state && LIST_STATES.has(state) ? 'Posts' : 'Calendar';
+  }
+  return '';
+};
 
 export const AppTopbar = () => {
   const router = useRouter();
-  const pathname = usePathname();
-  const pageTitle =
-    pathname === '/media' || pathname?.startsWith('/media/')
-      ? 'Content Library'
-      : '';
+  const pathname = usePathname() || '';
+  const searchParams = useSearchParams();
+  const pageTitle = titleForPath(pathname, searchParams.get('state'));
 
   const openCreatePost = useCallback(() => {
     router.push('/compose');

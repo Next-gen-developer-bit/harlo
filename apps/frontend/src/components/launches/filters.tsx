@@ -240,11 +240,7 @@ export const Filters = () => {
 
   return (
     <div className="text-textColor flex flex-wrap gap-3 items-center justify-between select-none w-full mb-4">
-      <div className="flex items-center gap-3 min-w-0">
-        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
-          {isListView ? t('posts', 'Posts') : t('calendar', 'Calendar')}
-        </h1>
-        {!isListView && (
+      {!isListView && (
           <div className="flex items-center text-slate-400">
             <span className="px-1 text-sm font-medium text-slate-600">
               {getDisplayText()}
@@ -294,9 +290,8 @@ export const Filters = () => {
               </svg>
             </button>
           </div>
-        )}
-      </div>
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      )}
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
         {isListView && (
           <>
             <div className="border h-9 border-slate-200 bg-slate-200 gap-px flex items-center rounded-lg overflow-hidden">

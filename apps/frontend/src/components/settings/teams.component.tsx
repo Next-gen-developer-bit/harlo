@@ -280,10 +280,7 @@ export const TeamsComponent = () => {
   return (
     <AppPage>
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
-          Team
-        </h1>
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-end">
         <div className="flex flex-wrap items-center gap-2">
           {!isGated && (
             <PrimaryButton onClick={openCreateTeam}>

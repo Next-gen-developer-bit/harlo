@@ -156,10 +156,7 @@ export const QueuePage = () => {
 
   return (
     <div className={shell}>
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
-          Queue
-        </h1>
+      <div className="mb-6 flex justify-end">
         <PrimaryLink href="/compose">Add to queue</PrimaryLink>
       </div>
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
@@ -194,10 +191,7 @@ export const QueuePage = () => {
 
 export const CampaignsPage = () => (
   <div className={shell}>
-    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
-        Campaigns
-      </h1>
+    <div className="mb-6 flex justify-end">
       <PrimaryLink href="/compose">Create post</PrimaryLink>
     </div>
     <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
@@ -259,10 +253,7 @@ export const WorkspacesPage = () => {
 
   return (
     <div className={shell}>
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
-          Workspaces
-        </h1>
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-end">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative" ref={menuRef}>
             <button
@@ -387,10 +378,7 @@ export const ReportsPage = () => {
 
   return (
     <div className={shell}>
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
-          Reports
-        </h1>
+      <div className="mb-6 flex justify-end">
         <PrimaryLink href="/analytics">View insights</PrimaryLink>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
