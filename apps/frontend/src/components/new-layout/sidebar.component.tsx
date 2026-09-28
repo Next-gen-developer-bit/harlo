@@ -823,9 +823,9 @@ export const Sidebar: FC = () => {
       ) {
         return;
       }
-      const response = await fetch('/user/workspace', {
+      const response = await fetch('/user/workspace/remove', {
         method: 'POST',
-        body: JSON.stringify({ id: org.id, remove: true }),
+        body: JSON.stringify({ id: org.id, name: org.name }),
       });
       if (!response.ok) {
         let message = 'Could not delete this workspace';
