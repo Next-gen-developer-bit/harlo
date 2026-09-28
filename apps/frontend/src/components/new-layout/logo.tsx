@@ -16,7 +16,7 @@ export const Logo = () => {
       <text
         x="16"
         y="23"
-        fontFamily="'Arial Rounded MT Bold', 'Nunito', 'Poppins', Arial, sans-serif"
+        fontFamily="'Poppins', ui-sans-serif, system-ui, sans-serif"
         fontWeight="900"
         fontSize="19"
         fill="white"

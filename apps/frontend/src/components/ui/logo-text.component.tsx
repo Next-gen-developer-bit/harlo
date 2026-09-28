@@ -15,7 +15,7 @@ export const LogoTextComponent = () => {
       <text
         x="22"
         y="31"
-        fontFamily="'Arial Rounded MT Bold', 'Nunito', 'Poppins', Arial, sans-serif"
+        fontFamily="'Poppins', ui-sans-serif, system-ui, sans-serif"
         fontWeight="900"
         fontSize="24"
         fill="white"
@@ -30,7 +30,7 @@ export const LogoTextComponent = () => {
       <text
         x="52"
         y="30"
-        fontFamily="'Inter', 'Segoe UI', sans-serif"
+        fontFamily="'Poppins', ui-sans-serif, system-ui, sans-serif"
         fontWeight="700"
         fontSize="22"
         fill="currentColor"
@@ -43,7 +43,7 @@ export const LogoTextComponent = () => {
       <text
         x="53"
         y="42"
-        fontFamily="'Inter', 'Segoe UI', sans-serif"
+        fontFamily="'Poppins', ui-sans-serif, system-ui, sans-serif"
         fontWeight="400"
         fontSize="8"
         fill="currentColor"

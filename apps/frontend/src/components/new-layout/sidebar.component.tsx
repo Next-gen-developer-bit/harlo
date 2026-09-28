@@ -41,7 +41,7 @@ const SIDEBAR_STYLES = `
   background: #ffffff !important;
   color: #334155 !important;
   border-right: 1px solid #e2e8f0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
   font-size: 13px;
   overflow: hidden;
   user-select: none;

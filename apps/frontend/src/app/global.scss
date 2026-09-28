@@ -14,7 +14,7 @@
 body {
   background: var(--new-bgColor) !important;
   color: var(--new-btn-text);
-  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
 }
 
 body * {
@@ -413,7 +413,7 @@ body * {
   -webkit-text-fill-color: white !important;
 }
 div div .set-font-family {
-  font-family: 'Helvetica Neue', Helvetica !important;
+  font-family: "Poppins", ui-sans-serif, system-ui, sans-serif !important;
   font-stretch: 100% !important;
   font-style: normal !important;
   font-weight: 400 !important;
@@ -596,7 +596,7 @@ html[dir='rtl'] [dir='ltr'] {
 //
 
 .ProseMirror {
-  font-family: Arial;
+  font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
 }
 
 .ProseMirror:focus {
