@@ -33,14 +33,7 @@ export class OrganizationService {
     if (active.length <= 1) {
       throw new HttpException('You need to keep at least one workspace', 400);
     }
-    try {
-      await this._organizationRepository.deleteWorkspace(orgId);
-    } catch {
-      throw new HttpException(
-        'This workspace still has content and cannot be deleted',
-        400
-      );
-    }
+    await this._organizationRepository.deleteWorkspace(orgId);
   }
 
   private async assertWorkspaceManager(userId: string, orgId: string) {

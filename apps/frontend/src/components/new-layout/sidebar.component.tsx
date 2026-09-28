@@ -827,10 +827,19 @@ export const Sidebar: FC = () => {
         method: 'DELETE',
       });
       if (!response.ok) {
-        toast.show(
-          'This workspace still has content and cannot be deleted',
-          'warning'
-        );
+        let message = 'Could not delete this workspace';
+        try {
+          const body = await response.json();
+          const serverMessage = Array.isArray(body?.message)
+            ? body.message[0]
+            : body?.message;
+          if (typeof serverMessage === 'string' && serverMessage) {
+            message = serverMessage;
+          }
+        } catch {
+          // Keep the fallback message.
+        }
+        toast.show(message, 'warning');
         return;
       }
       toast.show('Workspace deleted', 'success');

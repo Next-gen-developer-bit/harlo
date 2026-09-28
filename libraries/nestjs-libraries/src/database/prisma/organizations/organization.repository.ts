@@ -1,5 +1,5 @@
 import { PrismaRepository } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
-import { Role, ShortLinkPreference, SubscriptionTier } from '@prisma/client';
+import { PrismaClient, Role, ShortLinkPreference, SubscriptionTier } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { AuthService } from '@gitroom/helpers/auth/auth.service';
 import { CreateOrgUserDto } from '@gitroom/nestjs-libraries/dtos/auth/create.org.user.dto';
@@ -292,10 +292,134 @@ export class OrganizationRepository {
     });
   }
 
-  deleteWorkspace(orgId: string) {
-    return this._organization.model.organization.delete({
-      where: { id: orgId },
-    });
+  async deleteWorkspace(orgId: string) {
+    const prisma = this._organization.model as unknown as PrismaClient;
+    await prisma.$transaction(async (tx) => {
+      const posts = await tx.post.findMany({
+        where: { organizationId: orgId },
+        select: { id: true },
+      });
+      const postIds = posts.map((post) => post.id);
+      const integrations = await tx.integration.findMany({
+        where: { organizationId: orgId },
+        select: { id: true },
+      });
+      const integrationIds = integrations.map((integration) => integration.id);
+
+      if (postIds.length) {
+        await tx.tagsPosts.deleteMany({ where: { postId: { in: postIds } } });
+        await tx.comments.deleteMany({ where: { postId: { in: postIds } } });
+        await tx.errors.deleteMany({ where: { postId: { in: postIds } } });
+        await tx.payoutProblems.deleteMany({ where: { postId: { in: postIds } } });
+        await tx.post.updateMany({
+          where: { parentPostId: { in: postIds } },
+          data: { parentPostId: null },
+        });
+        await tx.post.updateMany({
+          where: { id: { in: postIds } },
+          data: { lastMessageId: null, submittedForOrderId: null },
+        });
+      }
+
+      await tx.post.updateMany({
+        where: { submittedForOrganizationId: orgId },
+        data: { submittedForOrganizationId: null },
+      });
+      await tx.post.deleteMany({ where: { organizationId: orgId } });
+
+      if (integrationIds.length) {
+        await tx.exisingPlugData.deleteMany({
+          where: { integrationId: { in: integrationIds } },
+        });
+        await tx.integrationsWebhooks.deleteMany({
+          where: { integrationId: { in: integrationIds } },
+        });
+        await tx.orderItems.deleteMany({
+          where: { integrationId: { in: integrationIds } },
+        });
+      }
+
+      await tx.plugs.deleteMany({ where: { organizationId: orgId } });
+      await tx.integration.deleteMany({ where: { organizationId: orgId } });
+      await tx.customer.deleteMany({ where: { orgId } });
+      await tx.tagsPosts.deleteMany({ where: { tag: { orgId } } });
+      await tx.tags.deleteMany({ where: { orgId } });
+      await tx.usedCodes.deleteMany({ where: { orgId } });
+      await tx.gitHub.deleteMany({ where: { organizationId: orgId } });
+      await tx.comments.deleteMany({ where: { organizationId: orgId } });
+      await tx.errors.deleteMany({ where: { organizationId: orgId } });
+      await tx.signatures.deleteMany({ where: { organizationId: orgId } });
+      await tx.notifications.deleteMany({ where: { organizationId: orgId } });
+      await tx.credits.deleteMany({ where: { organizationId: orgId } });
+      await tx.subscription.deleteMany({ where: { organizationId: orgId } });
+      await tx.autoPost.deleteMany({ where: { organizationId: orgId } });
+      await tx.sets.deleteMany({ where: { organizationId: orgId } });
+      await tx.thirdParty.deleteMany({ where: { organizationId: orgId } });
+      await tx.integrationsWebhooks.deleteMany({
+        where: { webhook: { organizationId: orgId } },
+      });
+      await tx.webhooks.deleteMany({ where: { organizationId: orgId } });
+      await tx.oAuthAuthorization.deleteMany({ where: { organizationId: orgId } });
+      await tx.oAuthApp.updateMany({
+        where: { organizationId: orgId },
+        data: { pictureId: null },
+      });
+      await tx.oAuthApp.deleteMany({ where: { organizationId: orgId } });
+
+      const media = await tx.media.findMany({
+        where: { organizationId: orgId },
+        select: { id: true },
+      });
+      const mediaIds = media.map((item) => item.id);
+      if (mediaIds.length) {
+        await tx.user.updateMany({
+          where: { pictureId: { in: mediaIds } },
+          data: { pictureId: null },
+        });
+        await tx.socialMediaAgency.updateMany({
+          where: { logoId: { in: mediaIds } },
+          data: { logoId: null },
+        });
+        await tx.oAuthApp.updateMany({
+          where: { pictureId: { in: mediaIds } },
+          data: { pictureId: null },
+        });
+      }
+      await tx.media.deleteMany({ where: { organizationId: orgId } });
+
+      const groups = await tx.messagesGroup.findMany({
+        where: { buyerOrganizationId: orgId },
+        select: { id: true },
+      });
+      const groupIds = groups.map((group) => group.id);
+      if (groupIds.length) {
+        const orders = await tx.orders.findMany({
+          where: { messageGroupId: { in: groupIds } },
+          select: { id: true },
+        });
+        const orderIds = orders.map((order) => order.id);
+        if (orderIds.length) {
+          await tx.payoutProblems.deleteMany({
+            where: { orderId: { in: orderIds } },
+          });
+          await tx.orderItems.deleteMany({ where: { orderId: { in: orderIds } } });
+          await tx.post.updateMany({
+            where: { submittedForOrderId: { in: orderIds } },
+            data: { submittedForOrderId: null },
+          });
+          await tx.orders.deleteMany({ where: { id: { in: orderIds } } });
+        }
+        await tx.post.updateMany({
+          where: { lastMessage: { groupId: { in: groupIds } } },
+          data: { lastMessageId: null },
+        });
+        await tx.messages.deleteMany({ where: { groupId: { in: groupIds } } });
+        await tx.messagesGroup.deleteMany({ where: { id: { in: groupIds } } });
+      }
+
+      await tx.userOrganization.deleteMany({ where: { organizationId: orgId } });
+      await tx.organization.delete({ where: { id: orgId } });
+    }, { timeout: 30000 });
   }
 
   async createWorkspaceForUser(userId: string, name: string) {
