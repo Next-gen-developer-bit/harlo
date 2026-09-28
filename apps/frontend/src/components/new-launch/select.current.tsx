@@ -8,7 +8,6 @@ import {
 import clsx from 'clsx';
 import SafeImage from '@gitroom/react/helpers/safe.image';
 import { useShallow } from 'zustand/react/shallow';
-import { GlobalIcon } from '@gitroom/frontend/components/ui/icons';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { Integrations } from '@gitroom/frontend/components/launches/calendar.context';
 import {
@@ -103,11 +102,12 @@ export const SelectCurrent: FC = () => {
         <div
           ref={contentRef}
           className={clsx(
-            'flex w-full gap-2 overflow-x-auto pb-1',
+            'flex w-full items-center gap-2 overflow-x-auto py-0.5',
             locked && 'pointer-events-none opacity-50'
           )}
         >
-          <div
+          <button
+            type="button"
             onClick={() => {
               setHide(true);
               setCurrent('global');
@@ -118,15 +118,14 @@ export const SelectCurrent: FC = () => {
               'Edit all accounts'
             )}
             className={clsx(
-              'flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-white px-2.5 text-[12px] font-semibold',
+              'inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-white px-3 text-[13px] font-semibold leading-none',
               current !== 'global'
-                ? 'text-[#64748b] ring-1 ring-[#e6e8ee]'
-                : 'text-[#612BD3] ring-2 ring-[#612BD3]'
+                ? 'border border-[#e6e8ee] text-slate-500'
+                : 'border-2 border-[#612BD3] text-[#612BD3]'
             )}
           >
-            <GlobalIcon size={14} />
-            <span>{t('all', 'All')}</span>
-          </div>
+            {t('all', 'All')}
+          </button>
           {selectedIntegrations.map(({ integration }) => (
             <div
               onClick={() => {
@@ -137,8 +136,8 @@ export const SelectCurrent: FC = () => {
               className={clsx(
                 'group relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white',
                 current === integration.id
-                  ? 'ring-2 ring-[#612BD3]'
-                  : 'ring-1 ring-[#e6e8ee]'
+                  ? 'border-2 border-[#612BD3]'
+                  : 'border border-[#e6e8ee]'
               )}
             >
               <button
