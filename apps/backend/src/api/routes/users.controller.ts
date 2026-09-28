@@ -339,15 +339,50 @@ export class UsersController {
     );
   }
 
-  @Post('/workspace')
-  async createWorkspace(
+  @Post('/workspace/rename')
+  async renameWorkspacePost(
     @GetUserFromRequest() user: User,
+    @GetOrgFromRequest() org: Organization,
     @Body() body: CreateWorkspaceDto,
     @Res({ passthrough: true }) response: Response
   ) {
+    const renamed = await this._orgService.renameWorkspaceForUser(
+      user.id,
+      body.id || '',
+      body.name || ''
+    );
+    if (org?.id === body.id) {
+      response.header('reload', 'true');
+    }
+    return renamed;
+  }
+
+  @Post('/workspace')
+  async createWorkspace(
+    @GetUserFromRequest() user: User,
+    @GetOrgFromRequest() org: Organization,
+    @Body() body: CreateWorkspaceDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    if (body.remove) {
+      return this.deleteWorkspace(user, org, body.id || '');
+    }
+
+    if (body.id) {
+      const renamed = await this._orgService.renameWorkspaceForUser(
+        user.id,
+        body.id,
+        body.name || ''
+      );
+      if (org?.id === body.id) {
+        response.header('reload', 'true');
+      }
+      return renamed;
+    }
+
     const workspace = await this._orgService.createWorkspaceForUser(
       user.id,
-      body.name
+      body.name || ''
     );
 
     response.cookie('showorg', workspace.id, {
@@ -362,9 +397,7 @@ export class UsersController {
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
     });
 
-    if (process.env.NOT_SECURED) {
-      response.header('showorg', workspace.id);
-    }
+    response.header('showorg', workspace.id);
 
     return workspace;
   }
@@ -437,9 +470,7 @@ export class UsersController {
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
     });
 
-    if (process.env.NOT_SECURED) {
-      response.header('showorg', id);
-    }
+    response.header('showorg', id);
 
     response.status(200).send();
   }

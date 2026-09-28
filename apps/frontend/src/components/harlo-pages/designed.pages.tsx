@@ -15,6 +15,7 @@ import {
   usePublishedPostsAnalytics,
 } from '@gitroom/frontend/components/platform-analytics/use.published.posts.analytics';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { useToaster } from '@gitroom/react/toaster/toaster';
 import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
 
 const shell =
@@ -213,10 +214,17 @@ export const CampaignsPage = () => (
 export const WorkspacesPage = () => {
   const user = useUser();
   const fetch = useFetch();
-  const { data: organizations } = useOrganizations();
+  const toast = useToaster();
+  const { data: organizations, mutate } = useOrganizations();
   const [menuOpen, setMenuOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const currentName =
+    (organizations || []).find((org) => org.id === user?.orgId)?.name ||
+    user?.orgName ||
+    'Workspace';
   const menuRef = useClickAway<HTMLDivElement>(() => setMenuOpen(false));
 
   const switchWorkspace = useCallback(
@@ -241,15 +249,73 @@ export const WorkspacesPage = () => {
     }
     setCreating(true);
     try {
-      await fetch('/user/workspace', {
+      const response = await fetch('/user/workspace', {
         method: 'POST',
         body: JSON.stringify({ name: nextName }),
       });
+      if (!response.ok) {
+        toast.show('Could not create this workspace', 'warning');
+        setCreating(false);
+        return;
+      }
       window.location.href = '/overview';
     } catch {
       setCreating(false);
     }
-  }, [creating, fetch, name]);
+  }, [creating, fetch, name, toast]);
+
+  const saveWorkspaceName = useCallback(
+    async (orgId: string) => {
+      const nextName = editingName.trim();
+      if (nextName.length < 2) {
+        toast.show('Use at least 2 characters for the workspace name', 'warning');
+        return;
+      }
+      const response = await fetch('/user/workspace/rename', {
+        method: 'POST',
+        body: JSON.stringify({ id: orgId, name: nextName }),
+      });
+      if (!response.ok) {
+        toast.show('Could not save the workspace name', 'warning');
+        return;
+      }
+      setEditingId(null);
+      if (orgId === user?.orgId) {
+        window.location.reload();
+        return;
+      }
+      await mutate();
+    },
+    [editingName, fetch, mutate, toast, user?.orgId]
+  );
+
+  const deleteWorkspace = useCallback(
+    (org: { id: string; name: string }) => async () => {
+      const response = await fetch('/user/workspace/remove', {
+        method: 'POST',
+        body: JSON.stringify({ id: org.id }),
+      });
+      if (!response.ok) {
+        let message = 'Could not delete this workspace';
+        try {
+          const body = await response.json();
+          const serverMessage = Array.isArray(body?.message)
+            ? body.message[0]
+            : body?.message;
+          if (typeof serverMessage === 'string' && serverMessage) {
+            message = serverMessage;
+          }
+        } catch {
+          // Keep the fallback message.
+        }
+        toast.show(message, 'warning');
+        return;
+      }
+      toast.show('Workspace deleted', 'success');
+      await mutate();
+    },
+    [fetch, mutate, toast]
+  );
 
   return (
     <div className={shell}>
@@ -263,9 +329,7 @@ export const WorkspacesPage = () => {
               aria-expanded={menuOpen}
               aria-haspopup="menu"
             >
-              <span className="max-w-[220px] truncate">
-                {user?.orgName || 'Workspace'}
-              </span>
+              <span className="max-w-[220px] truncate">{currentName}</span>
               <svg
                 className="h-4 w-4 text-slate-400"
                 fill="none"
@@ -345,27 +409,72 @@ export const WorkspacesPage = () => {
             key={org.id}
             className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4"
           >
-            <div>
-              <div className="font-semibold text-slate-900">{org.name}</div>
+            <div className="min-w-0">
+              {editingId === org.id ? (
+                <input
+                  value={editingName}
+                  onChange={(event) => setEditingName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      saveWorkspaceName(org.id);
+                    }
+                  }}
+                  className="h-9 w-full max-w-xs rounded-lg border border-slate-200 px-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  maxLength={64}
+                />
+              ) : (
+                <div className="font-semibold text-slate-900">{org.name}</div>
+              )}
               <div className="text-xs text-slate-400">
                 {org.id === user?.orgId
                   ? 'Current workspace'
                   : 'Available in this account'}
               </div>
             </div>
-            {org.id === user?.orgId ? (
-              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600">
-                Active
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={switchWorkspace(org.id)}
-                className="text-sm font-semibold text-blue-600 hover:text-blue-700"
-              >
-                Switch
-              </button>
-            )}
+            <div className="flex shrink-0 items-center gap-3">
+              {editingId === org.id ? (
+                <button
+                  type="button"
+                  onClick={() => saveWorkspaceName(org.id)}
+                  className="text-sm font-semibold text-blue-600 hover:text-blue-700"
+                >
+                  Save
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingId(org.id);
+                    setEditingName(org.name);
+                  }}
+                  className="text-sm font-semibold text-slate-600 hover:text-slate-900"
+                >
+                  Rename
+                </button>
+              )}
+              {org.id === user?.orgId ? (
+                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600">
+                  Active
+                </span>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={deleteWorkspace(org)}
+                    className="text-sm font-semibold text-red-500 hover:text-red-600"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={switchWorkspace(org.id)}
+                    className="text-sm font-semibold text-blue-600 hover:text-blue-700"
+                  >
+                    Switch
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         ))}
       </div>

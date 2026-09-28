@@ -1,7 +1,16 @@
-import { IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
 
 export class CreateWorkspaceDto {
+  @ValidateIf((body) => !body.remove)
   @IsString()
   @MinLength(2)
-  name: string;
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  remove?: boolean;
 }

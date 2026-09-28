@@ -789,9 +789,9 @@ export const Sidebar: FC = () => {
             submitLabel="Save"
             initialName={org.name}
             onSubmit={async (name: string) => {
-              const response = await fetch(`/user/workspace/${org.id}`, {
-                method: 'PUT',
-                body: JSON.stringify({ name: name.trim() }),
+              const response = await fetch('/user/workspace/rename', {
+                method: 'POST',
+                body: JSON.stringify({ id: org.id, name: name.trim() }),
               });
               if (!response.ok) {
                 toast.show('Could not rename this workspace', 'warning');
@@ -1078,7 +1078,12 @@ export const Sidebar: FC = () => {
                             {iconHome}
                           </span>
                           <span className="truncate">
-                            {user?.orgName || 'Home'}
+                            {(organizations || []).find(
+                              (org: { id: string; name: string }) =>
+                                org.id === user?.orgId
+                            )?.name ||
+                              user?.orgName ||
+                              'Home'}
                           </span>
                         </button>
                         {otherWorkspaces.length > 0 ? (
