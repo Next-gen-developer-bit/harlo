@@ -378,12 +378,24 @@ export class UsersController {
     return this._orgService.renameWorkspaceForUser(user.id, id, body.name);
   }
 
+  @Post('/workspace/remove')
+  async removeWorkspace(
+    @GetUserFromRequest() user: User,
+    @GetOrgFromRequest() org: Organization,
+    @Body('id') id: string
+  ) {
+    return this.deleteWorkspace(user, org, id);
+  }
+
   @Delete('/workspace/:id')
   async deleteWorkspace(
     @GetUserFromRequest() user: User,
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string
   ) {
+    if (!id) {
+      throw new HttpException('Workspace id is required', 400);
+    }
     if (org?.id === id) {
       throw new HttpException(
         'Switch to another workspace before deleting this one',
