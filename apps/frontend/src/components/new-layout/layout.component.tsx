@@ -96,22 +96,19 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
             <NewSubscription />
             <ContinueProvider />
             <div
-              className="flex flex-col min-h-screen min-w-screen text-newTextColor"
+              className="flex h-dvh max-h-dvh min-h-0 min-w-screen flex-col overflow-hidden text-newTextColor"
               style={{ background: '#f7f8fa' }}
             >
               <div>{user?.admin ? <Impersonate /> : <div />}</div>
               <>
                 <AnnouncementBanner />
-                <div
-                  className="flex-1 flex"
-                  style={{ height: '100vh', overflow: 'hidden' }}
-                >
+                <div className="flex min-h-0 flex-1 overflow-hidden">
                   <Support />
-                  <div id="left-menu" className="flex-shrink-0" style={{ height: '100%' }}>
+                  <div id="left-menu" className="flex h-full min-h-0 shrink-0">
                     <Sidebar />
                   </div>
                   <div
-                    className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col min-w-0 bg-[#f8fafc]"
+                    className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden bg-[#f8fafc]"
                     style={{ background: '#f8fafc' }}
                   >
                     <AppTopbar />
