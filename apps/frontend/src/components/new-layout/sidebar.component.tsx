@@ -201,6 +201,13 @@ const SIDEBAR_STYLES = `
 .pb-nav--active .pb-nav-icon {
   color: #2563eb !important;
 }
+.pb-home-workspace {
+  display: block;
+  color: #334155 !important;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
 
 /* ── Help & Support ── */
 .pb-help-link {
@@ -1039,11 +1046,7 @@ export const Sidebar: FC = () => {
                 <span className="pb-nav-icon">{iconHome}</span>
                 <span className="min-w-0 flex-1 text-left">
                   <span className="block truncate">Home</span>
-                  <span
-                    className={`block truncate text-[11px] font-medium leading-tight ${
-                      pathname === '/overview' ? 'text-[#60a5fa]' : 'text-slate-400'
-                    }`}
-                  >
+                  <span className="pb-home-workspace truncate">
                     {workspaceName}
                   </span>
                 </span>

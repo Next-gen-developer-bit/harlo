@@ -13,6 +13,8 @@ import { useWorkspaceOverview } from '@gitroom/frontend/components/workspace-hom
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
+import { useUser } from '@gitroom/frontend/components/layout/user.context';
+import { useOrganizations } from '@gitroom/frontend/components/layout/use.organizations';
 const stripCaption = (content?: string) =>
   (content || '')
     .replace(/<[^>]*>/g, ' ')
@@ -58,6 +60,12 @@ export const WorkspaceHomeComponent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fetch = useFetch();
+  const user = useUser();
+  const { data: organizations } = useOrganizations();
+  const workspaceName =
+    organizations?.find((org) => org.id === user?.orgId)?.name ||
+    user?.orgName ||
+    'Workspace';
   const { data: overview } = useWorkspaceOverview();
   const { data: integrations } = useIntegrationList();
   const { data: analytics } = usePublishedPostsAnalytics(30);
@@ -143,6 +151,15 @@ export const WorkspaceHomeComponent = () => {
   return (
     <div className="min-h-full bg-[#f7f8fa] px-6 py-6 font-sans text-slate-800 md:px-8">
       <Onboarding />
+
+      <div className="mb-6">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#94a3b8]">
+          Current workspace
+        </p>
+        <h1 className="mt-1 truncate text-[32px] font-bold leading-tight tracking-[-0.03em] text-[#0f172a]">
+          {workspaceName}
+        </h1>
+      </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
