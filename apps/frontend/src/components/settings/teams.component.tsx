@@ -48,6 +48,7 @@ import {
 type TeamMember = {
   id: string;
   role: 'SUPERADMIN' | 'ADMIN' | 'USER';
+  status?: 'ACTIVE' | 'PENDING';
   user: {
     email: string;
     id: string;
@@ -115,7 +116,29 @@ const platformIcon = (identifier?: string) => {
 const useTeamMembers = () => {
   const fetch = useFetch();
   const loadTeam = useCallback(async () => {
-    return (await (await fetch('/settings/team')).json()).users as TeamMember[];
+    const payload = await (await fetch('/settings/team')).json();
+    const active = ((payload?.users || []) as TeamMember[]).map((member) => ({
+      ...member,
+      id: member.id || member.user.id,
+      status: 'ACTIVE' as const,
+    }));
+    const pending = (
+      (payload?.invites || []) as Array<{
+        id: string;
+        email: string;
+        role: 'ADMIN' | 'USER';
+      }>
+    ).map((invite) => ({
+      id: invite.id,
+      role: invite.role,
+      status: 'PENDING' as const,
+      user: {
+        id: invite.id,
+        email: invite.email,
+        name: invite.email.split('@')[0],
+      },
+    }));
+    return [...active, ...pending] as TeamMember[];
   }, [fetch]);
   return useSWR('/api/teams', loadTeam, { revalidateOnFocus: true });
 };
@@ -162,8 +185,9 @@ export const TeamsComponent = () => {
   const members = data || [];
   const hasTeam = members.length > 0;
 
-  // Pending invites are not exposed by the API today — keep the count honest.
-  const pendingCount = 0;
+  const pendingCount = members.filter(
+    (member) => member.status === 'PENDING'
+  ).length;
 
   const orgName = user?.orgName || 'Workspace';
 
@@ -183,6 +207,9 @@ export const TeamsComponent = () => {
   const filtered = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     return members.filter((member) => {
+      if (tab === 'pending' && member.status !== 'PENDING') {
+        return false;
+      }
       if (roleFilter !== 'all' && member.role !== roleFilter) {
         return false;
       }
@@ -197,7 +224,7 @@ export const TeamsComponent = () => {
       }
       return true;
     });
-  }, [members, searchQuery, roleFilter, orgName]);
+  }, [members, searchQuery, roleFilter, orgName, tab]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
@@ -253,6 +280,7 @@ export const TeamsComponent = () => {
     [modals, members, integrations, mutate]
   );
 
+  const api = useFetch();
   const remove = useCallback(
     (toRemove: TeamMember) => async () => {
       if (
@@ -262,12 +290,14 @@ export const TeamsComponent = () => {
       ) {
         return;
       }
-      const fetch = window.fetch;
-      // Use the configured fetch via context is not available here; reuse the
-      // same endpoint as the original implementation.
-      const response = await fetch(`/settings/team/${toRemove.user.id}`, {
-        method: 'DELETE',
-      });
+      const response = await api(
+        toRemove.status === 'PENDING'
+          ? `/settings/team/invite/${toRemove.id}`
+          : `/settings/team/${toRemove.user.id}`,
+        {
+          method: 'DELETE',
+        }
+      );
       if (!response.ok) {
         toast.show('Could not remove this member', 'warning');
         return;
@@ -275,7 +305,7 @@ export const TeamsComponent = () => {
       toast.show('Member removed', 'success');
       await mutate();
     },
-    [mutate, toast]
+    [api, mutate, toast]
   );
 
   return (
@@ -376,18 +406,21 @@ export const TeamsComponent = () => {
             <div className="flex flex-col gap-3 border-b border-slate-100 p-4 lg:flex-row lg:items-center lg:justify-between">
               <TabBar
                 value={tab}
-                onChange={setTab}
+                onChange={(value) => {
+                  setTab(value);
+                  setPage(1);
+                }}
                 tabs={[
-                  { value: 'members', label: 'Members', count: members.length },
-                  ...(pendingCount > 0
-                    ? [
-                        {
-                          value: 'pending' as const,
-                          label: 'Pending invites',
-                          count: pendingCount,
-                        },
-                      ]
-                    : []),
+                  {
+                    value: 'members',
+                    label: 'Members',
+                    count: members.length,
+                  },
+                  {
+                    value: 'pending',
+                    label: 'Pending invites',
+                    count: pendingCount,
+                  },
                 ]}
               />
               <div className="flex flex-wrap items-center gap-2">
@@ -485,10 +518,17 @@ export const TeamsComponent = () => {
                           </div>
                         </Td>
                         <Td>
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                            Active
-                          </span>
+                          {member.status === 'PENDING' ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                              Pending
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              Active
+                            </span>
+                          )}
                         </Td>
                         <Td>
                           <div
