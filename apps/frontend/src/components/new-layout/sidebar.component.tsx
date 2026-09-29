@@ -58,6 +58,28 @@ const SIDEBAR_STYLES = `
   flex-shrink: 0;
   text-decoration: none;
 }
+.pb-sidebar .pb-create-post {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 40px;
+  margin: 4px 12px 10px;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #ffffff !important;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.pb-sidebar .pb-create-post:hover {
+  background: #1d4ed8;
+}
+.pb-sidebar .pb-create-post svg {
+  width: 16px;
+  height: 16px;
+}
 .pb-sidebar .pb-brand-icon {
   width: 28px;
   height: 28px;
@@ -1031,6 +1053,13 @@ export const Sidebar: FC = () => {
             className="pb-brand-mark"
             style={{ height: 28, width: 'auto', display: 'block' }}
           />
+        </Link>
+
+        <Link href="/compose" className="pb-create-post">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Create Post
         </Link>
 
         {/* ── Scrollable Nav Items with Always-Visible Rail ── */}
