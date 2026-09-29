@@ -38,6 +38,8 @@ const SIDEBAR_STYLES = `
   min-width: 240px;
   max-width: 240px;
   height: 100%;
+  max-height: 100%;
+  min-height: 0;
   background: #ffffff !important;
   color: #334155 !important;
   border-right: 1px solid #e2e8f0;
@@ -87,10 +89,14 @@ const SIDEBAR_STYLES = `
 }
 .pb-scroll {
   flex: 1;
+  min-height: 0;
   height: 100%;
+  max-height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 16px 8px 12px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 16px 12px 12px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
