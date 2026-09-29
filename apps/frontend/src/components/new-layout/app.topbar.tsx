@@ -69,7 +69,16 @@ export const AppTopbar = () => {
 
   return (
     <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-100 bg-[#f8fafc]/95 px-6 py-3 backdrop-blur md:px-8">
-      {pageTitle ? (
+      {pathname === '/overview' || pathname === '/dashboard' ? (
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Current workspace
+          </p>
+          <h1 className="truncate text-[28px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+            {workspaceName}
+          </h1>
+        </div>
+      ) : pageTitle ? (
         <h1 className="shrink-0 text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
           {pageTitle}
         </h1>
