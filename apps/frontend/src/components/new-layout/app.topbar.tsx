@@ -3,6 +3,8 @@
 import { useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
+import { useUser } from '@gitroom/frontend/components/layout/user.context';
+import { useOrganizations } from '@gitroom/frontend/components/layout/use.organizations';
 
 const LIST_STATES = new Set([
   'all',
@@ -48,9 +50,18 @@ const titleForPath = (pathname: string, state: string | null) => {
 
 export const AppTopbar = () => {
   const router = useRouter();
+  const user = useUser();
+  const { data: organizations } = useOrganizations();
   const pathname = usePathname() || '';
   const searchParams = useSearchParams();
-  const pageTitle = titleForPath(pathname, searchParams.get('state'));
+  const workspaceName =
+    organizations?.find((org) => org.id === user?.orgId)?.name ||
+    user?.orgName ||
+    'Home';
+  const pageTitle =
+    pathname === '/overview' || pathname === '/dashboard'
+      ? workspaceName
+      : titleForPath(pathname, searchParams.get('state'));
 
   const openCreatePost = useCallback(() => {
     router.push('/compose');
