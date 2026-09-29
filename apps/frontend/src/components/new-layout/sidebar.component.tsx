@@ -52,7 +52,7 @@ const SIDEBAR_STYLES = `
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 20px 20px 16px;
+  padding: 12px 20px 8px;
   flex-shrink: 0;
   text-decoration: none;
 }
@@ -90,7 +90,7 @@ const SIDEBAR_STYLES = `
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 16px 48px 12px;
+  padding: 0 16px 8px 12px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -143,16 +143,16 @@ const SIDEBAR_STYLES = `
 .pb-group {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  margin-bottom: 4px;
+  gap: 0;
+  margin-bottom: 2px;
 }
 .pb-divider {
   height: 1px;
   background: #f1f5f9;
-  margin: 8px 6px;
+  margin: 4px 6px;
 }
 .pb-sec {
-  padding: 8px 12px 4px;
+  padding: 4px 12px 2px;
   font-size: 11px;
   font-weight: 600;
   color: #94a3b8 !important;
@@ -164,7 +164,7 @@ const SIDEBAR_STYLES = `
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 8px 12px;
+  padding: 5px 12px;
   border-radius: 8px;
   font-size: 13.5px;
   font-weight: 500;
@@ -207,8 +207,8 @@ const SIDEBAR_STYLES = `
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
-  margin: 4px 6px 4px;
+  padding: 6px 12px;
+  margin: 2px 6px;
   border-radius: 8px;
   font-size: 13.5px;
   font-weight: 500;
@@ -251,7 +251,7 @@ const SIDEBAR_STYLES = `
 /* ── User Profile Footer ── */
 .pb-user-footer {
   position: relative;
-  padding: 12px 14px;
+  padding: 8px 14px;
   border-top: 1px solid #e8ecf1;
   display: flex;
   align-items: center;
@@ -1020,19 +1020,20 @@ export const Sidebar: FC = () => {
         {/* ── Scrollable Nav Items with Always-Visible Rail ── */}
         <div className="pb-scroll-wrap">
           <div className="pb-scroll" ref={scrollRef} onScroll={updateScrollbar}>
-            {/* Home with workspace menu */}
+            {/* Home, then the workspace switcher directly under it */}
             <div className="pb-group">
+              <NavItem path="/overview" label="Home" icon={iconHome} />
               <div className="relative" ref={homeRef}>
                 <button
                   type="button"
                   ref={homeButtonRef}
                   onClick={toggleHomeMenu}
-                  className={`pb-nav ${pathname === '/overview' ? 'pb-nav--active' : ''}`}
+                  className={`pb-nav ${pathname === '/workspaces' || pathname.startsWith('/workspaces/') ? 'pb-nav--active' : ''}`}
                   aria-expanded={homeOpen}
                   aria-haspopup="menu"
                 >
-                  <span className="pb-nav-icon">{iconHome}</span>
-                  <span className="min-w-0 flex-1 truncate text-left">Home</span>
+                  <span className="pb-nav-icon">{iconWorkspaces}</span>
+                  <span className="min-w-0 flex-1 truncate text-left">Workspaces</span>
                   <svg
                     className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${homeOpen ? '' : 'rotate-180'}`}
                     fill="none"
@@ -1187,7 +1188,6 @@ export const Sidebar: FC = () => {
             {/* MANAGE */}
             <div className="pb-group">
               <div className="pb-sec">Manage</div>
-              <NavItem path="/workspaces" label="Workspaces" icon={iconWorkspaces} />
               <NavItem path="/campaigns" label="Campaigns" icon={iconCampaigns} />
               <NavItem path="/teams" label="Team" icon={iconTeam} />
               <NavItem path="/third-party" label="Social Accounts" icon={iconSocialAccounts} />
