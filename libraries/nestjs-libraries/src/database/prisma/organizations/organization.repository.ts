@@ -422,10 +422,16 @@ export class OrganizationRepository {
     }, { timeout: 30000 });
   }
 
-  async createWorkspaceForUser(userId: string, name: string) {
+  async createWorkspaceForUser(
+    userId: string,
+    name: string,
+    description?: string
+  ) {
+    const trimmedDescription = description?.trim();
     return this._organization.model.organization.create({
       data: {
         name,
+        ...(trimmedDescription ? { description: trimmedDescription } : {}),
         apiKey: AuthService.fixedEncryption(makeId(20)),
         allowTrial: true,
         isTrailing: true,

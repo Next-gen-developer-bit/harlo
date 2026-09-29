@@ -382,7 +382,8 @@ export class UsersController {
 
     const workspace = await this._orgService.createWorkspaceForUser(
       user.id,
-      body.name || ''
+      body.name || '',
+      body.description
     );
 
     response.cookie('showorg', workspace.id, {
