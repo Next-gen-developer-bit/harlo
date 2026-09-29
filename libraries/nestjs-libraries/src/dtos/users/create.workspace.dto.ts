@@ -13,4 +13,8 @@ export class CreateWorkspaceDto {
   @IsOptional()
   @IsBoolean()
   remove?: boolean;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 }

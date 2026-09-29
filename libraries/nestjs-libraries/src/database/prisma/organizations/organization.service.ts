@@ -17,8 +17,12 @@ export class OrganizationService {
     private _organizationRepository: OrganizationRepository,
     private _notificationsService: NotificationService
   ) {}
-  createWorkspaceForUser(userId: string, name: string) {
-    return this._organizationRepository.createWorkspaceForUser(userId, name);
+  createWorkspaceForUser(userId: string, name: string, description?: string) {
+    return this._organizationRepository.createWorkspaceForUser(
+      userId,
+      name,
+      description
+    );
   }
 
   async renameWorkspaceForUser(userId: string, orgId: string, name: string) {
