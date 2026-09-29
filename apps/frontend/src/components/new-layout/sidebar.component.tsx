@@ -738,6 +738,16 @@ export const Sidebar: FC = () => {
     return () => document.removeEventListener('mousedown', onPointerDown);
   }, [homeOpen]);
 
+  const workspaceName = useMemo(
+    () =>
+      (organizations || []).find(
+        (org: { id: string; name: string }) => org.id === user?.orgId
+      )?.name ||
+      user?.orgName ||
+      'Workspace',
+    [organizations, user?.orgId, user?.orgName]
+  );
+
   const otherWorkspaces = useMemo(
     () =>
       (organizations || []).filter(
@@ -1022,7 +1032,22 @@ export const Sidebar: FC = () => {
           <div className="pb-scroll" ref={scrollRef} onScroll={updateScrollbar}>
             {/* Home, then the workspace switcher directly under it */}
             <div className="pb-group">
-              <NavItem path="/overview" label="Home" icon={iconHome} />
+              <Link
+                href="/overview"
+                className={`pb-nav ${pathname === '/overview' ? 'pb-nav--active' : ''}`}
+              >
+                <span className="pb-nav-icon">{iconHome}</span>
+                <span className="min-w-0 flex-1 text-left">
+                  <span className="block truncate">Home</span>
+                  <span
+                    className={`block truncate text-[11px] font-medium leading-tight ${
+                      pathname === '/overview' ? 'text-[#60a5fa]' : 'text-slate-400'
+                    }`}
+                  >
+                    {workspaceName}
+                  </span>
+                </span>
+              </Link>
               <div className="relative" ref={homeRef}>
                 <button
                   type="button"
@@ -1073,14 +1098,7 @@ export const Sidebar: FC = () => {
                           <span className="flex h-5 w-5 shrink-0 items-center justify-center text-white [&_svg]:h-5 [&_svg]:w-5">
                             {iconHome}
                           </span>
-                          <span className="truncate">
-                            {(organizations || []).find(
-                              (org: { id: string; name: string }) =>
-                                org.id === user?.orgId
-                            )?.name ||
-                              user?.orgName ||
-                              'Home'}
-                          </span>
+                          <span className="truncate">{workspaceName}</span>
                         </button>
                         {otherWorkspaces.length > 0 ? (
                           <div className="mt-4">
