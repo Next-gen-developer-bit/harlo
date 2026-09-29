@@ -308,6 +308,16 @@ export class UsersController {
       getOrgFromCookie.orgId,
       getOrgFromCookie.role
     );
+    if (getOrgFromCookie.orgId && user.email) {
+      try {
+        await this._orgService.acceptInvite(
+          getOrgFromCookie.orgId,
+          user.email
+        );
+      } catch {
+        // The invite row is optional until OrganizationInvite exists.
+      }
+    }
     const organizationId =
       typeof addedOrg !== 'boolean' ? addedOrg.organizationId : null;
 

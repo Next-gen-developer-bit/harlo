@@ -10,7 +10,8 @@ export class OrganizationRepository {
   constructor(
     private _organization: PrismaRepository<'organization'>,
     private _userOrg: PrismaRepository<'userOrganization'>,
-    private _user: PrismaRepository<'user'>
+    private _user: PrismaRepository<'user'>,
+    private _invite: PrismaRepository<'organizationInvite'>
   ) {}
 
   createMaxUser(id: string, name: string, saasName: string, email: string) {
@@ -517,6 +518,71 @@ export class OrganizationRepository {
         },
       });
     } catch (err) {}
+  }
+
+  saveInvite(data: {
+    email: string;
+    role: 'USER' | 'ADMIN';
+    organizationId: string;
+    invitedById?: string;
+    expiresAt: Date;
+  }) {
+    const email = data.email.trim().toLowerCase();
+    return this._invite.model.organizationInvite.upsert({
+      where: {
+        organizationId_email: {
+          organizationId: data.organizationId,
+          email,
+        },
+      },
+      create: {
+        email,
+        role: data.role === 'ADMIN' ? Role.ADMIN : Role.USER,
+        organizationId: data.organizationId,
+        invitedById: data.invitedById,
+        expiresAt: data.expiresAt,
+      },
+      update: {
+        role: data.role === 'ADMIN' ? Role.ADMIN : Role.USER,
+        invitedById: data.invitedById,
+        expiresAt: data.expiresAt,
+        acceptedAt: null,
+      },
+    });
+  }
+
+  listPendingInvites(organizationId: string) {
+    return this._invite.model.organizationInvite.findMany({
+      where: {
+        organizationId,
+        acceptedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        expiresAt: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async acceptInvite(organizationId: string, email: string) {
+    await this._invite.model.organizationInvite.updateMany({
+      where: {
+        organizationId,
+        email: email.trim().toLowerCase(),
+        acceptedAt: null,
+      },
+      data: { acceptedAt: new Date() },
+    });
+  }
+
+  deleteInvite(organizationId: string, inviteId: string) {
+    return this._invite.model.organizationInvite.deleteMany({
+      where: { id: inviteId, organizationId },
+    });
   }
 
   async getTeam(orgId: string) {

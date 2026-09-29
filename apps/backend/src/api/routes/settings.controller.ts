@@ -60,6 +60,18 @@ export class SettingsController {
     return this._organizationService.addTeamMemberByEmail(org, body);
   }
 
+  @Delete('/team/invite/:id')
+  @CheckPolicies(
+    [AuthorizationActions.Create, Sections.TEAM_MEMBERS],
+    [AuthorizationActions.Create, Sections.ADMIN]
+  )
+  deleteInvite(
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string
+  ) {
+    return this._organizationService.deleteInvite(org.id, id);
+  }
+
   @Delete('/team/:id')
   @CheckPolicies(
     [AuthorizationActions.Create, Sections.TEAM_MEMBERS],

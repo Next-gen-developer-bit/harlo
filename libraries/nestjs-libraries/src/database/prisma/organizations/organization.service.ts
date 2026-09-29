@@ -103,8 +103,13 @@ export class OrganizationService {
     return this._organizationRepository.updateApiKey(orgId);
   }
 
-  getTeam(orgId: string) {
-    return this._organizationRepository.getTeam(orgId);
+  async getTeam(orgId: string) {
+    const team = await this._organizationRepository.getTeam(orgId);
+    const invites = await this._organizationRepository.listPendingInvites(orgId);
+    return {
+      users: team?.users || [],
+      invites,
+    };
   }
 
   async setStreak(organizationId: string, type: 'start' | 'end') {
@@ -128,6 +133,26 @@ export class OrganizationService {
     const url = `${process.env.FRONTEND_URL}/auth/invite?org=${encodeURIComponent(
       token
     )}`;
+    try {
+      await this._organizationRepository.saveInvite({
+        email: body.email,
+        role: body.role === 'ADMIN' ? 'ADMIN' : 'USER',
+        organizationId: org.id,
+        invitedById: user.id,
+        expiresAt: dayjs().add(2, 'day').toDate(),
+      });
+    } catch (err: any) {
+      const missingTable =
+        err?.code === 'P2021' ||
+        String(err?.message || '').includes('OrganizationInvite');
+      if (missingTable) {
+        throw new HttpException(
+          'Could not save this invitation. Create the OrganizationInvite table, then try again.',
+          400
+        );
+      }
+      throw err;
+    }
     const emailConfigured = this._notificationsService.hasEmailProvider();
     let emailed = false;
     if (body.sendEmail && emailConfigured) {
@@ -207,6 +232,14 @@ export class OrganizationService {
     }
 
     return { added: true };
+  }
+
+  acceptInvite(orgId: string, email: string) {
+    return this._organizationRepository.acceptInvite(orgId, email);
+  }
+
+  deleteInvite(orgId: string, inviteId: string) {
+    return this._organizationRepository.deleteInvite(orgId, inviteId);
   }
 
   async deleteTeamMember(org: Organization, userId: string) {
