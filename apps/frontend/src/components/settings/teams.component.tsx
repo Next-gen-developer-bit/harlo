@@ -160,10 +160,7 @@ export const TeamsComponent = () => {
 
   const isGated = user?.tier?.current === 'FREE' || !user?.tier?.team_members;
   const members = data || [];
-  const invitedMembers = members.filter(
-    (member) => member.user.id !== user?.id
-  );
-  const hasTeam = invitedMembers.length > 0;
+  const hasTeam = members.length > 0;
 
   // Pending invites are not exposed by the API today — keep the count honest.
   const pendingCount = 0;
@@ -232,25 +229,29 @@ export const TeamsComponent = () => {
     });
   };
 
-  const openCreateTeam = useCallback(() => {
-    modals.openModal({
-      id: 'create-team-modal',
-      closeOnClickOutside: true,
-      withCloseButton: false,
-      removeLayout: true,
-      children: (close) => (
-        <CreateTeamModal
-          members={members}
-          integrations={integrations || []}
-          onClose={close}
-          onCreated={async () => {
-            await mutate();
-            close();
-          }}
-        />
-      ),
-    });
-  }, [modals, members, integrations, mutate]);
+  const openCreateTeam = useCallback(
+    (mode: 'create' | 'invite' = 'create') => {
+      modals.openModal({
+        id: 'create-team-modal',
+        closeOnClickOutside: true,
+        withCloseButton: false,
+        removeLayout: true,
+        children: (close) => (
+          <CreateTeamModal
+            mode={mode}
+            members={members}
+            integrations={integrations || []}
+            onClose={close}
+            onCreated={async () => {
+              await mutate();
+              close();
+            }}
+          />
+        ),
+      });
+    },
+    [modals, members, integrations, mutate]
+  );
 
   const remove = useCallback(
     (toRemove: TeamMember) => async () => {
@@ -283,10 +284,15 @@ export const TeamsComponent = () => {
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-end">
         <div className="flex flex-wrap items-center gap-2">
           {!isGated && (
-            <PrimaryButton onClick={openCreateTeam}>
-              <Icon path={ICONS.plus} className="h-4 w-4" />
-              Invite member
-            </PrimaryButton>
+            <>
+              <PrimaryButton onClick={() => openCreateTeam('create')}>
+                <Icon path={ICONS.plus} className="h-4 w-4" />
+                Create team
+              </PrimaryButton>
+              <SecondaryButton onClick={() => openCreateTeam('invite')}>
+                Invite member
+              </SecondaryButton>
+            </>
           )}
         </div>
       </div>
@@ -358,7 +364,7 @@ export const TeamsComponent = () => {
             className="flex-1"
           >
             {!isGated ? (
-              <PrimaryButton onClick={openCreateTeam}>
+              <PrimaryButton onClick={() => openCreateTeam('create')}>
                 <Icon path={ICONS.plus} className="h-4 w-4" />
                 Create team
               </PrimaryButton>
@@ -584,7 +590,7 @@ export const TeamsComponent = () => {
               </p>
             </div>
           </div>
-          <SecondaryButton onClick={openCreateTeam} disabled={isGated}>
+          <SecondaryButton onClick={() => openCreateTeam('invite')} disabled={isGated}>
             <Icon path={ICONS.plus} className="h-4 w-4" />
             Invite member
           </SecondaryButton>
@@ -617,16 +623,17 @@ export const TeamsComponent = () => {
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    Create team modal
-   — Team name / description / approval toggle / workspace+account scoping are
-   intentionally disabled (backend does not support them yet). Only the
-   member invitation flow (POST /settings/team) is functional.
+   Creating a team creates a workspace. Invites use the existing team invite
+   endpoint. Approval rules and account scoping are still a preview.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const CreateTeamModal = ({
+  mode,
   members,
   integrations,
   onClose,
   onCreated,
 }: {
+  mode: 'create' | 'invite';
   members: TeamMember[];
   integrations: IntegrationItem[];
   onClose: () => void;
@@ -682,12 +689,39 @@ const CreateTeamModal = ({
   };
 
   const submit = async () => {
-    if (!pendingInvites.length) {
+    const teamName = name.trim();
+    if (mode === 'create' && teamName.length < 2) {
+      toast.show('Enter a team name with at least 2 characters', 'warning');
+      return;
+    }
+    if (mode === 'invite' && !pendingInvites.length) {
       toast.show('Add at least one member to invite', 'warning');
       return;
     }
     setLoading(true);
     try {
+      if (mode === 'create') {
+        const created = await fetch('/user/workspace', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: teamName,
+            ...(description.trim() ? { description: description.trim() } : {}),
+          }),
+        });
+        if (!created.ok) {
+          const payload = await created.json().catch(() => ({}));
+          const message = Array.isArray(payload?.message)
+            ? payload.message[0]
+            : payload?.message;
+          toast.show(message || 'Could not create this team', 'warning');
+          return;
+        }
+      }
+      if (!pendingInvites.length) {
+        toast.show('Team created', 'success');
+        window.location.href = '/teams';
+        return;
+      }
       let allEmailsSent = true;
       let emailConfigured = true;
       const inviteLinks: string[] = [];
@@ -720,7 +754,12 @@ const CreateTeamModal = ({
         copy(inviteLinks.join('\n'));
       }
       if (allEmailsSent) {
-        toast.show('Team invitations sent and links copied', 'success');
+        toast.show(
+          mode === 'create'
+            ? 'Team created and invitations sent'
+            : 'Team invitations sent and links copied',
+          'success'
+        );
       } else if (emailConfigured) {
         toast.show(
           'Some emails could not be sent. The invitation link was copied.',
@@ -732,6 +771,10 @@ const CreateTeamModal = ({
           'warning'
         );
       }
+      if (mode === 'create') {
+        window.location.href = '/teams';
+        return;
+      }
       await onCreated();
     } catch {
       toast.show('Failed to create team', 'warning');
@@ -741,7 +784,7 @@ const CreateTeamModal = ({
   };
 
   const disabledNote =
-    'Team naming and scoped workspace/account access are currently a setup preview.';
+    'Approval rules and per-account access are coming soon.';
 
   return (
     <div
@@ -761,7 +804,7 @@ const CreateTeamModal = ({
             id="create-team-title"
             className="text-xl font-bold text-slate-900"
           >
-            Create team
+            {mode === 'create' ? 'Create team' : 'Invite member'}
           </h2>
           <button
             type="button"
@@ -776,9 +819,17 @@ const CreateTeamModal = ({
         {/* Body */}
         <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
           <div className="rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-3 text-xs leading-5 text-blue-700">
-            Member invitations are applied to{' '}
-            <strong>{user?.orgName || 'the current workspace'}</strong>.{' '}
-            {disabledNote}
+            {mode === 'create' ? (
+              <>
+                This creates a new workspace for the team. {disabledNote}
+              </>
+            ) : (
+              <>
+                Member invitations are applied to{' '}
+                <strong>{user?.orgName || 'the current workspace'}</strong>.{' '}
+                {disabledNote}
+              </>
+            )}
           </div>
 
           {/* Team name */}
@@ -790,8 +841,12 @@ const CreateTeamModal = ({
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Growth Team"
-              disabled
-              className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
+              disabled={mode !== 'create'}
+              className={`w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 ${
+                mode === 'create'
+                  ? 'bg-white text-slate-900'
+                  : 'cursor-not-allowed bg-slate-50 text-slate-500'
+              }`}
             />
           </label>
 
@@ -805,8 +860,12 @@ const CreateTeamModal = ({
               maxLength={500}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="For marketers and collaborators managing content, campaigns and approvals across Harlo Social."
-              disabled
-              className="min-h-[88px] w-full cursor-not-allowed resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
+              disabled={mode !== 'create'}
+              className={`min-h-[88px] w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 ${
+                mode === 'create'
+                  ? 'bg-white text-slate-900'
+                  : 'cursor-not-allowed bg-slate-50 text-slate-500'
+              }`}
             />
             <div className="mt-1 text-right text-[11px] text-slate-400">
               {description.length}/500
@@ -1029,7 +1088,13 @@ const CreateTeamModal = ({
         <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-4">
           <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
           <PrimaryButton onClick={submit} disabled={loading}>
-            {loading ? 'Sending…' : 'Create team'}
+            {loading
+              ? mode === 'create'
+                ? 'Creating…'
+                : 'Sending…'
+              : mode === 'create'
+              ? 'Create team'
+              : 'Send invites'}
           </PrimaryButton>
         </div>
       </div>
