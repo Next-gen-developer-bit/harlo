@@ -201,13 +201,6 @@ const SIDEBAR_STYLES = `
 .pb-nav--active .pb-nav-icon {
   color: #2563eb !important;
 }
-.pb-home-workspace {
-  display: block;
-  color: #334155 !important;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
-}
 
 /* ── Help & Support ── */
 .pb-help-link {
@@ -1039,18 +1032,7 @@ export const Sidebar: FC = () => {
           <div className="pb-scroll" ref={scrollRef} onScroll={updateScrollbar}>
             {/* Home, then the workspace switcher directly under it */}
             <div className="pb-group">
-              <Link
-                href="/overview"
-                className={`pb-nav ${pathname === '/overview' ? 'pb-nav--active' : ''}`}
-              >
-                <span className="pb-nav-icon">{iconHome}</span>
-                <span className="min-w-0 flex-1 text-left">
-                  <span className="block truncate">Home</span>
-                  <span className="pb-home-workspace truncate">
-                    {workspaceName}
-                  </span>
-                </span>
-              </Link>
+              <NavItem path="/overview" label="Home" icon={iconHome} />
               <div className="relative" ref={homeRef}>
                 <button
                   type="button"
