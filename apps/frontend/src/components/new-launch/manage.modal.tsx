@@ -31,11 +31,7 @@ import { SelectCustomer } from '@gitroom/frontend/components/launches/select.cus
 import { CopilotPopup } from '@copilotkit/react-ui';
 import { DummyCodeComponent } from '@gitroom/frontend/components/new-launch/dummy.code.component';
 import { CreationMethodBadge } from '@gitroom/frontend/components/launches/creation.method.badge';
-import {
-  CloseIcon,
-  TrashIcon,
-  DropdownArrowSmallIcon,
-} from '@gitroom/frontend/components/ui/icons';
+import { CloseIcon, TrashIcon } from '@gitroom/frontend/components/ui/icons';
 import { useHasScroll } from '@gitroom/frontend/components/ui/is.scroll.hook';
 import { useShortlinkPreference } from '@gitroom/frontend/components/settings/shortlink-preference.component';
 import dayjs from 'dayjs';
@@ -819,51 +815,50 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                 {t('add_to_queue', 'Add to Queue')}
               </button>
             )}
-            {!addEditSets && (
-              <div className="group relative">
-                <button
-                  disabled={
-                    selectedIntegrations.length === 0 || loading || locked
-                  }
-                  onClick={schedule('schedule')}
-                  className="relative flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#612BD3] px-4 text-[13px] font-semibold text-white outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading && (
-                    <div className="absolute left-[50%] top-[50%] -translate-x-[50%] -translate-y-[50%]">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    </div>
-                  )}
-                  <span className={clsx(loading && 'invisible')}>
-                    {selectedIntegrations.length === 0
-                      ? t('check_circles_above', 'Select an account')
-                      : dummy
-                      ? t('create_output', 'Create output')
-                      : !existingData?.integration
-                      ? t('add_to_calendar', 'Add to calendar')
-                      : existingData?.posts?.[0]?.state === 'DRAFT'
-                      ? t('schedule', 'Schedule')
-                      : t('update', 'Update')}
-                  </span>
-                  {!dummy && (
-                    <DropdownArrowSmallIcon className="text-white group-hover:rotate-180" />
-                  )}
-                </button>
-
-                {!dummy && (
-                  <div className="absolute bottom-[calc(100%+8px)] right-0 z-[300] hidden w-[180px] flex-col rounded-lg border border-[#e6e8ee] bg-white p-1.5 shadow-sm group-hover:flex group-focus-within:flex">
-                    <button
-                      type="button"
-                      onClick={schedule('now')}
-                      disabled={
-                        selectedIntegrations.length === 0 || loading || locked
-                      }
-                      className="post-now flex h-9 w-full items-center justify-center rounded-md text-[13px] font-semibold text-[#612BD3] hover:bg-[#f8f7fc] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {t('post_now', 'Post Now')}
-                    </button>
+            {!addEditSets && !dummy && (
+              <button
+                type="button"
+                onClick={schedule('now')}
+                disabled={
+                  selectedIntegrations.length === 0 || loading || locked
+                }
+                className="relative flex h-9 items-center justify-center whitespace-nowrap rounded-lg border border-[#612BD3] bg-white px-4 text-[13px] font-semibold text-[#612BD3] outline-none hover:bg-[#f8f7fc] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading && (
+                  <div className="absolute left-[50%] top-[50%] -translate-x-[50%] -translate-y-[50%]">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#612BD3] border-t-transparent" />
                   </div>
                 )}
-              </div>
+                <span className={clsx(loading && 'invisible')}>
+                  {t('post_now', 'Post now')}
+                </span>
+              </button>
+            )}
+            {!addEditSets && (
+              <button
+                disabled={
+                  selectedIntegrations.length === 0 || loading || locked
+                }
+                onClick={schedule('schedule')}
+                className="relative flex h-9 items-center justify-center whitespace-nowrap rounded-lg bg-[#612BD3] px-4 text-[13px] font-semibold text-white outline-none disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading && (
+                  <div className="absolute left-[50%] top-[50%] -translate-x-[50%] -translate-y-[50%]">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  </div>
+                )}
+                <span className={clsx(loading && 'invisible')}>
+                  {selectedIntegrations.length === 0
+                    ? t('check_circles_above', 'Select an account')
+                    : dummy
+                    ? t('create_output', 'Create output')
+                    : !existingData?.integration
+                    ? t('add_to_calendar', 'Add to calendar')
+                    : existingData?.posts?.[0]?.state === 'DRAFT'
+                    ? t('schedule', 'Schedule')
+                    : t('update', 'Update')}
+                </span>
+              </button>
             )}
           </div>
         </div>
