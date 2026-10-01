@@ -21,6 +21,106 @@ import { Tool } from '@gitroom/nestjs-libraries/integrations/tool.decorator';
 import { hasExtension, resolveMediaUrl } from '@gitroom/helpers/utils/has.extension';
 import { ssrfSafeFetch } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
 
+const MP4_CONTAINERS = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl', 'edts']);
+
+// Instagram rejects some phone exports that carry an edit list (`elst`) and
+// reports it as an unsupported video. Drop those boxes and keep chunk offsets
+// pointed at the same media bytes.
+function stripMp4EditLists(input: Buffer): Buffer {
+  const readBox = (offset: number) => {
+    const size32 = input.readUInt32BE(offset);
+    const type = input.toString('latin1', offset + 4, offset + 8);
+    let header = 8;
+    let size = size32;
+    if (size32 === 1) {
+      size = Number(input.readBigUInt64BE(offset + 8));
+      header = 16;
+    } else if (size32 === 0) {
+      size = input.length - offset;
+    }
+    return { offset, header, size, type, end: offset + size };
+  };
+
+  type Mp4Box = ReturnType<typeof readBox> & { children?: Mp4Box[] };
+
+  const parse = (start: number, end: number): Mp4Box[] => {
+    const boxes: Mp4Box[] = [];
+    let offset = start;
+    while (offset + 8 <= end) {
+      const box = readBox(offset) as Mp4Box;
+      if (box.size < 8 || box.end > end) {
+        break;
+      }
+      if (MP4_CONTAINERS.has(box.type)) {
+        box.children = parse(offset + box.header, box.end);
+      }
+      boxes.push(box);
+      offset = box.end;
+    }
+    return boxes;
+  };
+
+  const roots = parse(0, input.length);
+  const removed: Array<[number, number]> = [];
+  const collect = (boxes: Mp4Box[]) => {
+    for (const box of boxes) {
+      if (box.type === 'edts') {
+        removed.push([box.offset, box.end]);
+      }
+      if (box.children) {
+        collect(box.children);
+      }
+    }
+  };
+  collect(roots);
+  if (!removed.length) {
+    return input;
+  }
+
+  const deletedBefore = (position: number) =>
+    removed.reduce(
+      (sum, [start, end]) => sum + (end <= position ? end - start : 0),
+      0
+    );
+
+  const writeBox = (box: Mp4Box): Buffer => {
+    if (box.type === 'edts') {
+      return Buffer.alloc(0);
+    }
+    if (box.type === 'stco' || box.type === 'co64') {
+      const out = Buffer.from(input.subarray(box.offset, box.end));
+      const count = out.readUInt32BE(12);
+      let pointer = 16;
+      for (let index = 0; index < count; index++) {
+        if (box.type === 'stco') {
+          const value = out.readUInt32BE(pointer);
+          out.writeUInt32BE(value - deletedBefore(value), pointer);
+          pointer += 4;
+        } else {
+          const value = Number(out.readBigUInt64BE(pointer));
+          out.writeBigUInt64BE(BigInt(value - deletedBefore(value)), pointer);
+          pointer += 8;
+        }
+      }
+      return out;
+    }
+    if (!box.children) {
+      return input.subarray(box.offset, box.end);
+    }
+    const children = Buffer.concat(box.children.map((child) => writeBox(child)));
+    const header = Buffer.from(input.subarray(box.offset, box.offset + box.header));
+    const newSize = header.length + children.length;
+    if (box.header === 8) {
+      header.writeUInt32BE(newSize, 0);
+    } else {
+      header.writeBigUInt64BE(BigInt(newSize), 8);
+    }
+    return Buffer.concat([header, children]);
+  };
+
+  return Buffer.concat(roots.map((box) => writeBox(box)));
+}
+
 @Rules(
   "Instagram should have at least one attachment, if it's a story, it can have only one picture"
 )
@@ -625,11 +725,19 @@ export class InstagramProvider
     ).json();
 
     if (status_code === 'ERROR' || status_code === 'EXPIRED') {
+      const detail = String(status || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 220);
+      const mapped = this.handleErrors(detail, 400);
       throw new BadBody(
         this.identifier,
         JSON.stringify({ status_code, status }),
         '{}',
-        status || 'Instagram could not process the media'
+        mapped?.value ||
+          (detail
+            ? `Instagram rejected this video: ${detail}`
+            : 'Instagram rejected this video. Please try an MP4 with H.264 video and AAC audio.')
       );
     }
 
@@ -665,7 +773,7 @@ export class InstagramProvider
         this.identifier,
         '{}',
         '{}',
-        'Instagram could not read the video file. Upload it again.'
+        'Instagram could not read the video file. Please try uploading it again.'
       );
     }
 
@@ -678,7 +786,11 @@ export class InstagramProvider
     if (!bytes.length || bytes.length > 80 * 1024 * 1024) {
       return null;
     }
-    return bytes;
+    try {
+      return stripMp4EditLists(bytes);
+    } catch {
+      return bytes;
+    }
   }
 
   private async uploadInstagramVideo(params: {

@@ -132,7 +132,7 @@ const polish = (message: string) => {
   if (/(?:currently unavailable|please try again later)/i.test(firstLine)) {
     return PLATFORM_UNAVAILABLE;
   }
-  return FALLBACK;
+  return firstLine;
 };
 
 const fromTemporalDetails = (value: unknown): string | undefined => {
