@@ -19,6 +19,7 @@ import { Integration } from '@prisma/client';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
 import { Tool } from '@gitroom/nestjs-libraries/integrations/tool.decorator';
 import { hasExtension, resolveMediaUrl } from '@gitroom/helpers/utils/has.extension';
+import { ssrfSafeFetch } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
 
 @Rules(
   "Instagram should have at least one attachment, if it's a story, it can have only one picture"
@@ -109,7 +110,8 @@ export class InstagramProvider
     if (body.indexOf('An unknown error occurred') > -1) {
       return {
         type: 'retry' as const,
-        value: 'An unknown error occurred, please try again later',
+        value:
+          'Instagram could not process this post. Please try posting again.',
       };
     }
     if (body.indexOf('2207081') > -1) {
@@ -375,7 +377,8 @@ export class InstagramProvider
     if (body.indexOf('2207027') > -1) {
       return {
         type: 'bad-body' as const,
-        value: 'Unknown error, please try again later or contact support',
+        value:
+          'Instagram could not process this video. Please try an MP4 with H.264 video and AAC audio.',
       };
     }
 
@@ -653,6 +656,85 @@ export class InstagramProvider
     }
   }
 
+  // Instagram often cannot fetch a storage URL (error 2207027). Upload the
+  // video bytes to their resumable endpoint instead, then publish that container.
+  private async instagramVideoBytes(mediaUrl: string): Promise<Buffer | null> {
+    const response = await ssrfSafeFetch(mediaUrl);
+    if (!response.ok) {
+      throw new BadBody(
+        this.identifier,
+        '{}',
+        '{}',
+        'Instagram could not read the video file. Upload it again.'
+      );
+    }
+
+    const advertised = Number(response.headers.get('content-length') || 0);
+    if (advertised > 80 * 1024 * 1024) {
+      return null;
+    }
+
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (!bytes.length || bytes.length > 80 * 1024 * 1024) {
+      return null;
+    }
+    return bytes;
+  }
+
+  private async uploadInstagramVideo(params: {
+    type: string;
+    id: string;
+    accessToken: string;
+    mediaKind: string;
+    bytes: Buffer;
+    query: string;
+  }): Promise<string> {
+    const { id: containerId, uri } = await (
+      await this.fetch(
+        `https://${params.type}/v20.0/${params.id}/media?upload_type=resumable&media_type=${params.mediaKind}${params.query}&access_token=${params.accessToken}`,
+        { method: 'POST' }
+      )
+    ).json();
+
+    if (!containerId || !uri) {
+      throw new BadBody(
+        this.identifier,
+        '{}',
+        '{}',
+        'Instagram could not start the video upload. Please try posting again.'
+      );
+    }
+
+    const upload = await ssrfSafeFetch(uri, {
+      method: 'POST',
+      headers: {
+        Authorization: `OAuth ${params.accessToken}`,
+        offset: '0',
+        file_size: String(params.bytes.length),
+      },
+      body: new Uint8Array(params.bytes),
+    });
+    const uploadText = await upload.text();
+    let success = false;
+    try {
+      success = JSON.parse(uploadText)?.success === true;
+    } catch {
+      success = false;
+    }
+    if (!upload.ok || !success) {
+      const handle = this.handleErrors(uploadText || '{}', upload.status);
+      throw new BadBody(
+        this.identifier,
+        uploadText || '{}',
+        '{}',
+        handle?.value ||
+          'Instagram could not upload this video. Please try an MP4 with H.264 video and AAC audio.'
+      );
+    }
+
+    return containerId;
+  }
+
   async postPending(
     id: string,
     token: string,
@@ -743,14 +825,54 @@ export class InstagramProvider
               )}`
             : ``;
 
-        const { id: photoId } = await (
-          await this.fetch(
-            `https://${type}/v20.0/${id}/media?${mediaType}${isCarousel}${collaborators}${trialParams}${audioConfiguration}&access_token=${accessToken}${caption}`,
-            {
-              method: 'POST',
-            }
-          )
-        ).json();
+        const containerQuery = `${isCarousel}${collaborators}${trialParams}${audioConfiguration}${thumbOffset}${caption}`;
+        let photoId = '';
+        if (isVideo) {
+          const bytes = await this.instagramVideoBytes(mediaUrl);
+          const mediaKind =
+            firstPost?.media?.length === 1
+              ? isStory
+                ? 'STORIES'
+                : 'REELS'
+              : isStory
+              ? 'STORIES'
+              : 'VIDEO';
+          photoId = bytes
+            ? await this.uploadInstagramVideo({
+                type,
+                id,
+                accessToken,
+                mediaKind,
+                bytes,
+                query: containerQuery,
+              })
+            : (
+                await (
+                  await this.fetch(
+                    `https://${type}/v20.0/${id}/media?${mediaType}${isCarousel}${collaborators}${trialParams}${audioConfiguration}&access_token=${accessToken}${caption}`,
+                    { method: 'POST' }
+                  )
+                ).json()
+              ).id;
+        } else {
+          photoId = (
+            await (
+              await this.fetch(
+                `https://${type}/v20.0/${id}/media?${mediaType}${isCarousel}${collaborators}${trialParams}${audioConfiguration}&access_token=${accessToken}${caption}`,
+                { method: 'POST' }
+              )
+            ).json()
+          ).id;
+        }
+
+        if (!photoId) {
+          throw new BadBody(
+            this.identifier,
+            '{}',
+            '{}',
+            'Instagram could not create this post. Please try posting again.'
+          );
+        }
 
         return photoId;
       }) || []
