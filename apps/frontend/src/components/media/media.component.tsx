@@ -626,16 +626,20 @@ export const MediaBox: FC<{
                           />
                         </>
                       )}
+                      {(media.originalName || media.name) && (
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-2.5 pt-8">
+                          <div
+                            title={media.originalName || media.name}
+                            className="truncate text-sm font-semibold text-white drop-shadow"
+                          >
+                            {media.originalName || media.name}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="p-3">
                       <div className="min-w-0">
-                        <div
-                          title={media.originalName || media.name}
-                          className="truncate text-sm font-semibold text-slate-800"
-                        >
-                          {media.originalName || media.name}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
+                        <div className="text-xs text-slate-500">
                           {isVideoMedia(media.path) ? 'Video' : 'Image'}
                         </div>
                       </div>
@@ -694,9 +698,16 @@ export const MediaBox: FC<{
                           onClick={deleteImage(media)}
                         />
                       )}
-                      <div className="absolute bottom-[10px] end-[10px] z-[100]">
-                        {media.originalName}
-                      </div>
+                      {(media.originalName || media.name) && (
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[100] bg-gradient-to-t from-black/80 via-black/40 to-transparent px-2 pb-2 pt-8">
+                          <div
+                            title={media.originalName || media.name}
+                            className="truncate text-xs font-semibold text-white drop-shadow"
+                          >
+                            {media.originalName || media.name}
+                          </div>
+                        </div>
+                      )}
                       <div className="w-full h-full rounded-[6px] overflow-hidden relative">
                         <div className="absolute z-[20] left-[50%] top-[50%] -translate-x-[50%] -translate-y-[50%]">
                           <div
