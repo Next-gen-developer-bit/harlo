@@ -18,7 +18,108 @@ import { InstagramDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-set
 import { Integration } from '@prisma/client';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
 import { Tool } from '@gitroom/nestjs-libraries/integrations/tool.decorator';
-import { hasExtension } from '@gitroom/helpers/utils/has.extension';
+import { hasExtension, resolveMediaUrl } from '@gitroom/helpers/utils/has.extension';
+import { ssrfSafeFetch } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
+
+const MP4_CONTAINERS = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl', 'edts']);
+
+// Instagram rejects some phone exports that carry an edit list (`elst`) and
+// reports it as an unsupported video. Drop those boxes and keep chunk offsets
+// pointed at the same media bytes.
+function stripMp4EditLists(input: Buffer): Buffer {
+  const readBox = (offset: number) => {
+    const size32 = input.readUInt32BE(offset);
+    const type = input.toString('latin1', offset + 4, offset + 8);
+    let header = 8;
+    let size = size32;
+    if (size32 === 1) {
+      size = Number(input.readBigUInt64BE(offset + 8));
+      header = 16;
+    } else if (size32 === 0) {
+      size = input.length - offset;
+    }
+    return { offset, header, size, type, end: offset + size };
+  };
+
+  type Mp4Box = ReturnType<typeof readBox> & { children?: Mp4Box[] };
+
+  const parse = (start: number, end: number): Mp4Box[] => {
+    const boxes: Mp4Box[] = [];
+    let offset = start;
+    while (offset + 8 <= end) {
+      const box = readBox(offset) as Mp4Box;
+      if (box.size < 8 || box.end > end) {
+        break;
+      }
+      if (MP4_CONTAINERS.has(box.type)) {
+        box.children = parse(offset + box.header, box.end);
+      }
+      boxes.push(box);
+      offset = box.end;
+    }
+    return boxes;
+  };
+
+  const roots = parse(0, input.length);
+  const removed: Array<[number, number]> = [];
+  const collect = (boxes: Mp4Box[]) => {
+    for (const box of boxes) {
+      if (box.type === 'edts') {
+        removed.push([box.offset, box.end]);
+      }
+      if (box.children) {
+        collect(box.children);
+      }
+    }
+  };
+  collect(roots);
+  if (!removed.length) {
+    return input;
+  }
+
+  const deletedBefore = (position: number) =>
+    removed.reduce(
+      (sum, [start, end]) => sum + (end <= position ? end - start : 0),
+      0
+    );
+
+  const writeBox = (box: Mp4Box): Buffer => {
+    if (box.type === 'edts') {
+      return Buffer.alloc(0);
+    }
+    if (box.type === 'stco' || box.type === 'co64') {
+      const out = Buffer.from(input.subarray(box.offset, box.end));
+      const count = out.readUInt32BE(12);
+      let pointer = 16;
+      for (let index = 0; index < count; index++) {
+        if (box.type === 'stco') {
+          const value = out.readUInt32BE(pointer);
+          out.writeUInt32BE(value - deletedBefore(value), pointer);
+          pointer += 4;
+        } else {
+          const value = Number(out.readBigUInt64BE(pointer));
+          out.writeBigUInt64BE(BigInt(value - deletedBefore(value)), pointer);
+          pointer += 8;
+        }
+      }
+      return out;
+    }
+    if (!box.children) {
+      return input.subarray(box.offset, box.end);
+    }
+    const children = Buffer.concat(box.children.map((child) => writeBox(child)));
+    const header = Buffer.from(input.subarray(box.offset, box.offset + box.header));
+    const newSize = header.length + children.length;
+    if (box.header === 8) {
+      header.writeUInt32BE(newSize, 0);
+    } else {
+      header.writeBigUInt64BE(BigInt(newSize), 8);
+    }
+    return Buffer.concat([header, children]);
+  };
+
+  return Buffer.concat(roots.map((box) => writeBox(box)));
+}
 
 @Rules(
   "Instagram should have at least one attachment, if it's a story, it can have only one picture"
@@ -109,7 +210,8 @@ export class InstagramProvider
     if (body.indexOf('An unknown error occurred') > -1) {
       return {
         type: 'retry' as const,
-        value: 'An unknown error occurred, please try again later',
+        value:
+          'Instagram could not process this post. Please try posting again.',
       };
     }
     if (body.indexOf('2207081') > -1) {
@@ -375,7 +477,8 @@ export class InstagramProvider
     if (body.indexOf('2207027') > -1) {
       return {
         type: 'bad-body' as const,
-        value: 'Unknown error, please try again later or contact support',
+        value:
+          'Instagram could not process this video. Please try an MP4 with H.264 video and AAC audio.',
       };
     }
 
@@ -622,11 +725,19 @@ export class InstagramProvider
     ).json();
 
     if (status_code === 'ERROR' || status_code === 'EXPIRED') {
+      const detail = String(status || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 220);
+      const mapped = this.handleErrors(detail, 400);
       throw new BadBody(
         this.identifier,
         JSON.stringify({ status_code, status }),
         '{}',
-        status || 'Instagram could not process the media'
+        mapped?.value ||
+          (detail
+            ? `Instagram rejected this video: ${detail}`
+            : 'Instagram rejected this video. Please try an MP4 with H.264 video and AAC audio.')
       );
     }
 
@@ -653,6 +764,89 @@ export class InstagramProvider
     }
   }
 
+  // Instagram often cannot fetch a storage URL (error 2207027). Upload the
+  // video bytes to their resumable endpoint instead, then publish that container.
+  private async instagramVideoBytes(mediaUrl: string): Promise<Buffer | null> {
+    const response = await ssrfSafeFetch(mediaUrl);
+    if (!response.ok) {
+      throw new BadBody(
+        this.identifier,
+        '{}',
+        '{}',
+        'Instagram could not read the video file. Please try uploading it again.'
+      );
+    }
+
+    const advertised = Number(response.headers.get('content-length') || 0);
+    if (advertised > 80 * 1024 * 1024) {
+      return null;
+    }
+
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (!bytes.length || bytes.length > 80 * 1024 * 1024) {
+      return null;
+    }
+    try {
+      return stripMp4EditLists(bytes);
+    } catch {
+      return bytes;
+    }
+  }
+
+  private async uploadInstagramVideo(params: {
+    type: string;
+    id: string;
+    accessToken: string;
+    mediaKind: string;
+    bytes: Buffer;
+    query: string;
+  }): Promise<string> {
+    const { id: containerId, uri } = await (
+      await this.fetch(
+        `https://${params.type}/v20.0/${params.id}/media?upload_type=resumable&media_type=${params.mediaKind}${params.query}&access_token=${params.accessToken}`,
+        { method: 'POST' }
+      )
+    ).json();
+
+    if (!containerId || !uri) {
+      throw new BadBody(
+        this.identifier,
+        '{}',
+        '{}',
+        'Instagram could not start the video upload. Please try posting again.'
+      );
+    }
+
+    const upload = await ssrfSafeFetch(uri, {
+      method: 'POST',
+      headers: {
+        Authorization: `OAuth ${params.accessToken}`,
+        offset: '0',
+        file_size: String(params.bytes.length),
+      },
+      body: new Uint8Array(params.bytes),
+    });
+    const uploadText = await upload.text();
+    let success = false;
+    try {
+      success = JSON.parse(uploadText)?.success === true;
+    } catch {
+      success = false;
+    }
+    if (!upload.ok || !success) {
+      const handle = this.handleErrors(uploadText || '{}', upload.status);
+      throw new BadBody(
+        this.identifier,
+        uploadText || '{}',
+        '{}',
+        handle?.value ||
+          'Instagram could not upload this video. Please try an MP4 with H.264 video and AAC audio.'
+      );
+    }
+
+    return containerId;
+  }
+
   async postPending(
     id: string,
     token: string,
@@ -674,21 +868,35 @@ export class InstagramProvider
           (firstPost?.media?.length || 0) > 1 && !isStory
             ? `&is_carousel_item=true`
             : ``;
-        const mediaType = hasExtension(m.path, 'mp4')
+        const mediaUrl = resolveMediaUrl(m.path);
+        if (!mediaUrl) {
+          throw new BadBody(
+            this.identifier,
+            '{}',
+            '{}',
+            'Instagram could not read the attached file. Remove it and upload it again.'
+          );
+        }
+        // The file URL has to be encoded. A raw `https://` inside the query
+        // string gets collapsed to `https:/`, and Instagram then cannot
+        // download the file.
+        const encodedMedia = encodeURIComponent(mediaUrl);
+        const isVideo = hasExtension(mediaUrl, 'mp4');
+        const thumbOffset =
+          isVideo && !isStory && Number(m?.thumbnailTimestamp) > 0
+            ? `&thumb_offset=${Math.round(Number(m.thumbnailTimestamp))}`
+            : '';
+        const mediaType = isVideo
           ? firstPost?.media?.length === 1
             ? isStory
-              ? `video_url=${m.path}&media_type=STORIES`
-              : `video_url=${m.path}&media_type=REELS&thumb_offset=${
-                  m?.thumbnailTimestamp || 0
-                }`
+              ? `video_url=${encodedMedia}&media_type=STORIES`
+              : `video_url=${encodedMedia}&media_type=REELS${thumbOffset}`
             : isStory
-            ? `video_url=${m.path}&media_type=STORIES`
-            : `video_url=${m.path}&media_type=VIDEO&thumb_offset=${
-                m?.thumbnailTimestamp || 0
-              }`
+            ? `video_url=${encodedMedia}&media_type=STORIES`
+            : `video_url=${encodedMedia}&media_type=VIDEO${thumbOffset}`
           : isStory
-          ? `image_url=${m.path}&media_type=STORIES`
-          : `image_url=${m.path}`;
+          ? `image_url=${encodedMedia}&media_type=STORIES`
+          : `image_url=${encodedMedia}`;
 
         const trialParams = isTrialReel
           ? `&trial_params=${encodeURIComponent(
@@ -729,14 +937,54 @@ export class InstagramProvider
               )}`
             : ``;
 
-        const { id: photoId } = await (
-          await this.fetch(
-            `https://${type}/v20.0/${id}/media?${mediaType}${isCarousel}${collaborators}${trialParams}${audioConfiguration}&access_token=${accessToken}${caption}`,
-            {
-              method: 'POST',
-            }
-          )
-        ).json();
+        const containerQuery = `${isCarousel}${collaborators}${trialParams}${audioConfiguration}${thumbOffset}${caption}`;
+        let photoId = '';
+        if (isVideo) {
+          const bytes = await this.instagramVideoBytes(mediaUrl);
+          const mediaKind =
+            firstPost?.media?.length === 1
+              ? isStory
+                ? 'STORIES'
+                : 'REELS'
+              : isStory
+              ? 'STORIES'
+              : 'VIDEO';
+          photoId = bytes
+            ? await this.uploadInstagramVideo({
+                type,
+                id,
+                accessToken,
+                mediaKind,
+                bytes,
+                query: containerQuery,
+              })
+            : (
+                await (
+                  await this.fetch(
+                    `https://${type}/v20.0/${id}/media?${mediaType}${isCarousel}${collaborators}${trialParams}${audioConfiguration}&access_token=${accessToken}${caption}`,
+                    { method: 'POST' }
+                  )
+                ).json()
+              ).id;
+        } else {
+          photoId = (
+            await (
+              await this.fetch(
+                `https://${type}/v20.0/${id}/media?${mediaType}${isCarousel}${collaborators}${trialParams}${audioConfiguration}&access_token=${accessToken}${caption}`,
+                { method: 'POST' }
+              )
+            ).json()
+          ).id;
+        }
+
+        if (!photoId) {
+          throw new BadBody(
+            this.identifier,
+            '{}',
+            '{}',
+            'Instagram could not create this post. Please try posting again.'
+          );
+        }
 
         return photoId;
       }) || []

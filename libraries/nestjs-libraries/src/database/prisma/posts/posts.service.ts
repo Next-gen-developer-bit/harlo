@@ -51,7 +51,10 @@ import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import { RefreshToken } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
 import { AnalyticsSnapshotDto } from '@gitroom/nestjs-libraries/dtos/analytics/analytics.snapshot.dto';
-import { hasExtension } from '@gitroom/helpers/utils/has.extension';
+import {
+  hasExtension,
+  resolveMediaUrl,
+} from '@gitroom/helpers/utils/has.extension';
 import { stripLinks } from '@gitroom/helpers/utils/strip.links';
 import { readablePostError } from '@gitroom/helpers/utils/publish.error';
 import { validate } from 'class-validator';
@@ -728,20 +731,21 @@ export class PostsService {
           )
         )
           .map((m) => {
+            const mediaPath = resolveMediaUrl(m.path) || m.path;
             return {
               ...m,
               url:
-                m.path.indexOf('http') === -1
+                mediaPath.indexOf('http') === -1
                   ? process.env.FRONTEND_URL +
                     '/' +
                     process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY +
-                    m.path
-                  : m.path,
+                    mediaPath
+                  : mediaPath,
               type: 'image',
               path:
-                m.path.indexOf('http') === -1
-                  ? process.env.UPLOAD_DIRECTORY + m.path
-                  : m.path,
+                mediaPath.indexOf('http') === -1
+                  ? process.env.UPLOAD_DIRECTORY + mediaPath
+                  : mediaPath,
             };
           })
           .map(async (m) => {

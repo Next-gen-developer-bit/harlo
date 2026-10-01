@@ -17,6 +17,7 @@ import {
   PublishedPostsChannelAnalytics,
   usePublishedPostsAnalytics,
 } from '@gitroom/frontend/components/platform-analytics/use.published.posts.analytics';
+import { resolveMediaUrl } from '@gitroom/helpers/utils/has.extension';
 
 const PLATFORM_COLORS: Record<string, string> = {
   instagram: '#ec4899',
@@ -758,9 +759,9 @@ export const AnalyticsDashboard = () => {
                 <div className="mt-3 divide-y divide-slate-100">
                   {topPosts.map((post) => (
                     <div key={post.id} className="flex items-center gap-3 py-3">
-                      {post.image ? (
+                      {resolveMediaUrl(post.image) ? (
                         <img
-                          src={post.image}
+                          src={resolveMediaUrl(post.image)}
                           alt=""
                           className="h-11 w-11 rounded-lg object-cover"
                         />
