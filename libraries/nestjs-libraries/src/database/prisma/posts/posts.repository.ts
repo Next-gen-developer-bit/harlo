@@ -314,6 +314,7 @@ export class PostsRepository {
           group: true,
           creationMethod: true,
           error: true,
+          image: true,
           tags: {
             select: {
               tag: true,

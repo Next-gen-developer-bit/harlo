@@ -18,7 +18,7 @@ import { InstagramDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-set
 import { Integration } from '@prisma/client';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
 import { Tool } from '@gitroom/nestjs-libraries/integrations/tool.decorator';
-import { hasExtension } from '@gitroom/helpers/utils/has.extension';
+import { hasExtension, resolveMediaUrl } from '@gitroom/helpers/utils/has.extension';
 
 @Rules(
   "Instagram should have at least one attachment, if it's a story, it can have only one picture"
@@ -674,21 +674,35 @@ export class InstagramProvider
           (firstPost?.media?.length || 0) > 1 && !isStory
             ? `&is_carousel_item=true`
             : ``;
-        const mediaType = hasExtension(m.path, 'mp4')
+        const mediaUrl = resolveMediaUrl(m.path);
+        if (!mediaUrl) {
+          throw new BadBody(
+            this.identifier,
+            '{}',
+            '{}',
+            'Instagram could not read the attached file. Remove it and upload it again.'
+          );
+        }
+        // The file URL has to be encoded. A raw `https://` inside the query
+        // string gets collapsed to `https:/`, and Instagram then cannot
+        // download the file.
+        const encodedMedia = encodeURIComponent(mediaUrl);
+        const isVideo = hasExtension(mediaUrl, 'mp4');
+        const thumbOffset =
+          isVideo && !isStory && Number(m?.thumbnailTimestamp) > 0
+            ? `&thumb_offset=${Math.round(Number(m.thumbnailTimestamp))}`
+            : '';
+        const mediaType = isVideo
           ? firstPost?.media?.length === 1
             ? isStory
-              ? `video_url=${m.path}&media_type=STORIES`
-              : `video_url=${m.path}&media_type=REELS&thumb_offset=${
-                  m?.thumbnailTimestamp || 0
-                }`
+              ? `video_url=${encodedMedia}&media_type=STORIES`
+              : `video_url=${encodedMedia}&media_type=REELS${thumbOffset}`
             : isStory
-            ? `video_url=${m.path}&media_type=STORIES`
-            : `video_url=${m.path}&media_type=VIDEO&thumb_offset=${
-                m?.thumbnailTimestamp || 0
-              }`
+            ? `video_url=${encodedMedia}&media_type=STORIES`
+            : `video_url=${encodedMedia}&media_type=VIDEO${thumbOffset}`
           : isStory
-          ? `image_url=${m.path}&media_type=STORIES`
-          : `image_url=${m.path}`;
+          ? `image_url=${encodedMedia}&media_type=STORIES`
+          : `image_url=${encodedMedia}`;
 
         const trialParams = isTrialReel
           ? `&trial_params=${encodeURIComponent(

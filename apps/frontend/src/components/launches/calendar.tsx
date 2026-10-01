@@ -45,6 +45,10 @@ import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { random } from 'lodash';
 import SafeImage from '@gitroom/react/helpers/safe.image';
+import {
+  hasExtension,
+  resolveMediaUrl,
+} from '@gitroom/helpers/utils/has.extension';
 import { extend } from 'dayjs';
 import { isUSCitizen } from './helpers/isuscitizen.utils';
 import { useInterval } from '@mantine/hooks';
@@ -478,16 +482,26 @@ export const WeekView = () => {
   );
 };
 const postThumb = (image?: string | null) => {
-  if (!image) {
-    return null;
+  const url = resolveMediaUrl(image);
+  return url || null;
+};
+
+const MediaThumb: FC<{ src: string; className: string }> = ({
+  src,
+  className,
+}) => {
+  if (hasExtension(src, 'mp4')) {
+    return (
+      <video
+        src={`${src}#t=0.1`}
+        muted
+        playsInline
+        preload="metadata"
+        className={className}
+      />
+    );
   }
-  try {
-    const parsed = JSON.parse(image);
-    const first = Array.isArray(parsed) ? parsed[0] : parsed;
-    return first?.thumbnail || first?.path || first?.url || null;
-  } catch {
-    return image.startsWith('http') || image.startsWith('/') ? image : null;
-  }
+  return <img src={src} alt="" className={className} />;
 };
 
 const platformIconSrc = (identifier?: string) =>
@@ -731,6 +745,7 @@ export const ListView = () => {
                   stripHtmlValidation('none', post.content, false, true, false) ||
                   t('no_content', 'Untitled post');
                 const thumb = postThumb(post.image);
+                const failedPost = group.find((item) => item.state === 'ERROR');
                 const platforms = [
                   ...new Set(
                     group
@@ -747,11 +762,8 @@ export const ListView = () => {
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                           {thumb ? (
-                            <SafeImage
+                            <MediaThumb
                               src={thumb}
-                              alt=""
-                              width={40}
-                              height={40}
                               className="h-10 w-10 object-cover"
                             />
                           ) : null}
@@ -796,6 +808,11 @@ export const ListView = () => {
                       >
                         {statusLabel(state)}
                       </span>
+                      {state === 'ERROR' && failedPost?.error ? (
+                        <div className="mt-1 max-w-[220px] text-xs text-rose-600">
+                          {failedPost.error}
+                        </div>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
@@ -1491,11 +1508,7 @@ const MonthPostCard: FC<{
       )}
       <button type="button" className="block w-full text-left" onClick={editPost}>
         {thumb ? (
-          <img
-            src={thumb}
-            alt=""
-            className="h-[84px] w-full object-cover"
-          />
+          <MediaThumb src={thumb} className="h-[84px] w-full object-cover" />
         ) : (
           <div className="flex h-[84px] items-end bg-slate-100 px-2.5 py-2">
             <p className="line-clamp-3 text-[11px] leading-4 text-slate-500">

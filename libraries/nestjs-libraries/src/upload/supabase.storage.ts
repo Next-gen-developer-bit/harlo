@@ -53,8 +53,10 @@ export class SupabaseStorage implements IUploadProvider {
   }
 
   private publicUrl(key: string) {
-    return this._client.storage.from(this._bucket).getPublicUrl(key).data
-      .publicUrl;
+    return this._client.storage
+      .from(this._bucket)
+      .getPublicUrl(key)
+      .data.publicUrl.replace(/^(https?):\/(?!\/)/i, '$1://');
   }
 
   private async ensureBucket() {
