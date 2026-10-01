@@ -13,24 +13,14 @@ import { useWorkspaceOverview } from '@gitroom/frontend/components/workspace-hom
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
+import { resolveMediaUrl } from '@gitroom/helpers/utils/has.extension';
 const stripCaption = (content?: string) =>
   (content || '')
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim() || 'Untitled post';
 
-const postThumb = (image?: string | null) => {
-  if (!image) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(image);
-    const first = Array.isArray(parsed) ? parsed[0] : parsed;
-    return first?.thumbnail || first?.path || first?.url || null;
-  } catch {
-    return image.startsWith('http') || image.startsWith('/') ? image : null;
-  }
-};
+const postThumb = (image?: string | null) => resolveMediaUrl(image) || null;
 
 const platformSrc = (identifier?: string) =>
   identifier === 'youtube'

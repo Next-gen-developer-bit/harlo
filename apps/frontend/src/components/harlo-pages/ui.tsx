@@ -3,6 +3,7 @@
 import React, { ReactNode } from 'react';
 import Link from 'next/link';
 import clsx from 'clsx';
+import { resolveMediaUrl } from '@gitroom/helpers/utils/has.extension';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    Harlo design primitives
@@ -669,18 +670,7 @@ export const stripCaption = (content?: string | null, fallback = 'Untitled post'
     .replace(/\s+/g, ' ')
     .trim() || fallback;
 
-export const postThumb = (image?: string | null) => {
-  if (!image) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(image);
-    const first = Array.isArray(parsed) ? parsed[0] : parsed;
-    return first?.thumbnail || first?.path || first?.url || null;
-  } catch {
-    return image.startsWith('http') || image.startsWith('/') ? image : null;
-  }
-};
+export const postThumb = (image?: string | null) => resolveMediaUrl(image) || null;
 
 export const Thumb = ({
   src,
