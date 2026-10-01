@@ -793,10 +793,26 @@ export class InstagramProvider
     }
   }
 
+  private postInstagramUpload(uri: string, token: string, bytes: Buffer) {
+    const uploadUrl = new URL(uri);
+    uploadUrl.searchParams.set('access_token', token);
+    return ssrfSafeFetch(uploadUrl.toString(), {
+      method: 'POST',
+      headers: {
+        Authorization: `OAuth ${token}`,
+        offset: '0',
+        file_size: String(bytes.length),
+        'Content-Type': 'application/octet-stream',
+      },
+      body: new Uint8Array(bytes),
+    });
+  }
+
   private async uploadInstagramVideo(params: {
     type: string;
     id: string;
     accessToken: string;
+    userToken?: string;
     mediaKind: string;
     bytes: Buffer;
     query: string;
@@ -817,24 +833,26 @@ export class InstagramProvider
       );
     }
 
-    const upload = await ssrfSafeFetch(uri, {
-      method: 'POST',
-      headers: {
-        Authorization: `OAuth ${params.accessToken}`,
-        offset: '0',
-        file_size: String(params.bytes.length),
-      },
-      body: new Uint8Array(params.bytes),
-    });
-    const uploadText = await upload.text();
-    let success = false;
-    try {
-      success = JSON.parse(uploadText)?.success === true;
-    } catch {
-      success = false;
+    const tokens = [params.accessToken, params.userToken].filter(
+      (token, index, all): token is string =>
+        !!token && all.indexOf(token) === index
+    );
+    let uploadText = '';
+    let uploadOk = false;
+    for (const token of tokens) {
+      const upload = await this.postInstagramUpload(uri, token, params.bytes);
+      uploadText = await upload.text();
+      try {
+        uploadOk = upload.ok && JSON.parse(uploadText)?.success === true;
+      } catch {
+        uploadOk = false;
+      }
+      if (uploadOk || !uploadText.includes('190,')) {
+        break;
+      }
     }
-    if (!upload.ok || !success) {
-      const handle = this.handleErrors(uploadText || '{}', upload.status);
+    if (!uploadOk) {
+      const handle = this.handleErrors(uploadText || '{}', 400);
       throw new BadBody(
         this.identifier,
         uploadText || '{}',
@@ -854,7 +872,7 @@ export class InstagramProvider
     integration: Integration,
     type = 'graph.facebook.com'
   ): Promise<PostResponse[]> {
-    const [accessToken] = token.split('___');
+    const [accessToken, userToken] = token.split('___');
     const [firstPost] = postDetails;
     const isStory = firstPost.settings.post_type === 'story';
     const isTrialReel = this.assetBoolean(firstPost.settings.is_trial_reel);
@@ -954,6 +972,7 @@ export class InstagramProvider
                 type,
                 id,
                 accessToken,
+                userToken,
                 mediaKind,
                 bytes,
                 query: containerQuery,
@@ -1025,8 +1044,8 @@ export class InstagramProvider
     },
     integration: Integration
   ): Promise<PendingCheckResponse> {
-    const [accessToken, userToken] = token.split('___');
-    const checkToken = userToken || accessToken;
+    const [accessToken] = token.split('___');
+    const checkToken = accessToken;
 
     // the carousel container was already created: wait for it
     if (pendingData.carouselId) {
@@ -1091,8 +1110,8 @@ export class InstagramProvider
     },
     integration: Integration
   ): Promise<PendingCheckResponse> {
-    const [accessToken, userToken] = token.split('___');
-    const checkToken = userToken || accessToken;
+    const [accessToken] = token.split('___');
+    const checkToken = accessToken;
     const igId = integration.internalId;
 
     if (pendingData.postType === 'stories') {
