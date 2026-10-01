@@ -11,6 +11,7 @@ import { timer } from '@gitroom/helpers/utils/timer';
 import dayjs from 'dayjs';
 import {
   BadBody,
+  NotEnoughScopes,
   SocialAbstract,
 } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { capitalize, chunk } from 'lodash';
@@ -127,44 +128,107 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
     };
   }
 
+  private threadsError(body: any) {
+    return (
+      body?.error_message ||
+      body?.error?.message ||
+      (typeof body?.error === 'string' ? body.error : '') ||
+      ''
+    );
+  }
+
+  private async threadsJson(url: string, init?: RequestInit) {
+    const response = await fetch(url, init);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || this.threadsError(body)) {
+      throw new NotEnoughScopes(
+        this.threadsError(body) ||
+          `Threads login failed (${response.status}). Check THREADS_APP_ID, THREADS_APP_SECRET, and the redirect URL.`
+      );
+    }
+    return body;
+  }
+
   async authenticate(params: {
     code: string;
     codeVerifier: string;
     refresh?: string;
   }) {
-    const getAccessToken = await (
-      await this.fetch(
-        'https://graph.threads.net/oauth/access_token' +
-          `?client_id=${process.env.THREADS_APP_ID}` +
-          `&redirect_uri=${encodeURIComponent(this.threadsRedirect())}` +
-          `&grant_type=authorization_code` +
-          `&client_secret=${process.env.THREADS_APP_SECRET}` +
-          `&code=${params.code}`
-      )
-    ).json();
+    const appId = process.env.THREADS_APP_ID;
+    const appSecret = process.env.THREADS_APP_SECRET;
+    if (!appId || !appSecret) {
+      throw new NotEnoughScopes(
+        'THREADS_APP_ID or THREADS_APP_SECRET is missing on the API server.'
+      );
+    }
 
-    const { access_token } = await (
-      await this.fetch(
-        'https://graph.threads.net/access_token' +
+    const code = String(params.code || '').replace(/#_$/, '');
+    let shortLived: any;
+    try {
+      shortLived = await this.threadsJson(
+        'https://graph.threads.net/oauth/access_token',
+        { method: 'POST', body: this.threadsTokenForm(code) }
+      );
+    } catch (first) {
+      shortLived = await this.threadsJson(
+        'https://graph.threads.com/oauth/access_token',
+        { method: 'POST', body: this.threadsTokenForm(code) }
+      ).catch(() => {
+        throw first;
+      });
+    }
+
+    const shortToken = shortLived?.access_token;
+    if (!shortToken) {
+      throw new NotEnoughScopes(
+        this.threadsError(shortLived) ||
+          'Threads did not return an access token.'
+      );
+    }
+
+    const longLived = await this.threadsJson(
+      'https://graph.threads.net/access_token' +
+        '?grant_type=th_exchange_token' +
+        `&client_secret=${encodeURIComponent(appSecret)}` +
+        `&access_token=${encodeURIComponent(shortToken)}`
+    ).catch(async () =>
+      this.threadsJson(
+        'https://graph.threads.com/access_token' +
           '?grant_type=th_exchange_token' +
-          `&client_secret=${process.env.THREADS_APP_SECRET}` +
-          `&access_token=${getAccessToken.access_token}`
-      )
-    ).json();
-
-    const { id, name, username, picture } = await this.fetchUserInfo(
-      access_token
+          `&client_secret=${encodeURIComponent(appSecret)}` +
+          `&access_token=${encodeURIComponent(shortToken)}`
+      ).catch(() => ({}))
     );
 
+    const accessToken = longLived?.access_token || shortToken;
+    const { id, name, username, picture } = await this.fetchUserInfo(
+      accessToken
+    );
+    if (!id) {
+      throw new NotEnoughScopes(
+        'Threads did not return an account id. Reconnect and allow all permissions.'
+      );
+    }
+
     return {
-      id,
-      name,
-      accessToken: access_token,
-      refreshToken: access_token,
+      id: String(id),
+      name: name || username || `Channel_${String(id).slice(0, 8)}`,
+      accessToken,
+      refreshToken: accessToken,
       expiresIn: dayjs().add(58, 'days').unix() - dayjs().unix(),
       picture: picture || '',
-      username: username,
+      username: username || '',
     };
+  }
+
+  private threadsTokenForm(code: string) {
+    const formData = new FormData();
+    formData.append('client_id', process.env.THREADS_APP_ID || '');
+    formData.append('client_secret', process.env.THREADS_APP_SECRET || '');
+    formData.append('grant_type', 'authorization_code');
+    formData.append('redirect_uri', this.threadsRedirect());
+    formData.append('code', code);
+    return formData;
   }
 
   // Single, read-only status check of a media container - no loops and no
@@ -224,17 +288,23 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
   }
 
   private async fetchUserInfo(accessToken: string) {
-    const { id, username, threads_profile_picture_url } = await (
-      await this.fetch(
-        `https://graph.threads.net/v1.0/me?fields=id,username,threads_profile_picture_url&access_token=${accessToken}`
+    const profile = await this.threadsJson(
+      `https://graph.threads.net/v1.0/me?fields=id,username,threads_profile_picture_url&access_token=${encodeURIComponent(
+        accessToken
+      )}`
+    ).catch(async () =>
+      this.threadsJson(
+        `https://graph.threads.com/v1.0/me?fields=id,username,threads_profile_picture_url&access_token=${encodeURIComponent(
+          accessToken
+        )}`
       )
-    ).json();
+    );
 
     return {
-      id,
-      name: username,
-      picture: threads_profile_picture_url || '',
-      username,
+      id: profile.id,
+      name: profile.username,
+      picture: profile.threads_profile_picture_url || '',
+      username: profile.username,
     };
   }
 
