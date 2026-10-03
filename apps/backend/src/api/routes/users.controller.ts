@@ -383,6 +383,8 @@ export class UsersController {
     @Body() body: CreateWorkspaceDto,
     @Res({ passthrough: true }) response: Response
   ) {
+    // Delete must win over rename. A missing/false remove with an id used to
+    // rename the workspace and return 200, which looked like a successful delete.
     if (body.remove) {
       return this.removeWorkspaceById(user, org, body.id || '');
     }

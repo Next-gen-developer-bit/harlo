@@ -858,22 +858,21 @@ export const Sidebar: FC = () => {
       }
       const response = await fetch('/user/workspace', {
         method: 'POST',
-        body: JSON.stringify({ id: org.id, name: org.name, remove: true }),
+        // Do not send name here. If remove is ignored, rename must fail validation
+        // instead of returning 200 and looking like a successful delete.
+        body: JSON.stringify({ id: org.id, remove: true }),
       });
-      if (!response.ok) {
-        let message = 'Could not delete this workspace';
-        try {
-          const body = await response.json();
-          const serverMessage = Array.isArray(body?.message)
-            ? body.message[0]
-            : body?.message;
-          if (typeof serverMessage === 'string' && serverMessage) {
-            message = serverMessage;
-          }
-        } catch {
-          // Keep the fallback message.
-        }
-        toast.show(message, 'warning');
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body?.deleted !== true) {
+        const serverMessage = Array.isArray(body?.message)
+          ? body.message[0]
+          : body?.message;
+        toast.show(
+          typeof serverMessage === 'string' && serverMessage
+            ? serverMessage
+            : 'Could not delete this workspace',
+          'warning'
+        );
         return;
       }
       toast.show('Workspace deleted', 'success');
