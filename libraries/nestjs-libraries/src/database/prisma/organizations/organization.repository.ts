@@ -418,6 +418,14 @@ export class OrganizationRepository {
         await tx.messagesGroup.deleteMany({ where: { id: { in: groupIds } } });
       }
 
+      try {
+        await tx.organizationInvite.deleteMany({
+          where: { organizationId: orgId },
+        });
+      } catch {
+        // Table may not exist yet in older databases.
+      }
+
       await tx.userOrganization.deleteMany({ where: { organizationId: orgId } });
       await tx.organization.delete({ where: { id: orgId } });
     }, { timeout: 30000 });

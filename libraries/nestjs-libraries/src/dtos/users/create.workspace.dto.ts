@@ -1,4 +1,11 @@
-import { IsBoolean, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateWorkspaceDto {
   @ValidateIf((body) => !body.remove)
@@ -11,6 +18,7 @@ export class CreateWorkspaceDto {
   id?: string;
 
   @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   remove?: boolean;
 
