@@ -30,6 +30,7 @@ import { UserDetailDto } from '@gitroom/nestjs-libraries/dtos/users/user.details
 import { EmailNotificationsDto } from '@gitroom/nestjs-libraries/dtos/users/email-notifications.dto';
 import { FeedbackDto } from '@gitroom/nestjs-libraries/dtos/users/feedback.dto';
 import { CreateWorkspaceDto } from '@gitroom/nestjs-libraries/dtos/users/create.workspace.dto';
+import { RemoveWorkspaceDto } from '@gitroom/nestjs-libraries/dtos/users/remove.workspace.dto';
 import { HttpForbiddenException } from '@gitroom/nestjs-libraries/services/exception.filter';
 import { RealIP } from 'nestjs-real-ip';
 import { UserAgent } from '@gitroom/nestjs-libraries/user/user.agent';
@@ -371,9 +372,18 @@ export class UsersController {
   async removeWorkspace(
     @GetUserFromRequest() user: User,
     @GetOrgFromRequest() org: Organization,
-    @Body() body: CreateWorkspaceDto
+    @Body() body: RemoveWorkspaceDto
   ) {
-    return this.removeWorkspaceById(user, org, body.id || '');
+    return this.removeWorkspaceById(user, org, body.id);
+  }
+
+  @Post('/workspace/delete')
+  async deleteWorkspacePost(
+    @GetUserFromRequest() user: User,
+    @GetOrgFromRequest() org: Organization,
+    @Body() body: RemoveWorkspaceDto
+  ) {
+    return this.removeWorkspaceById(user, org, body.id);
   }
 
   @Post('/workspace')
@@ -381,12 +391,20 @@ export class UsersController {
     @GetUserFromRequest() user: User,
     @GetOrgFromRequest() org: Organization,
     @Body() body: CreateWorkspaceDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) response: Response
   ) {
-    // Delete must win over rename. A missing/false remove with an id used to
-    // rename the workspace and return 200, which looked like a successful delete.
-    if (body.remove) {
-      return this.removeWorkspaceById(user, org, body.id || '');
+    // Prefer the raw body flag too. With transform:true, undecorated fields can be
+    // dropped before the controller runs on older deploys.
+    const rawRemove = (req as any)?.body?.remove;
+    const shouldRemove =
+      body.remove === true || rawRemove === true || rawRemove === 'true';
+    if (shouldRemove) {
+      return this.removeWorkspaceById(
+        user,
+        org,
+        body.id || String((req as any)?.body?.id || '')
+      );
     }
 
     if (body.id) {

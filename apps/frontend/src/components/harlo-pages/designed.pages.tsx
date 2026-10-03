@@ -291,14 +291,31 @@ export const WorkspacesPage = () => {
 
   const deleteWorkspace = useCallback(
     (org: { id: string; name: string }) => async () => {
-      const response = await fetch('/user/workspace', {
-        method: 'POST',
-        // Do not send name here. If remove is ignored, rename must fail validation
-        // instead of returning 200 and looking like a successful delete.
-        body: JSON.stringify({ id: org.id, remove: true }),
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || body?.deleted !== true) {
+      const attempts = [
+        { url: '/user/workspace/remove', body: { id: org.id } },
+        { url: '/user/workspace/delete', body: { id: org.id } },
+        {
+          url: '/user/workspace',
+          body: { id: org.id, name: org.name, remove: true },
+        },
+      ];
+      let body: any = {};
+      let deleted = false;
+      for (const attempt of attempts) {
+        const response = await fetch(attempt.url, {
+          method: 'POST',
+          body: JSON.stringify(attempt.body),
+        });
+        body = await response.json().catch(() => ({}));
+        if (response.ok && body?.deleted === true) {
+          deleted = true;
+          break;
+        }
+        if (response.status !== 404) {
+          break;
+        }
+      }
+      if (!deleted) {
         const serverMessage = Array.isArray(body?.message)
           ? body.message[0]
           : body?.message;
