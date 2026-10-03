@@ -2,7 +2,7 @@
 
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { useModals } from '@gitroom/frontend/components/layout/new-modal';
 import { useToaster } from '@gitroom/react/toaster/toaster';
@@ -187,6 +187,15 @@ export const TeamsComponent = () => {
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
   const menuRef = useClickAway<HTMLDivElement>(() => setMenuOpenFor(null));
 
+  useEffect(() => {
+    if (
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('tab') === 'pending'
+    ) {
+      setTab('pending');
+    }
+  }, []);
+
   const isGated = user?.tier?.current === 'FREE' || !user?.tier?.team_members;
   const members = data || [];
   const hasTeam = members.length > 0;
@@ -310,6 +319,8 @@ export const TeamsComponent = () => {
             onClose={close}
             onCreated={async () => {
               await mutate();
+              setWorkspaceFilter('all');
+              setTab('pending');
               close();
             }}
           />
@@ -537,11 +548,18 @@ export const TeamsComponent = () => {
                             </div>
                             <div className="min-w-0">
                               <div className="truncate text-sm font-semibold text-slate-900">
-                                {memberName(member)}
-                                {member.user.id === user?.id ? ' (you)' : ''}
+                                {member.status === 'PENDING'
+                                  ? member.user.email
+                                  : memberName(member)}
+                                {member.status !== 'PENDING' &&
+                                member.user.id === user?.id
+                                  ? ' (you)'
+                                  : ''}
                               </div>
                               <div className="truncate text-xs text-slate-400">
-                                {member.user.email}
+                                {member.status === 'PENDING'
+                                  ? 'Invitation sent'
+                                  : member.user.email}
                               </div>
                             </div>
                           </div>
@@ -632,7 +650,9 @@ export const TeamsComponent = () => {
                   {pageItems.length === 0 && (
                     <tr>
                       <Td className="py-10 text-center text-sm text-slate-400">
-                        No members match your filters.
+                        {tab === 'pending'
+                          ? 'No pending invitations.'
+                          : 'No members match your filters.'}
                       </Td>
                     </tr>
                   )}
@@ -649,7 +669,7 @@ export const TeamsComponent = () => {
                 filtered.length === 0 ? 0 : start + 1
               }–${Math.min(start + PAGE_SIZE, filtered.length)} of ${
                 filtered.length
-              } members`}
+              } ${tab === 'pending' ? 'invites' : 'members'}`}
             />
           </>
         )}
@@ -861,7 +881,7 @@ const CreateTeamModal = ({
         );
       }
       if (mode === 'create') {
-        window.location.href = '/teams';
+        window.location.href = '/teams?tab=pending';
         return;
       }
       await onCreated();
