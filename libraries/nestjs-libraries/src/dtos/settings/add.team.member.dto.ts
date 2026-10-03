@@ -3,7 +3,9 @@ import {
   IsDefined,
   IsEmail,
   IsIn,
+  IsOptional,
   IsString,
+  IsUUID,
   ValidateIf,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
@@ -22,4 +24,8 @@ export class AddTeamMemberDto {
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   sendEmail: boolean;
+
+  @IsOptional()
+  @IsUUID()
+  organizationId?: string;
 }

@@ -105,11 +105,64 @@ export class OrganizationService {
 
   async getTeam(orgId: string) {
     const team = await this._organizationRepository.getTeam(orgId);
-    const invites = await this._organizationRepository.listPendingInvites(orgId);
     return {
       users: team?.users || [],
-      invites,
+      invites: await this.safePendingInvites(orgId),
     };
+  }
+
+  async getTeamOverview(userId: string) {
+    const orgs = await this._organizationRepository.getOrgsByUserId(userId);
+    const users: Array<
+      Record<string, unknown> & {
+        organizationId: string;
+        organizationName: string;
+      }
+    > = [];
+    const invites: Array<
+      Record<string, unknown> & {
+        organizationId: string;
+        organizationName: string;
+      }
+    > = [];
+
+    for (const org of orgs) {
+      if (org.users?.[0]?.disabled) {
+        continue;
+      }
+      const team = await this._organizationRepository.getTeam(org.id);
+      for (const member of team?.users || []) {
+        users.push({
+          ...member,
+          organizationId: org.id,
+          organizationName: org.name,
+        });
+      }
+      const pending = await this.safePendingInvites(org.id);
+      for (const invite of pending) {
+        invites.push({
+          ...invite,
+          organizationId: org.id,
+          organizationName: org.name,
+        });
+      }
+    }
+
+    return { users, invites };
+  }
+
+  private async safePendingInvites(orgId: string) {
+    try {
+      return await this._organizationRepository.listPendingInvites(orgId);
+    } catch (err: any) {
+      const missingTable =
+        err?.code === 'P2021' ||
+        String(err?.message || '').includes('OrganizationInvite');
+      if (missingTable) {
+        return [];
+      }
+      throw err;
+    }
   }
 
   async setStreak(organizationId: string, type: 'start' | 'end') {
@@ -121,12 +174,23 @@ export class OrganizationService {
   }
 
   async inviteTeamMember(org: Organization, user: User, body: AddTeamMemberDto) {
+    let target = org;
+    if (body.organizationId && body.organizationId !== org.id) {
+      await this.assertWorkspaceManager(user.id, body.organizationId);
+      const found = await this._organizationRepository.getOrgById(
+        body.organizationId
+      );
+      if (!found) {
+        throw new HttpException('Workspace not found', 400);
+      }
+      target = found;
+    }
     const timeLimit = dayjs().add(2, 'day').format('YYYY-MM-DD HH:mm:ss');
     const id = makeId(5);
     const token = AuthService.signJWT({
       email: body.email,
       role: body.role,
-      orgId: org.id,
+      orgId: target.id,
       timeLimit,
       id,
     });
@@ -137,7 +201,7 @@ export class OrganizationService {
       await this._organizationRepository.saveInvite({
         email: body.email,
         role: body.role === 'ADMIN' ? 'ADMIN' : 'USER',
-        organizationId: org.id,
+        organizationId: target.id,
         invitedById: user.id,
         expiresAt: dayjs().add(2, 'day').toDate(),
       });
@@ -165,10 +229,10 @@ export class OrganizationService {
       const inviter = user.name
         ? `${escapeHtml(user.name)} (${escapeHtml(user.email)})`
         : escapeHtml(user.email);
-      const orgName = escapeHtml(org.name);
+      const orgName = escapeHtml(target.name);
       emailed = await this._notificationsService.sendEmailNow(
         body.email,
-        `${user.name || user.email} invited you to join "${org.name}" on Harlo`,
+        `${user.name || user.email} invited you to join "${target.name}" on Harlo`,
         `<p>${inviter} invited you to join the "${orgName}" workspace on Harlo.</p>
 <p><a href="${url}">Accept the invitation</a> to get started. This link expires in 2 days.</p>
 <p>Use the invited email address (${escapeHtml(body.email)}) when you create an account or sign in.</p>

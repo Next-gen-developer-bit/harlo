@@ -49,6 +49,8 @@ type TeamMember = {
   id: string;
   role: 'SUPERADMIN' | 'ADMIN' | 'USER';
   status?: 'ACTIVE' | 'PENDING';
+  organizationId?: string;
+  organizationName?: string;
   user: {
     email: string;
     id: string;
@@ -119,7 +121,7 @@ const useTeamMembers = () => {
     const payload = await (await fetch('/settings/team')).json();
     const active = ((payload?.users || []) as TeamMember[]).map((member) => ({
       ...member,
-      id: member.id || member.user.id,
+      id: member.id || `${member.organizationId || 'org'}-${member.user.id}`,
       status: 'ACTIVE' as const,
     }));
     const pending = (
@@ -127,11 +129,15 @@ const useTeamMembers = () => {
         id: string;
         email: string;
         role: 'ADMIN' | 'USER';
+        organizationId?: string;
+        organizationName?: string;
       }>
     ).map((invite) => ({
       id: invite.id,
       role: invite.role,
       status: 'PENDING' as const,
+      organizationId: invite.organizationId,
+      organizationName: invite.organizationName,
       user: {
         id: invite.id,
         email: invite.email,
@@ -185,6 +191,9 @@ export const TeamsComponent = () => {
   const members = data || [];
   const hasTeam = members.length > 0;
 
+  const activeMembers = members.filter(
+    (member) => member.status !== 'PENDING'
+  );
   const pendingCount = members.filter(
     (member) => member.status === 'PENDING'
   ).length;
@@ -193,16 +202,16 @@ export const TeamsComponent = () => {
 
   // Role counts (real, derived from the member list)
   const counts = useMemo(() => {
-    const admins = members.filter((m) => m.role === 'ADMIN').length;
-    const editors = members.filter((m) => m.role === 'USER').length;
+    const admins = activeMembers.filter((m) => m.role === 'ADMIN').length;
+    const editors = activeMembers.filter((m) => m.role === 'USER').length;
     return {
-      total: members.length,
+      total: activeMembers.length,
       admins,
       editors,
       // No "viewer" role exists in the data model yet.
       viewers: 0,
     };
-  }, [members]);
+  }, [activeMembers]);
 
   const filtered = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
@@ -210,12 +219,25 @@ export const TeamsComponent = () => {
       if (tab === 'pending' && member.status !== 'PENDING') {
         return false;
       }
+      if (tab === 'members' && member.status === 'PENDING') {
+        return false;
+      }
       if (roleFilter !== 'all' && member.role !== roleFilter) {
         return false;
       }
       if (
+        workspaceFilter !== 'all' &&
+        (member.organizationId || user?.orgId) !== workspaceFilter
+      ) {
+        return false;
+      }
+      if (
         query &&
-        ![memberName(member), member.user.email, orgName]
+        ![
+          memberName(member),
+          member.user.email,
+          member.organizationName || orgName,
+        ]
           .join(' ')
           .toLowerCase()
           .includes(query)
@@ -224,7 +246,7 @@ export const TeamsComponent = () => {
       }
       return true;
     });
-  }, [members, searchQuery, roleFilter, orgName, tab]);
+  }, [members, searchQuery, roleFilter, orgName, tab, workspaceFilter, user?.orgId]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
@@ -237,10 +259,27 @@ export const TeamsComponent = () => {
     { value: 'ADMIN', label: 'Admin' },
     { value: 'USER', label: 'Editor' },
   ];
-  const workspaceOptions = [
-    { value: 'all', label: 'All workspaces' },
-    { value: user?.orgId || 'current', label: orgName },
-  ];
+  const workspaceOptions = useMemo(() => {
+    const names = new Map<string, string>();
+    if (user?.orgId) {
+      names.set(user.orgId, orgName);
+    }
+    for (const member of members) {
+      if (member.organizationId) {
+        names.set(
+          member.organizationId,
+          member.organizationName || orgName
+        );
+      }
+    }
+    return [
+      { value: 'all', label: 'All workspaces' },
+      ...Array.from(names.entries()).map(([value, label]) => ({
+        value,
+        label,
+      })),
+    ];
+  }, [members, orgName, user?.orgId]);
 
   const allOnPageSelected =
     pageItems.length > 0 &&
@@ -414,7 +453,7 @@ export const TeamsComponent = () => {
                   {
                     value: 'members',
                     label: 'Members',
-                    count: members.length,
+                    count: activeMembers.length,
                   },
                   {
                     value: 'pending',
@@ -474,7 +513,7 @@ export const TeamsComponent = () => {
                     const isOwner = member.role === 'SUPERADMIN';
                     return (
                       <tr
-                        key={member.user.id}
+                        key={member.id}
                         className="transition-colors hover:bg-slate-50/60"
                       >
                         <Td>
@@ -514,7 +553,9 @@ export const TeamsComponent = () => {
                         </Td>
                         <Td>
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <Chip tone="slate">{orgName}</Chip>
+                            <Chip tone="slate">
+                              {member.organizationName || orgName}
+                            </Chip>
                           </div>
                         </Td>
                         <Td>
@@ -740,6 +781,7 @@ const CreateTeamModal = ({
     }
     setLoading(true);
     try {
+      let inviteOrganizationId = user?.orgId;
       if (mode === 'create') {
         const created = await fetch('/user/workspace', {
           method: 'POST',
@@ -755,6 +797,10 @@ const CreateTeamModal = ({
             : payload?.message;
           toast.show(message || 'Could not create this team', 'warning');
           return;
+        }
+        const workspace = await created.json().catch(() => ({}));
+        if (workspace?.id) {
+          inviteOrganizationId = workspace.id;
         }
       }
       if (!pendingInvites.length) {
@@ -772,6 +818,9 @@ const CreateTeamModal = ({
             email: invite.email,
             role: invite.role,
             sendEmail: true,
+            ...(inviteOrganizationId
+              ? { organizationId: inviteOrganizationId }
+              : {}),
           }),
         });
         const payload = await response.json().catch(() => ({}));
