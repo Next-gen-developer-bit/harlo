@@ -118,7 +118,11 @@ const platformIcon = (identifier?: string) => {
 const useTeamMembers = () => {
   const fetch = useFetch();
   const loadTeam = useCallback(async () => {
-    const payload = await (await fetch('/settings/team')).json();
+    const response = await fetch('/settings/team');
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload?.message || 'Could not load team members');
+    }
     const active = ((payload?.users || []) as TeamMember[]).map((member) => ({
       ...member,
       id: member.id || `${member.organizationId || 'org'}-${member.user.id}`,
@@ -146,7 +150,10 @@ const useTeamMembers = () => {
     }));
     return [...active, ...pending] as TeamMember[];
   }, [fetch]);
-  return useSWR('/api/teams', loadTeam, { revalidateOnFocus: true });
+  return useSWR('/api/teams', loadTeam, {
+    revalidateOnFocus: true,
+    revalidateOnMount: true,
+  });
 };
 
 const useIntegrationsList = () => {
@@ -831,6 +838,7 @@ const CreateTeamModal = ({
       let allEmailsSent = true;
       let emailConfigured = true;
       const inviteLinks: string[] = [];
+      const savedInviteEmails: string[] = [];
       for (const invite of pendingInvites) {
         const response = await fetch('/settings/team', {
           method: 'POST',
@@ -855,6 +863,11 @@ const CreateTeamModal = ({
         if (payload?.url) {
           inviteLinks.push(payload.url);
         }
+        if (payload?.invite?.email) {
+          savedInviteEmails.push(payload.invite.email);
+        } else {
+          savedInviteEmails.push(invite.email);
+        }
         allEmailsSent = allEmailsSent && Boolean(payload?.emailed);
         emailConfigured =
           emailConfigured && Boolean(payload?.emailConfigured);
@@ -866,7 +879,7 @@ const CreateTeamModal = ({
         toast.show(
           mode === 'create'
             ? 'Team created and invitations sent'
-            : 'Team invitations sent and links copied',
+            : `Invitation sent to ${savedInviteEmails.join(', ')}`,
           'success'
         );
       } else if (emailConfigured) {
@@ -880,11 +893,8 @@ const CreateTeamModal = ({
           'warning'
         );
       }
-      if (mode === 'create') {
-        window.location.href = '/teams?tab=pending';
-        return;
-      }
-      await onCreated();
+      window.location.href = '/teams?tab=pending';
+      return;
     } catch {
       toast.show('Failed to create team', 'warning');
     } finally {
