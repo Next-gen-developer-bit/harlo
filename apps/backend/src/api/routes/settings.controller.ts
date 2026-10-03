@@ -30,8 +30,11 @@ export class SettingsController {
     [AuthorizationActions.Create, Sections.TEAM_MEMBERS],
     [AuthorizationActions.Create, Sections.ADMIN]
   )
-  async getTeam(@GetOrgFromRequest() org: Organization) {
-    return this._organizationService.getTeam(org.id);
+  async getTeam(
+    @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User
+  ) {
+    return this._organizationService.getTeamOverview(user.id);
   }
 
   @Post('/team')
