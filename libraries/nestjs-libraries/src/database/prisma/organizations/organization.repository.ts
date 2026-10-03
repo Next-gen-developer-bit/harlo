@@ -551,21 +551,34 @@ export class OrganizationRepository {
     });
   }
 
-  listPendingInvites(organizationId: string) {
-    return this._invite.model.organizationInvite.findMany({
-      where: {
-        organizationId,
-        acceptedAt: null,
-      },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        expiresAt: true,
-        createdAt: true,
-      },
-    });
+  async listPendingInvites(organizationId: string) {
+    const [invites, members] = await Promise.all([
+      this._invite.model.organizationInvite.findMany({
+        where: { organizationId },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          expiresAt: true,
+          createdAt: true,
+        },
+      }),
+      this._userOrg.model.userOrganization.findMany({
+        where: { organizationId, disabled: false },
+        select: {
+          user: {
+            select: { email: true },
+          },
+        },
+      }),
+    ]);
+    const memberEmails = new Set(
+      members.map((member) => member.user.email.trim().toLowerCase())
+    );
+    return invites.filter(
+      (invite) => !memberEmails.has(invite.email.trim().toLowerCase())
+    );
   }
 
   async acceptInvite(organizationId: string, email: string) {
