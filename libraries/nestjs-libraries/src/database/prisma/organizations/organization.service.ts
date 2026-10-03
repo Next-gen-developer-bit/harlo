@@ -197,8 +197,9 @@ export class OrganizationService {
     const url = `${process.env.FRONTEND_URL}/auth/invite?org=${encodeURIComponent(
       token
     )}`;
+    let savedInvite: { id: string; email: string; role: string } | null = null;
     try {
-      await this._organizationRepository.saveInvite({
+      savedInvite = await this._organizationRepository.saveInvite({
         email: body.email,
         role: body.role === 'ADMIN' ? 'ADMIN' : 'USER',
         organizationId: target.id,
@@ -239,7 +240,20 @@ export class OrganizationService {
 <p>If you were not expecting this invitation, you can ignore this email.</p>`
       );
     }
-    return { url, emailed, emailConfigured };
+    return {
+      url,
+      emailed,
+      emailConfigured,
+      invite: savedInvite
+        ? {
+            id: savedInvite.id,
+            email: savedInvite.email,
+            role: savedInvite.role,
+            organizationId: target.id,
+            organizationName: target.name,
+          }
+        : undefined,
+    };
   }
 
   async addTeamMemberByEmail(org: Organization, body: AdminAddTeamMemberDto) {
