@@ -338,17 +338,23 @@ export const TeamsComponent = () => {
   );
 
   const api = useFetch();
+  const canManageMembers =
+    user?.role === 'SUPERADMIN' || user?.role === 'ADMIN';
+
   const remove = useCallback(
     (toRemove: TeamMember) => async () => {
-      if (
-        !(await deleteDialog(
-          `Are you sure you want to remove ${toRemove.user.email} from the workspace?`
-        ))
-      ) {
+      const isSelf = toRemove.user.id === user?.id;
+      const isPending = toRemove.status === 'PENDING';
+      const question = isPending
+        ? `Cancel the invitation for ${toRemove.user.email}?`
+        : isSelf
+        ? `Leave the workspace as ${toRemove.user.email}?`
+        : `Are you sure you want to remove ${toRemove.user.email} from the workspace?`;
+      if (!(await deleteDialog(question))) {
         return;
       }
       const response = await api(
-        toRemove.status === 'PENDING'
+        isPending
           ? `/settings/team/invite/${toRemove.id}`
           : `/settings/team/${toRemove.user.id}`,
         {
@@ -356,13 +362,27 @@ export const TeamsComponent = () => {
         }
       );
       if (!response.ok) {
-        toast.show('Could not remove this member', 'warning');
+        toast.show(
+          isPending
+            ? 'Could not cancel this invitation'
+            : isSelf
+            ? 'Could not leave this workspace'
+            : 'Could not remove this member',
+          'warning'
+        );
         return;
       }
-      toast.show('Member removed', 'success');
+      toast.show(
+        isPending
+          ? 'Invitation cancelled'
+          : isSelf
+          ? 'You left the workspace'
+          : 'Member removed',
+        'success'
+      );
       await mutate();
     },
-    [api, mutate, toast]
+    [api, mutate, toast, user?.id]
   );
 
   return (
@@ -506,7 +526,7 @@ export const TeamsComponent = () => {
             </div>
 
             {/* Table */}
-            <div className="flex-1">
+            <div className="flex-1 overflow-visible">
               <Table>
                 <thead className="border-b border-slate-100">
                   <tr className="bg-slate-50/60">
@@ -529,6 +549,17 @@ export const TeamsComponent = () => {
                 <tbody className="divide-y divide-slate-100">
                   {pageItems.map((member) => {
                     const isOwner = member.role === 'SUPERADMIN';
+                    const isSelf = member.user.id === user?.id;
+                    const isPending = member.status === 'PENDING';
+                    const menuId = member.id;
+                    const showRemoveOther =
+                      !isPending &&
+                      !isSelf &&
+                      !isOwner &&
+                      canManageMembers;
+                    const showLeaveSelf =
+                      !isPending && isSelf && !isOwner;
+                    const showCancelInvite = isPending && canManageMembers;
                     return (
                       <tr
                         key={member.id}
@@ -555,16 +586,13 @@ export const TeamsComponent = () => {
                             </div>
                             <div className="min-w-0">
                               <div className="truncate text-sm font-semibold text-slate-900">
-                                {member.status === 'PENDING'
+                                {isPending
                                   ? member.user.email
                                   : memberName(member)}
-                                {member.status !== 'PENDING' &&
-                                member.user.id === user?.id
-                                  ? ' (you)'
-                                  : ''}
+                                {!isPending && isSelf ? ' (you)' : ''}
                               </div>
                               <div className="truncate text-xs text-slate-400">
-                                {member.status === 'PENDING'
+                                {isPending
                                   ? 'Invitation sent'
                                   : member.user.email}
                               </div>
@@ -584,7 +612,7 @@ export const TeamsComponent = () => {
                           </div>
                         </Td>
                         <Td>
-                          {member.status === 'PENDING' ? (
+                          {isPending ? (
                             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700">
                               <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                               Pending
@@ -596,18 +624,16 @@ export const TeamsComponent = () => {
                             </span>
                           )}
                         </Td>
-                        <Td>
+                        <Td className="overflow-visible">
                           <div
                             className="relative inline-block"
-                            ref={menuOpenFor === member.user.id ? menuRef : undefined}
+                            ref={menuOpenFor === menuId ? menuRef : undefined}
                           >
                             <button
                               type="button"
                               onClick={() =>
                                 setMenuOpenFor((current) =>
-                                  current === member.user.id
-                                    ? null
-                                    : member.user.id
+                                  current === menuId ? null : menuId
                                 )
                               }
                               className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
@@ -618,35 +644,74 @@ export const TeamsComponent = () => {
                                 className="h-4 w-4"
                               />
                             </button>
-                            {menuOpenFor === member.user.id && (
-                              <div className="absolute right-0 top-9 z-20 w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setMenuOpenFor(null);
-                                    openCreateTeam();
-                                  }}
-                                  className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                                >
-                                  Edit team
-                                </button>
-                                {member.user.id !== user?.id && !isOwner && (
+                            {menuOpenFor === menuId && (
+                              <div className="absolute right-0 bottom-[calc(100%+6px)] z-50 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                                {canManageMembers && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setMenuOpenFor(null);
+                                      openCreateTeam();
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                  >
+                                    Edit team
+                                  </button>
+                                )}
+                                {showRemoveOther && (
                                   <button
                                     type="button"
                                     onClick={() => {
                                       setMenuOpenFor(null);
                                       remove(member)();
                                     }}
-                                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                                    className="w-full px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
                                   >
                                     Remove member
                                   </button>
                                 )}
-                                {isOwner && (
+                                {showLeaveSelf && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setMenuOpenFor(null);
+                                      remove(member)();
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+                                  >
+                                    Leave team
+                                  </button>
+                                )}
+                                {showCancelInvite && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setMenuOpenFor(null);
+                                      remove(member)();
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+                                  >
+                                    Cancel invite
+                                  </button>
+                                )}
+                                {isOwner && !isSelf && (
                                   <div className="px-3 py-2 text-xs text-slate-400">
                                     Owner cannot be removed
                                   </div>
                                 )}
+                                {isOwner && isSelf && (
+                                  <div className="px-3 py-2 text-xs text-slate-400">
+                                    Owners cannot leave this workspace here
+                                  </div>
+                                )}
+                                {!canManageMembers &&
+                                  !showLeaveSelf &&
+                                  !showCancelInvite &&
+                                  !isOwner && (
+                                    <div className="px-3 py-2 text-xs text-slate-400">
+                                      Only owners and admins can manage members
+                                    </div>
+                                  )}
                               </div>
                             )}
                           </div>
