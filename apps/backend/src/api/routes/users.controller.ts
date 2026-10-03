@@ -367,6 +367,15 @@ export class UsersController {
     return renamed;
   }
 
+  @Post('/workspace/remove')
+  async removeWorkspace(
+    @GetUserFromRequest() user: User,
+    @GetOrgFromRequest() org: Organization,
+    @Body() body: CreateWorkspaceDto
+  ) {
+    return this.removeWorkspaceById(user, org, body.id || '');
+  }
+
   @Post('/workspace')
   async createWorkspace(
     @GetUserFromRequest() user: User,
@@ -375,7 +384,7 @@ export class UsersController {
     @Res({ passthrough: true }) response: Response
   ) {
     if (body.remove) {
-      return this.deleteWorkspace(user, org, body.id || '');
+      return this.removeWorkspaceById(user, org, body.id || '');
     }
 
     if (body.id) {
@@ -422,20 +431,19 @@ export class UsersController {
     return this._orgService.renameWorkspaceForUser(user.id, id, body.name);
   }
 
-  @Post('/workspace/remove')
-  async removeWorkspace(
-    @GetUserFromRequest() user: User,
-    @GetOrgFromRequest() org: Organization,
-    @Body('id') id: string
-  ) {
-    return this.deleteWorkspace(user, org, id);
-  }
-
   @Delete('/workspace/:id')
   async deleteWorkspace(
     @GetUserFromRequest() user: User,
     @GetOrgFromRequest() org: Organization,
     @Param('id') id: string
+  ) {
+    return this.removeWorkspaceById(user, org, id);
+  }
+
+  private async removeWorkspaceById(
+    user: User,
+    org: Organization,
+    id: string
   ) {
     if (!id) {
       throw new HttpException('Workspace id is required', 400);
