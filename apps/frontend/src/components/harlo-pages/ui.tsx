@@ -884,7 +884,7 @@ export const Pagination = ({
 
 /** Shared table chrome so every list page looks the same. */
 export const Table = ({ children }: { children: ReactNode }) => (
-  <div className="overflow-x-auto">
+  <div className="overflow-x-auto overflow-y-visible">
     <table className="w-full min-w-[720px] text-left">{children}</table>
   </div>
 );
