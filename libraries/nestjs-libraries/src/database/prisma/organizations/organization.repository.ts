@@ -520,13 +520,66 @@ export class OrganizationRepository {
     } catch (err) {}
   }
 
-  saveInvite(data: {
+  private inviteTableReady: Promise<void> | null = null;
+
+  private ensureInviteTable() {
+    if (!this.inviteTableReady) {
+      this.inviteTableReady = (async () => {
+        const db = this._organization.model as unknown as {
+          $executeRawUnsafe: (query: string) => Promise<unknown>;
+        };
+        await db.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS "OrganizationInvite" (
+            "id" TEXT NOT NULL,
+            "email" TEXT NOT NULL,
+            "role" "Role" NOT NULL DEFAULT 'USER',
+            "organizationId" TEXT NOT NULL,
+            "invitedById" TEXT,
+            "expiresAt" TIMESTAMP(3) NOT NULL,
+            "acceptedAt" TIMESTAMP(3),
+            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "OrganizationInvite_pkey" PRIMARY KEY ("id")
+          )
+        `);
+        await db.$executeRawUnsafe(`
+          DO $$ BEGIN
+            ALTER TABLE "OrganizationInvite"
+              ADD CONSTRAINT "OrganizationInvite_organizationId_fkey"
+              FOREIGN KEY ("organizationId") REFERENCES "Organization"("id")
+              ON DELETE CASCADE ON UPDATE CASCADE;
+          EXCEPTION
+            WHEN duplicate_object THEN NULL;
+          END $$
+        `);
+        await db.$executeRawUnsafe(`
+          CREATE UNIQUE INDEX IF NOT EXISTS "OrganizationInvite_organizationId_email_key"
+            ON "OrganizationInvite"("organizationId", "email")
+        `);
+        await db.$executeRawUnsafe(`
+          CREATE INDEX IF NOT EXISTS "OrganizationInvite_organizationId_idx"
+            ON "OrganizationInvite"("organizationId")
+        `);
+        await db.$executeRawUnsafe(`
+          CREATE INDEX IF NOT EXISTS "OrganizationInvite_email_idx"
+            ON "OrganizationInvite"("email")
+        `);
+      })().catch((err) => {
+        this.inviteTableReady = null;
+        throw err;
+      });
+    }
+    return this.inviteTableReady;
+  }
+
+  async saveInvite(data: {
     email: string;
     role: 'USER' | 'ADMIN';
     organizationId: string;
     invitedById?: string;
     expiresAt: Date;
   }) {
+    await this.ensureInviteTable();
     const email = data.email.trim().toLowerCase();
     return this._invite.model.organizationInvite.upsert({
       where: {
@@ -541,6 +594,7 @@ export class OrganizationRepository {
         organizationId: data.organizationId,
         invitedById: data.invitedById,
         expiresAt: data.expiresAt,
+        acceptedAt: null,
       },
       update: {
         role: data.role === 'ADMIN' ? Role.ADMIN : Role.USER,
@@ -552,9 +606,13 @@ export class OrganizationRepository {
   }
 
   async listPendingInvites(organizationId: string) {
+    await this.ensureInviteTable();
     const [invites, members] = await Promise.all([
       this._invite.model.organizationInvite.findMany({
-        where: { organizationId },
+        where: {
+          organizationId,
+          acceptedAt: null,
+        },
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
@@ -582,6 +640,7 @@ export class OrganizationRepository {
   }
 
   async acceptInvite(organizationId: string, email: string) {
+    await this.ensureInviteTable();
     await this._invite.model.organizationInvite.updateMany({
       where: {
         organizationId,
@@ -592,7 +651,8 @@ export class OrganizationRepository {
     });
   }
 
-  deleteInvite(organizationId: string, inviteId: string) {
+  async deleteInvite(organizationId: string, inviteId: string) {
+    await this.ensureInviteTable();
     return this._invite.model.organizationInvite.deleteMany({
       where: { id: inviteId, organizationId },
     });
