@@ -320,11 +320,15 @@ export class OrganizationService {
     return this._organizationRepository.deleteInvite(orgId, inviteId);
   }
 
-  async deleteTeamMember(org: Organization, userId: string) {
+  async deleteTeamMember(
+    org: Organization,
+    userId: string,
+    actingUserId?: string
+  ) {
     const userOrgs = await this._organizationRepository.getOrgsByUserId(userId);
     const findOrgToDelete = userOrgs.find((orgUser) => orgUser.id === org.id);
     if (!findOrgToDelete) {
-      throw new Error('User is not part of this organization');
+      throw new HttpException('User is not part of this organization', 400);
     }
 
     // @ts-ignore
@@ -332,9 +336,24 @@ export class OrganizationService {
     const userRole = findOrgToDelete.users[0].role;
     const myLevel = myRole === 'USER' ? 0 : myRole === 'ADMIN' ? 1 : 2;
     const userLevel = userRole === 'USER' ? 0 : userRole === 'ADMIN' ? 1 : 2;
+    const isSelf = !!actingUserId && actingUserId === userId;
+
+    if (userRole === 'SUPERADMIN') {
+      throw new HttpException('Owner cannot be removed', 400);
+    }
+
+    if (!isSelf && myLevel < 1) {
+      throw new HttpException(
+        'Only owners and admins can remove other members',
+        400
+      );
+    }
 
     if (myLevel < userLevel) {
-      throw new Error('You do not have permission to delete this user');
+      throw new HttpException(
+        'You do not have permission to delete this user',
+        400
+      );
     }
 
     return this._organizationRepository.deleteTeamMember(org.id, userId);

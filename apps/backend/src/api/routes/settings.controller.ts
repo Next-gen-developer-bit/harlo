@@ -76,15 +76,13 @@ export class SettingsController {
   }
 
   @Delete('/team/:id')
-  @CheckPolicies(
-    [AuthorizationActions.Create, Sections.TEAM_MEMBERS],
-    [AuthorizationActions.Create, Sections.ADMIN]
-  )
+  @CheckPolicies([AuthorizationActions.Create, Sections.TEAM_MEMBERS])
   deleteTeamMember(
     @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
     @Param('id') id: string
   ) {
-    return this._organizationService.deleteTeamMember(org, id);
+    return this._organizationService.deleteTeamMember(org, id, user.id);
   }
 
   @Get('/shortlink')
