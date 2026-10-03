@@ -291,9 +291,9 @@ export const WorkspacesPage = () => {
 
   const deleteWorkspace = useCallback(
     (org: { id: string; name: string }) => async () => {
-      const response = await fetch('/user/workspace/remove', {
+      const response = await fetch('/user/workspace', {
         method: 'POST',
-        body: JSON.stringify({ id: org.id, name: org.name }),
+        body: JSON.stringify({ id: org.id, name: org.name, remove: true }),
       });
       if (!response.ok) {
         let message = 'Could not delete this workspace';
