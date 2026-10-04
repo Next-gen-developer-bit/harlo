@@ -57,11 +57,12 @@ export class AuthMiddleware implements NestMiddleware {
         throw new HttpForbiddenException();
       }
 
-      // Reject tokens issued before the user logged out of all devices
+      // Reject tokens issued at or before the user logged out of all devices
       if (user.tokenRevokedAt) {
         const iat = (payload as any).iat;
-        // If the token has no iat or was issued before revocation, reject it
-        if (!iat || iat < Math.floor(user.tokenRevokedAt.getTime() / 1000)) {
+        const revokedAtSec = Math.floor(user.tokenRevokedAt.getTime() / 1000);
+        // If the token has no iat or was issued at/before revocation, reject it
+        if (!iat || iat <= revokedAtSec) {
           removeAuth(res);
           throw new HttpForbiddenException();
         }

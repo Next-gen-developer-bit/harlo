@@ -264,32 +264,16 @@ export class UsersRepository {
   }
 
   async revokeAllTokens(userId: string) {
-    try {
-      return await this._user.model.user.update({
-        where: {
-          id: userId,
-        },
-        data: {
-          tokenRevokedAt: new Date(),
-        },
-      });
-    } catch (err) {
-      try {
-        await this._transaction.model.$executeRawUnsafe(
-          `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "tokenRevokedAt" TIMESTAMP(3);`
-        );
-        return await this._user.model.user.update({
-          where: {
-            id: userId,
-          },
-          data: {
-            tokenRevokedAt: new Date(),
-          },
-        });
-      } catch (innerErr) {
-        return null;
-      }
-    }
+    return this._user.model.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        // Subtract 1s so tokens minted in the same second as logout are revoked
+        // (JWT iat is second-precision; middleware rejects iat <= tokenRevokedAt).
+        tokenRevokedAt: new Date(Date.now() - 1000),
+      },
+    });
   }
 
   async getEmailNotifications(userId: string) {

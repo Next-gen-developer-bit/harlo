@@ -51,11 +51,15 @@ function LayoutContextInner(params: { children: ReactNode }) {
       if (impersonate) {
         setCookie('impersonate', impersonate, 365);
       }
-      if (logout && !isSecured) {
-        setCookie('auth', '', -10);
-        setCookie('showorg', '', -10);
-        setCookie('impersonate', '', -10);
-        window.location.assign('/login');
+      if (logout) {
+        if (!isSecured) {
+          setCookie('auth', '', -10);
+          setCookie('showorg', '', -10);
+          setCookie('impersonate', '', -10);
+        }
+        // Clear httpOnly cookies via the Next.js proxy, then land on /login.
+        // Direct /login redirects bounce back to /overview if auth is still set.
+        window.location.assign('/auth/logout');
         return true;
       }
       const app = window.location.origin;
@@ -93,7 +97,7 @@ function LayoutContextInner(params: { children: ReactNode }) {
         return true;
       }
 
-      if (response.status === 401 || response?.headers?.get('logout')) {
+      if (response.status === 401) {
         const path =
           typeof window !== 'undefined' ? window.location.pathname : '';
         const authPath =
@@ -111,7 +115,8 @@ function LayoutContextInner(params: { children: ReactNode }) {
           setCookie('showorg', '', -10);
           setCookie('impersonate', '', -10);
         }
-        window.location.assign('/login');
+        window.location.assign('/auth/logout');
+        return true;
       }
       if (response.status === 406) {
         if (

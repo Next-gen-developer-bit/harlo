@@ -271,17 +271,18 @@ export const SettingsPopup = () => {
     setLoggingOutAll(true);
     setShowLogoutModal(false);
     try {
-      // The backend returns a `logout: true` response header which the
-      // afterRequest hook in layout.context.tsx detects and redirects to /login.
+      // Revoke all sessions server-side (sets tokenRevokedAt + clears API cookies).
       await fetch('/user/logout-all-devices', {
         method: 'POST',
       });
     } catch {
-      // On network failure, redirect manually as a fallback.
-      window.location.replace('/login');
-    } finally {
-      setLoggingOutAll(false);
+      // Still clear the local session below even if the API call fails.
     }
+    // Always finish via the Next.js /auth/logout route. That clears the
+    // httpOnly auth cookie on this domain, then redirects to /login.
+    // Going straight to /login is unsafe: if the cookie is still present,
+    // the proxy bounces the user back to /overview and logout looks broken.
+    window.location.href = '/auth/logout';
   }, [fetch]);
 
   const photoSrc = picture?.path
