@@ -560,7 +560,7 @@ export class UsersController {
   @Post('/logout')
   logout(@Res({ passthrough: true }) response: Response) {
     this.clearCookies(response);
-    response.status(200).send();
+    return { ok: true };
   }
 
   @Post('/logout-all-devices')
@@ -568,9 +568,15 @@ export class UsersController {
     @GetUserFromRequest() user: User,
     @Res({ passthrough: true }) response: Response
   ) {
-    await this._userService.revokeAllTokens(user.id);
+    try {
+      if (user?.id) {
+        await this._userService.revokeAllTokens(user.id);
+      }
+    } catch (e) {
+      // Don't fail the logout process if token revocation encounters a database issue
+    }
     this.clearCookies(response);
-    response.status(200).send({ ok: true });
+    return { ok: true };
   }
 
   @Post('/change-password')

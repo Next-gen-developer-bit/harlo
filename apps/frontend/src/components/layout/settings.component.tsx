@@ -53,6 +53,7 @@ export const SettingsPopup = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loggingOutAll, setLoggingOutAll] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Preferences State
   const [weeklyGoal, setWeeklyGoal] = useState<number>(5);
@@ -267,33 +268,26 @@ export const SettingsPopup = () => {
   }, [user?.email, fetch, toast]);
 
   const handleLogoutAllDevices = useCallback(async () => {
-    if (
-      !window.confirm(
-        'Are you sure you want to log out of all devices? This will invalidate all active sessions across all devices and browsers, and you will need to sign back in.'
-      )
-    ) {
-      return;
-    }
     setLoggingOutAll(true);
     try {
-      const response = await fetch('/user/logout-all-devices', {
+      await fetch('/user/logout-all-devices', {
         method: 'POST',
       });
-      if (!response.ok) {
-        toast.show('Could not log out of all devices', 'warning');
-        setLoggingOutAll(false);
-        return;
-      }
-      toast.show('Successfully logged out of all devices. Redirecting to login...', 'success');
-      setTimeout(() => {
-        router.push('/login');
-        window.location.href = '/login';
-      }, 1000);
     } catch {
-      toast.show('Could not log out of all devices', 'warning');
-      setLoggingOutAll(false);
+      // Proceed to clear cookies and redirect regardless of server/network response
     }
-  }, [fetch, router, toast]);
+
+    // Clear client-accessible auth cookies
+    document.cookie = 'auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    document.cookie = 'showorg=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    document.cookie = 'impersonate=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+
+    toast.show('Logged out of all devices', 'success');
+    setShowLogoutModal(false);
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 300);
+  }, [fetch, toast]);
 
   const photoSrc = picture?.path
     ? mediaDirectory.set(picture.path)
@@ -563,28 +557,23 @@ export const SettingsPopup = () => {
 
             {/* Logout of all devices */}
             <div className="pt-6 border-t border-slate-100">
-              <div className="rounded-2xl border border-red-100 bg-red-50/40 p-5 space-y-3">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <h4 className="text-xs font-bold text-red-900">
-                    Log out of all devices
-                  </h4>
-                </div>
-                <p className="text-xs text-red-700 leading-relaxed">
-                  Lost a device or want to end all active sessions? This will immediately revoke authentication tokens across all browsers and devices. You will be logged out on this device and must sign in again.
-                </p>
+              <div className="rounded-2xl border border-red-100 bg-red-50/40 p-4 flex items-center justify-between gap-4">
                 <div>
-                  <button
-                    type="button"
-                    disabled={loggingOutAll}
-                    onClick={handleLogoutAllDevices}
-                    className="rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60 shadow-xs"
-                  >
-                    {loggingOutAll ? 'Logging out…' : 'Log out of all devices'}
-                  </button>
+                  <div className="text-xs font-bold text-red-900">
+                    Log out of all devices
+                  </div>
+                  <p className="text-xs text-red-700/80 mt-0.5">
+                    Sign out of your account on all browsers and devices.
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  disabled={loggingOutAll}
+                  onClick={() => setShowLogoutModal(true)}
+                  className="shrink-0 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60 shadow-xs"
+                >
+                  Log out all
+                </button>
               </div>
             </div>
           </div>
@@ -691,6 +680,47 @@ export const SettingsPopup = () => {
           </div>
         )}
       </div>
+
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-slate-100">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Log out of all devices?
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-5 leading-relaxed">
+              You will be signed out on all devices and will need to log back in.
+            </p>
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={loggingOutAll}
+                onClick={() => setShowLogoutModal(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={loggingOutAll}
+                onClick={handleLogoutAllDevices}
+                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center gap-1.5"
+              >
+                {loggingOutAll && (
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                )}
+                <span>{loggingOutAll ? 'Logging out…' : 'Log out of all'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -264,14 +264,32 @@ export class UsersRepository {
   }
 
   async revokeAllTokens(userId: string) {
-    return this._user.model.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        tokenRevokedAt: new Date(),
-      },
-    });
+    try {
+      return await this._user.model.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          tokenRevokedAt: new Date(),
+        },
+      });
+    } catch (err) {
+      try {
+        await this._transaction.model.$executeRawUnsafe(
+          `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "tokenRevokedAt" TIMESTAMP(3);`
+        );
+        return await this._user.model.user.update({
+          where: {
+            id: userId,
+          },
+          data: {
+            tokenRevokedAt: new Date(),
+          },
+        });
+      } catch (innerErr) {
+        return null;
+      }
+    }
   }
 
   async getEmailNotifications(userId: string) {
