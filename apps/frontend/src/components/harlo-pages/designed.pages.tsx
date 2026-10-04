@@ -16,6 +16,7 @@ import {
 } from '@gitroom/frontend/components/platform-analytics/use.published.posts.analytics';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
+import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { expandPostsList } from '@gitroom/helpers/utils/posts.list.minify';
 
 const shell =
@@ -291,31 +292,20 @@ export const WorkspacesPage = () => {
 
   const deleteWorkspace = useCallback(
     (org: { id: string; name: string }) => async () => {
-      const attempts = [
-        { url: '/user/workspace/remove', body: { id: org.id } },
-        { url: '/user/workspace/delete', body: { id: org.id } },
-        {
-          url: '/user/workspace',
-          body: { id: org.id, name: org.name, remove: true },
-        },
-      ];
-      let body: any = {};
-      let deleted = false;
-      for (const attempt of attempts) {
-        const response = await fetch(attempt.url, {
-          method: 'POST',
-          body: JSON.stringify(attempt.body),
-        });
-        body = await response.json().catch(() => ({}));
-        if (response.ok && body?.deleted === true) {
-          deleted = true;
-          break;
-        }
-        if (response.status !== 404) {
-          break;
-        }
+      if (
+        !(await deleteDialog(
+          `Delete ${org.name}? Posts and connected accounts in that workspace will be removed.`,
+          'Yes, delete'
+        ))
+      ) {
+        return;
       }
-      if (!deleted) {
+      const response = await fetch('/user/workspace/remove', {
+        method: 'POST',
+        body: JSON.stringify({ id: org.id }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body?.deleted !== true) {
         const serverMessage = Array.isArray(body?.message)
           ? body.message[0]
           : body?.message;
@@ -328,7 +318,13 @@ export const WorkspacesPage = () => {
         return;
       }
       toast.show('Workspace deleted', 'success');
-      await mutate();
+      // Active-workspace deletes set a reload header; otherwise refresh the list.
+      if (!body?.switchedTo) {
+        await mutate(
+          (current) => current?.filter((item) => item.id !== org.id),
+          { revalidate: true }
+        );
+      }
     },
     [fetch, mutate, toast]
   );
@@ -473,23 +469,21 @@ export const WorkspacesPage = () => {
                   Active
                 </span>
               ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={deleteWorkspace(org)}
-                    className="text-sm font-semibold text-red-500 hover:text-red-600"
-                  >
-                    Delete
-                  </button>
-                  <button
-                    type="button"
-                    onClick={switchWorkspace(org.id)}
-                    className="text-sm font-semibold text-blue-600 hover:text-blue-700"
-                  >
-                    Switch
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={switchWorkspace(org.id)}
+                  className="text-sm font-semibold text-blue-600 hover:text-blue-700"
+                >
+                  Switch
+                </button>
               )}
+              <button
+                type="button"
+                onClick={deleteWorkspace(org)}
+                className="text-sm font-semibold text-red-500 hover:text-red-600"
+              >
+                Delete
+              </button>
             </div>
           </div>
         ))}

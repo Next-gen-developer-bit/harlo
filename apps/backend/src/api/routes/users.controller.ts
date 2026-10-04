@@ -373,18 +373,20 @@ export class UsersController {
   async removeWorkspace(
     @GetUserFromRequest() user: User,
     @GetOrgFromRequest() org: Organization,
-    @Body() body: RemoveWorkspaceDto
+    @Body() body: RemoveWorkspaceDto,
+    @Res({ passthrough: true }) response: Response
   ) {
-    return this.removeWorkspaceById(user, org, body.id);
+    return this.removeWorkspaceById(user, org, body.id, response);
   }
 
   @Post('/workspace/delete')
   async deleteWorkspacePost(
     @GetUserFromRequest() user: User,
     @GetOrgFromRequest() org: Organization,
-    @Body() body: RemoveWorkspaceDto
+    @Body() body: RemoveWorkspaceDto,
+    @Res({ passthrough: true }) response: Response
   ) {
-    return this.removeWorkspaceById(user, org, body.id);
+    return this.removeWorkspaceById(user, org, body.id, response);
   }
 
   @Post('/workspace')
@@ -404,7 +406,8 @@ export class UsersController {
       return this.removeWorkspaceById(
         user,
         org,
-        body.id || String((req as any)?.body?.id || '')
+        body.id || String((req as any)?.body?.id || ''),
+        response
       );
     }
 
@@ -456,27 +459,57 @@ export class UsersController {
   async deleteWorkspace(
     @GetUserFromRequest() user: User,
     @GetOrgFromRequest() org: Organization,
-    @Param('id') id: string
+    @Param('id') id: string,
+    @Res({ passthrough: true }) response: Response
   ) {
-    return this.removeWorkspaceById(user, org, id);
+    return this.removeWorkspaceById(user, org, id, response);
   }
 
   private async removeWorkspaceById(
     user: User,
     org: Organization,
-    id: string
+    id: string,
+    response?: Response
   ) {
     if (!id) {
       throw new HttpException('Workspace id is required', 400);
     }
+
+    // Deleting the active workspace used to require a separate switch first.
+    // Auto-switch to another workspace so one delete action is enough.
+    let switchedTo: string | undefined;
     if (org?.id === id) {
-      throw new HttpException(
-        'Switch to another workspace before deleting this one',
-        400
+      const orgs = await this._orgService.getOrgsByUserId(user.id);
+      const fallback = orgs.find(
+        (candidate) =>
+          candidate.id !== id && !candidate.users?.[0]?.disabled
       );
+      if (!fallback) {
+        throw new HttpException(
+          'You need to keep at least one workspace',
+          400
+        );
+      }
+      switchedTo = fallback.id;
+      if (response) {
+        response.cookie('showorg', switchedTo, {
+          domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
+          ...(!process.env.NOT_SECURED
+            ? {
+                secure: true,
+                httpOnly: true,
+                sameSite: 'none' as const,
+              }
+            : {}),
+          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+        });
+        response.header('showorg', switchedTo);
+        response.header('reload', 'true');
+      }
     }
+
     await this._orgService.deleteWorkspaceForUser(user.id, id);
-    return { deleted: true };
+    return { deleted: true, ...(switchedTo ? { switchedTo } : {}) };
   }
 
   @Post('/feedback')

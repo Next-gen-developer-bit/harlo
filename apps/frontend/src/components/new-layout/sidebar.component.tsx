@@ -857,32 +857,12 @@ export const Sidebar: FC = () => {
       ) {
         return;
       }
-      const attempts = [
-        { url: '/user/workspace/remove', body: { id: org.id } },
-        { url: '/user/workspace/delete', body: { id: org.id } },
-        {
-          url: '/user/workspace',
-          body: { id: org.id, name: org.name, remove: true },
-        },
-      ];
-      let body: any = {};
-      let deleted = false;
-      for (const attempt of attempts) {
-        const response = await fetch(attempt.url, {
-          method: 'POST',
-          body: JSON.stringify(attempt.body),
-        });
-        body = await response.json().catch(() => ({}));
-        if (response.ok && body?.deleted === true) {
-          deleted = true;
-          break;
-        }
-        // Try the next route when this one is missing on an older API deploy.
-        if (response.status !== 404) {
-          break;
-        }
-      }
-      if (!deleted) {
+      const response = await fetch('/user/workspace/remove', {
+        method: 'POST',
+        body: JSON.stringify({ id: org.id }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body?.deleted !== true) {
         const serverMessage = Array.isArray(body?.message)
           ? body.message[0]
           : body?.message;
@@ -895,7 +875,13 @@ export const Sidebar: FC = () => {
         return;
       }
       toast.show('Workspace deleted', 'success');
-      await mutateOrganizations();
+      // Active-workspace deletes set a reload header; otherwise refresh the list.
+      if (!body?.switchedTo) {
+        await mutateOrganizations(
+          (current) => current?.filter((item: { id: string }) => item.id !== org.id),
+          { revalidate: true }
+        );
+      }
     },
     [fetch, mutateOrganizations, toast]
   );
