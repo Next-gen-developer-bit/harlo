@@ -29,6 +29,7 @@ import { UsersService } from '@gitroom/nestjs-libraries/database/prisma/users/us
 import { UserDetailDto } from '@gitroom/nestjs-libraries/dtos/users/user.details.dto';
 import { EmailNotificationsDto } from '@gitroom/nestjs-libraries/dtos/users/email-notifications.dto';
 import { FeedbackDto } from '@gitroom/nestjs-libraries/dtos/users/feedback.dto';
+import { ChangePasswordDto } from '@gitroom/nestjs-libraries/dtos/users/change.password.dto';
 import { CreateWorkspaceDto } from '@gitroom/nestjs-libraries/dtos/users/create.workspace.dto';
 import { RemoveWorkspaceDto } from '@gitroom/nestjs-libraries/dtos/users/remove.workspace.dto';
 import { HttpForbiddenException } from '@gitroom/nestjs-libraries/services/exception.filter';
@@ -514,8 +515,7 @@ export class UsersController {
     response.status(200).send();
   }
 
-  @Post('/logout')
-  logout(@Res({ passthrough: true }) response: Response) {
+  private clearCookies(response: Response) {
     response.header('logout', 'true');
     response.cookie('auth', '', {
       domain: getCookieUrlFromDomain(process.env.FRONTEND_URL!),
@@ -555,8 +555,52 @@ export class UsersController {
       maxAge: -1,
       expires: new Date(0),
     });
+  }
 
+  @Post('/logout')
+  logout(@Res({ passthrough: true }) response: Response) {
+    this.clearCookies(response);
     response.status(200).send();
+  }
+
+  @Post('/logout-all-devices')
+  async logoutAllDevices(
+    @GetUserFromRequest() user: User,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    await this._userService.revokeAllTokens(user.id);
+    this.clearCookies(response);
+    response.status(200).send({ ok: true });
+  }
+
+  @Post('/change-password')
+  async changePassword(
+    @GetUserFromRequest() user: User,
+    @Body() body: ChangePasswordDto
+  ) {
+    if (user.providerName !== 'LOCAL') {
+      throw new HttpException(
+        'Password change is only available for email/password accounts.',
+        400
+      );
+    }
+
+    if (
+      !user.password ||
+      !AuthChecker.comparePassword(body.currentPassword, user.password)
+    ) {
+      throw new HttpException('Current password is incorrect.', 400);
+    }
+
+    if (!body.newPassword || body.newPassword.length < 8) {
+      throw new HttpException(
+        'New password must be at least 8 characters long.',
+        400
+      );
+    }
+
+    await this._userService.updatePassword(user.id, body.newPassword);
+    return { ok: true };
   }
 
   @Post('/t')

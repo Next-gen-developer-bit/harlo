@@ -210,9 +210,13 @@ export class AuthService {
     }
   }
 
-  async forgot(email: string) {
+  async forgot(email: string): Promise<boolean> {
     const user = await this._userService.getUserByEmail(email);
     if (!user || user.providerName !== Provider.LOCAL) {
+      return false;
+    }
+
+    if (!this._notificationService.hasEmailProvider()) {
       return false;
     }
 
@@ -224,20 +228,28 @@ export class AuthService {
     await this._notificationService.sendEmail(
       user.email,
       'Reset your password',
-      `You have requested to reset your passsord. <br />Click <a href="${process.env.FRONTEND_URL}/auth/forgot/${resetValues}">here</a> to reset your password<br />The link will expire in 20 minutes`
+      `You have requested to reset your password. <br />Click <a href="${process.env.FRONTEND_URL}/auth/forgot/${encodeURIComponent(
+        resetValues
+      )}">here</a> to reset your password<br />The link will expire in 20 minutes`
     );
+
+    return true;
   }
 
-  forgotReturn(body: ForgotReturnPasswordDto) {
-    const user = AuthChecker.verifyJWT(body.token) as {
-      id: string;
-      expires: string;
-    };
-    if (dayjs(user.expires).isBefore(dayjs())) {
+  async forgotReturn(body: ForgotReturnPasswordDto) {
+    try {
+      const user = AuthChecker.verifyJWT(body.token) as {
+        id: string;
+        expires: string;
+      };
+      if (!user?.id || dayjs(user.expires).isBefore(dayjs())) {
+        return false;
+      }
+
+      return await this._userService.updatePassword(user.id, body.password);
+    } catch {
       return false;
     }
-
-    return this._userService.updatePassword(user.id, body.password);
   }
 
   async activate(code: string, tracking: string) {
@@ -497,6 +509,6 @@ export class AuthService {
     if (user.password) {
       delete user.password;
     }
-    return AuthChecker.signJWT(user);
+    return AuthChecker.signJWT({ ...user, iat: Math.floor(Date.now() / 1000) });
   }
 }

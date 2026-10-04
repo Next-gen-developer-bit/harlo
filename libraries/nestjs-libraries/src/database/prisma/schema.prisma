@@ -114,6 +114,7 @@ model User {
   sendFailureEmails     Boolean              @default(true)
   sendStreakEmails      Boolean              @default(true)
   oauthAuthorizations   OAuthAuthorization[]
+  tokenRevokedAt        DateTime?
 
   @@unique([email, providerName])
   @@index([lastReadNotifications])

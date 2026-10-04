@@ -106,6 +106,10 @@ export class UsersService {
     return this._usersRepository.changePersonal(userId, body);
   }
 
+  revokeAllTokens(userId: string) {
+    return this._usersRepository.revokeAllTokens(userId);
+  }
+
   getEmailNotifications(userId: string) {
     return this._usersRepository.getEmailNotifications(userId);
   }

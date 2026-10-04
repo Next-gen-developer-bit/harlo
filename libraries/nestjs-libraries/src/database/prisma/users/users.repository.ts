@@ -238,22 +238,38 @@ export class UsersRepository {
   }
 
   async changePersonal(userId: string, body: UserDetailDto) {
+    const data: any = {
+      name: body.fullname,
+      bio: body.bio,
+    };
+
+    if (body.picture) {
+      data.picture = {
+        connect: {
+          id: body.picture.id,
+        },
+      };
+    } else if (body.picture === null) {
+      data.picture = {
+        disconnect: true,
+      };
+    }
+
     await this._user.model.user.update({
       where: {
         id: userId,
       },
+      data,
+    });
+  }
+
+  async revokeAllTokens(userId: string) {
+    return this._user.model.user.update({
+      where: {
+        id: userId,
+      },
       data: {
-        name: body.fullname,
-        bio: body.bio,
-        picture: body.picture
-          ? {
-              connect: {
-                id: body.picture.id,
-              },
-            }
-          : {
-              disconnect: true,
-            },
+        tokenRevokedAt: new Date(),
       },
     });
   }

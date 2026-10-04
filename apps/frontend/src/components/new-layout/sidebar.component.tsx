@@ -14,6 +14,7 @@ import { FeedbackModal } from '@gitroom/frontend/components/feedback/feedback.mo
 import { useOrganizations } from '@gitroom/frontend/components/layout/use.organizations';
 import { useClickAway } from '@uidotdev/usehooks';
 import { useToaster } from '@gitroom/react/toaster/toaster';
+import { resolveMediaUrl } from '@gitroom/helpers/utils/has.extension';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    SIDEBAR STYLES — Harlo Social Official Brand Identity
@@ -1308,7 +1309,7 @@ export const Sidebar: FC = () => {
           <img
             src={
               // @ts-ignore picture may be included from /user/self
-              user?.picture?.path ||
+              (user?.picture?.path ? resolveMediaUrl(user.picture.path) : '') ||
               `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
                 user?.email || user?.name || 'Harlo Social'
               )}`
