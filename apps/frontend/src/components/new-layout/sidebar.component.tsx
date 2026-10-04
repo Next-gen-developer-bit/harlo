@@ -1306,15 +1306,19 @@ export const Sidebar: FC = () => {
           onClick={() => setAccountOpen((open) => !open)}
         >
           <img
-            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
-              user?.email || user?.name || 'Harlo Social'
-            )}`}
+            src={
+              // @ts-ignore picture may be included from /user/self
+              user?.picture?.path ||
+              `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+                user?.email || user?.name || 'Harlo Social'
+              )}`
+            }
             alt="User"
             className="pb-user-avatar"
           />
           <div className="pb-user-info">
             <div className="pb-user-email">
-              {user?.email || user?.name || 'Account'}
+              {user?.name || user?.email || 'Account'}
             </div>
             <div className="pb-user-plan">
               {planLabel(user?.tier?.current)} Plan

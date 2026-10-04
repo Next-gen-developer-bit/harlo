@@ -5,10 +5,11 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UserDetailDto {
   @IsString()
-  @MinLength(3)
+  @MinLength(2)
   fullname: string;
 
   @IsString()
@@ -17,5 +18,6 @@ export class UserDetailDto {
 
   @IsOptional()
   @ValidateNested()
-  picture: MediaDto;
+  @Type(() => MediaDto)
+  picture?: MediaDto;
 }
