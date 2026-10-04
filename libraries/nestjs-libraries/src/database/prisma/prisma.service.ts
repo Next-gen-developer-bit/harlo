@@ -21,6 +21,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       try {
         await this.$connect();
         this.logger.log('Database connection established.');
+        await this.ensureAdditiveSchema();
         return;
       } catch (err: any) {
         this.logger.warn(
@@ -34,6 +35,22 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           throw err;
         }
       }
+    }
+  }
+
+  /**
+   * Safety net for deploys that start the API without `prisma db push`
+   * (e.g. Render `npm run start`). Only additive, nullable columns.
+   */
+  private async ensureAdditiveSchema() {
+    try {
+      await this.$executeRaw`
+        ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "tokenRevokedAt" TIMESTAMP(3)
+      `;
+    } catch (err: any) {
+      this.logger.warn(
+        `Could not ensure User.tokenRevokedAt column: ${err?.message ?? err}`
+      );
     }
   }
 

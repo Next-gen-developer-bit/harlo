@@ -17,7 +17,9 @@ services:
     runtime: node
     plan: starter
     buildCommand: corepack enable && corepack prepare pnpm@10.6.1 --activate && pnpm install --frozen-lockfile && NODE_OPTIONS=--max-old-space-size=4096 pnpm run build:backend
-    startCommand: npm run start
+    # `pnpm run start` runs prisma-db-push before booting the API so new
+    # schema columns (e.g. User.tokenRevokedAt) exist before auth queries run.
+    startCommand: pnpm run start
     healthCheckPath: /
     envVars:
       - key: NODE_VERSION
