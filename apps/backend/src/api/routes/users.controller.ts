@@ -560,6 +560,7 @@ export class UsersController {
   @Post('/logout')
   logout(@Res({ passthrough: true }) response: Response) {
     this.clearCookies(response);
+    response.header('logout', 'true');
     return { ok: true };
   }
 
@@ -576,6 +577,7 @@ export class UsersController {
       // Don't fail the logout process if token revocation encounters a database issue
     }
     this.clearCookies(response);
+    response.header('logout', 'true');
     return { ok: true };
   }
 

@@ -10,7 +10,7 @@ import { Webhooks } from '@gitroom/frontend/components/webhooks/webhooks';
 import { showMediaBox } from '@gitroom/frontend/components/media/media.component';
 import { useMediaDirectory } from '@gitroom/react/helpers/use.media.directory';
 import { useSWRConfig } from 'swr';
-import { useRouter } from 'next/navigation';
+
 import clsx from 'clsx';
 
 type ProfilePicture = {
@@ -30,7 +30,7 @@ export const SettingsPopup = () => {
   const toast = useToaster();
   const user = useUser();
   const { mutate } = useSWRConfig();
-  const router = useRouter();
+
   const mediaDirectory = useMediaDirectory();
 
   const [activeTab, setActiveTab] = useState<
@@ -269,25 +269,20 @@ export const SettingsPopup = () => {
 
   const handleLogoutAllDevices = useCallback(async () => {
     setLoggingOutAll(true);
+    setShowLogoutModal(false);
     try {
+      // The backend returns a `logout: true` response header which the
+      // afterRequest hook in layout.context.tsx detects and redirects to /login.
       await fetch('/user/logout-all-devices', {
         method: 'POST',
       });
     } catch {
-      // Proceed to clear cookies and redirect regardless of server/network response
+      // On network failure, redirect manually as a fallback.
+      window.location.replace('/login');
+    } finally {
+      setLoggingOutAll(false);
     }
-
-    // Clear client-accessible auth cookies
-    document.cookie = 'auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    document.cookie = 'showorg=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    document.cookie = 'impersonate=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-
-    toast.show('Logged out of all devices', 'success');
-    setShowLogoutModal(false);
-    setTimeout(() => {
-      window.location.href = '/login';
-    }, 300);
-  }, [fetch, toast]);
+  }, [fetch]);
 
   const photoSrc = picture?.path
     ? mediaDirectory.set(picture.path)
