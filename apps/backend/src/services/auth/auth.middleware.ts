@@ -57,6 +57,16 @@ export class AuthMiddleware implements NestMiddleware {
         throw new HttpForbiddenException();
       }
 
+      // Reject tokens issued before the user logged out of all devices
+      if (user.tokenRevokedAt) {
+        const iat = (payload as any).iat;
+        // If the token has no iat or was issued before revocation, reject it
+        if (!iat || iat < Math.floor(user.tokenRevokedAt.getTime() / 1000)) {
+          removeAuth(res);
+          throw new HttpForbiddenException();
+        }
+      }
+
       const impersonate = req.cookies.impersonate || req.headers.impersonate;
       if (user?.isSuperAdmin && impersonate) {
         const loadImpersonate = await this._organizationService.getUserOrg(

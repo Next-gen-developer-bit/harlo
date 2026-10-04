@@ -349,9 +349,9 @@ export class AuthController {
   @Post('/forgot')
   async forgot(@Body() body: ForgotPasswordDto) {
     try {
-      await this._authService.forgot(body.email);
+      const result = await this._authService.forgot(body.email);
       return {
-        forgot: true,
+        forgot: result !== false,
       };
     } catch (e) {
       return {

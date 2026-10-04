@@ -176,18 +176,39 @@ export const ShowMediaBoxModal: FC = () => {
     setCallBack(undefined);
   }, []);
   useEffect(() => {
-    showModalEmitter.on('show-modal', (cCallback) => {
+    const handler = (cCallback: any) => {
       setShowModal(true);
       setCallBack(() => cCallback);
-    });
+    };
+    showModalEmitter.on('show-modal', handler);
     return () => {
-      showModalEmitter.removeAllListeners('show-modal');
+      showModalEmitter.off('show-modal', handler);
     };
   }, []);
   if (!showModal) return null;
   return (
-    <div className="text-textColor">
-      <MediaBox setMedia={callBack!} closeModal={closeModal} />
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto">
+      <div className="relative w-full max-w-5xl h-[85vh] max-h-[820px] bg-sixth rounded-2xl shadow-2xl border border-tableBorder p-6 flex flex-col overflow-hidden text-textColor">
+        <button
+          type="button"
+          onClick={closeModal}
+          className="absolute top-4 right-4 z-50 text-gray-400 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
+          aria-label="Close"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <MediaBox
+          setMedia={(items) => {
+            if (callBack) {
+              callBack(items);
+            }
+            closeModal();
+          }}
+          closeModal={closeModal}
+        />
+      </div>
     </div>
   );
 };
@@ -224,7 +245,7 @@ export const MediaBox: FC<{
   standalone?: boolean;
   type?: 'image' | 'video';
   closeModal: () => void;
-}> = ({ type, standalone, setMedia, onCreatePost }) => {
+}> = ({ type, standalone, setMedia, onCreatePost, closeModal }) => {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebounce(search, 300);
@@ -292,8 +313,9 @@ export const MediaBox: FC<{
     }
     // @ts-ignore
     setMedia(selected);
+    closeModal?.();
     modals.closeCurrent();
-  }, [selected]);
+  }, [selected, closeModal]);
 
   const addToUpload = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
@@ -756,7 +778,10 @@ export const MediaBox: FC<{
         {!standalone && (
           <div className="flex justify-end mt-[32px] gap-[8px]">
             <button
-              onClick={() => modals.closeCurrent()}
+              onClick={() => {
+                closeModal?.();
+                modals.closeCurrent();
+              }}
               className="cursor-pointer h-[52px] px-[20px] items-center justify-center border border-newTextColor/10 flex rounded-[10px]"
             >
               {t('cancel', 'Cancel')}
