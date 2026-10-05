@@ -56,10 +56,10 @@ const isInternalMessage = (text: string) =>
   ].some((pattern) => pattern.test(text));
 
 const isActionableValidation = (text: string) =>
-  /\b(maximum|minimum|at least|at most|too (?:long|large|small)|required|only supports?|does not support|cannot|can't|should|must|invalid|corrupt|unsupported|rejected|violat|flagged|already|please (?:edit|check|remove|add|select|try))\b/i.test(
+  /\b(maximum|minimum|at least|at most|too (?:long|large|small)|required|only supports?|does not support|cannot|can't|should|must|invalid|corrupt|unsupported|rejected|violat|flagged|already|accessible|please (?:edit|check|remove|add|select|try|configure))\b/i.test(
     text
   ) &&
-  /\b(post|comment|caption|character|media|image|photo|video|file|attachment|hashtag|cashtag|link|url|board|page|content|story|article|account|upload)\b/i.test(
+  /\b(post|comment|caption|character|media|image|photo|video|file|attachment|hashtag|cashtag|link|url|board|page|content|story|article|account|upload|storage)\b/i.test(
     text
   );
 

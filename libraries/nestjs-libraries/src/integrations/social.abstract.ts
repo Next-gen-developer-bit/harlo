@@ -204,48 +204,67 @@ export abstract class SocialAbstract {
       // this.fetch applies to every other outbound request. identity encoding
       // so content-length matches the bytes a later GET actually streams
       // (fetch transparently decompresses encoded bodies).
-      const head = await ssrfSafeFetch(path, {
-        method: 'HEAD',
-        headers: { 'accept-encoding': 'identity' },
-      });
-      const length = Number(head.headers.get('content-length'));
-      // A failed HEAD can still carry a content-length (of the error body),
-      // and a zero/NaN size would poison chunk-count math downstream.
-      if (head.ok && Number.isFinite(length) && length > 0) {
-        return length;
-      }
+      try {
+        const head = await ssrfSafeFetch(path, {
+          method: 'HEAD',
+          headers: { 'accept-encoding': 'identity' },
+        });
+        const length = Number(head.headers.get('content-length'));
+        // A failed HEAD can still carry a content-length (of the error body),
+        // and a zero/NaN size would poison chunk-count math downstream.
+        if (head.ok && Number.isFinite(length) && length > 0) {
+          return length;
+        }
 
-      // Object stores (Supabase/S3) often omit Content-Length on HEAD.
-      // A 1-byte range probe returns Content-Range: bytes 0-0/<total>.
-      const probe = await ssrfSafeFetch(path, {
-        method: 'GET',
-        headers: {
-          Range: 'bytes=0-0',
-          'accept-encoding': 'identity',
-        },
-      });
-      await probe.arrayBuffer().catch(() => undefined);
-      const total = probe.headers
-        .get('content-range')
-        ?.match(/\/(\d+)\s*$/)?.[1];
-      if (total && Number(total) > 0) {
-        return Number(total);
-      }
-      const probeLength = Number(probe.headers.get('content-length'));
-      if (
-        (probe.ok || probe.status === 206) &&
-        Number.isFinite(probeLength) &&
-        probeLength > 0
-      ) {
-        return probeLength;
-      }
+        // Object stores (Supabase/S3) often omit Content-Length on HEAD.
+        // A 1-byte range probe returns Content-Range: bytes 0-0/<total>.
+        const probe = await ssrfSafeFetch(path, {
+          method: 'GET',
+          headers: {
+            Range: 'bytes=0-0',
+            'accept-encoding': 'identity',
+          },
+        });
+        await probe.arrayBuffer().catch(() => undefined);
+        const total = probe.headers
+          .get('content-range')
+          ?.match(/\/(\d+)\s*$/)?.[1];
+        if (total && Number(total) > 0) {
+          return Number(total);
+        }
+        const probeLength = Number(probe.headers.get('content-length'));
+        if (
+          (probe.ok || probe.status === 206) &&
+          Number.isFinite(probeLength) &&
+          probeLength > 0
+        ) {
+          return probeLength;
+        }
 
-      throw new BadBody(
-        identifier,
-        '{}',
-        Buffer.from('{}'),
-        'Could not determine the media size for upload'
-      );
+        throw new BadBody(
+          identifier,
+          '{}',
+          Buffer.from('{}'),
+          'Could not determine the media size for upload'
+        );
+      } catch (fetchErr: any) {
+        if (fetchErr instanceof ApplicationFailure) {
+          throw fetchErr;
+        }
+        const msg = String(fetchErr?.message || fetchErr || '');
+        const isNetworkOrSsrf =
+          /blocked ip|private|unreachable|econnrefused|econnreset|etimedout|dns|network/i.test(
+            msg
+          );
+        throw new BadBody(
+          identifier,
+          '{}',
+          Buffer.from('{}'),
+          isNetworkOrSsrf
+            ? 'The media file is not publicly accessible. Please configure a public storage provider (e.g. Cloudflare R2 or Supabase) so the platform can access it.'
+            : 'Could not access the media file for upload'
+        );
+      }
     }
 
     return statSync(path).size;
@@ -261,12 +280,29 @@ export abstract class SocialAbstract {
     identifier = ''
   ): Promise<Buffer> {
     if (path.indexOf('http') === 0) {
-      const response = await ssrfSafeFetch(path, {
-        headers: {
-          Range: `bytes=${start}-${end}`,
-          'accept-encoding': 'identity',
-        },
-      });
+      let response: Response;
+      try {
+        response = await ssrfSafeFetch(path, {
+          headers: {
+            Range: `bytes=${start}-${end}`,
+            'accept-encoding': 'identity',
+          },
+        });
+      } catch (fetchErr: any) {
+        const msg = String(fetchErr?.message || fetchErr || '');
+        const isNetworkOrSsrf =
+          /blocked ip|private|unreachable|econnrefused|econnreset|etimedout|dns|network/i.test(
+            msg
+          );
+        throw new BadBody(
+          identifier,
+          '{}',
+          Buffer.from('{}'),
+          isNetworkOrSsrf
+            ? 'The media file is not publicly accessible. Please configure a public storage provider (e.g. Cloudflare R2 or Supabase) so the platform can access it.'
+            : 'Could not access the media file for upload'
+        );
+      }
       // Anything but 206 means the server ignored the Range header: buffering
       // response.body here would silently load the whole file into memory and
       // upload corrupted chunks.
@@ -303,9 +339,26 @@ export abstract class SocialAbstract {
 
     // identity encoding so the streamed byte count matches the size mediaSize
     // reported - a decompressed body would overflow any declared length.
-    const response = await ssrfSafeFetch(path, {
-      headers: { 'accept-encoding': 'identity' },
-    });
+    let response: Response;
+    try {
+      response = await ssrfSafeFetch(path, {
+        headers: { 'accept-encoding': 'identity' },
+      });
+    } catch (fetchErr: any) {
+      const msg = String(fetchErr?.message || fetchErr || '');
+      const isNetworkOrSsrf =
+        /blocked ip|private|unreachable|econnrefused|econnreset|etimedout|dns|network/i.test(
+          msg
+        );
+      throw new BadBody(
+        identifier,
+        '{}',
+        Buffer.from('{}'),
+        isNetworkOrSsrf
+          ? 'The media file is not publicly accessible. Please configure a public storage provider (e.g. Cloudflare R2 or Supabase) so the platform can access it.'
+          : 'Could not access the media file for upload'
+      );
+    }
 
     if (!response.ok || !response.body) {
       throw new BadBody(

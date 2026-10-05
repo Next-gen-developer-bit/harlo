@@ -767,7 +767,29 @@ export class InstagramProvider
   // Instagram often cannot fetch a storage URL (error 2207027). Upload the
   // video bytes to their resumable endpoint instead, then publish that container.
   private async instagramVideoBytes(mediaUrl: string): Promise<Buffer | null> {
-    const response = await ssrfSafeFetch(mediaUrl);
+    let response: Response;
+    try {
+      response = await ssrfSafeFetch(mediaUrl);
+    } catch (fetchErr: any) {
+      // The most common cause here is a private/blocked IP: the media file is
+      // stored on a local server whose IP is not publicly routable. Instagram
+      // cannot reach it either, so give a clear, actionable error instead of
+      // the generic "platform unavailable" message.
+      const msg = String(fetchErr?.message || fetchErr || '');
+      const isNetworkOrSsrf =
+        /blocked ip|private|unreachable|econnrefused|econnreset|etimedout|dns|network/i.test(
+          msg
+        );
+      throw new BadBody(
+        this.identifier,
+        '{}',
+        '{}',
+        isNetworkOrSsrf
+          ? 'The video file is not publicly accessible. Please configure a public storage provider (e.g. Cloudflare R2) so Instagram can download the media.'
+          : 'Instagram could not read the video file. Please try uploading it again.'
+      );
+    }
+
     if (!response.ok) {
       throw new BadBody(
         this.identifier,
