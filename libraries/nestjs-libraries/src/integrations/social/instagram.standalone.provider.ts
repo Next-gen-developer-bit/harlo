@@ -169,12 +169,16 @@ export class InstagramStandaloneProvider
   }
 
   async generateAuthUrl() {
+    const appId = process.env.INSTAGRAM_APP_ID;
+    if (!appId) {
+      throw new Error(
+        'INSTAGRAM_APP_ID is not set on the API server. Add it to your environment and restart.'
+      );
+    }
     const state = makeId(6);
     return {
       url:
-        `https://www.instagram.com/oauth/authorize?enable_fb_login=0&client_id=${
-          process.env.INSTAGRAM_APP_ID
-        }&redirect_uri=${encodeURIComponent(
+        `https://www.instagram.com/oauth/authorize?enable_fb_login=0&client_id=${appId}&redirect_uri=${encodeURIComponent(
           this.redirectUri()
         )}&response_type=code&scope=${encodeURIComponent(
           this.scopes.join(',')

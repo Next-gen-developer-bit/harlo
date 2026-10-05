@@ -482,7 +482,7 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
     if (status === 'FAILED') {
       const handleError = this.handleErrors(JSON.stringify(post));
       throw new BadBody(
-        'titok-error-upload',
+        'tiktok-error-upload',
         JSON.stringify(post),
         Buffer.from(JSON.stringify(post)),
         handleError?.value || ''
@@ -922,7 +922,7 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
     }
 
     throw new BadBody(
-      'titok-error-upload',
+      'tiktok-error-upload',
       JSON.stringify({}),
       Buffer.from(JSON.stringify({})),
       'TikTok refused to publish your post'

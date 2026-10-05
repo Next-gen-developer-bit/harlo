@@ -955,7 +955,13 @@ export class InstagramProvider
               )}`
             : ``;
 
-        const containerQuery = `${isCarousel}${collaborators}${trialParams}${audioConfiguration}${thumbOffset}${caption}`;
+        // thumb_offset must NOT appear in containerQuery:
+        // • single-video resumable-upload: it is already embedded in the mediaType string
+        //   used as the `query` param passed to uploadInstagramVideo, so adding it again
+        //   produces a duplicate param and Instagram returns error 2207057.
+        // • carousel child containers: Instagram does not support thumb_offset for carousel
+        //   items at all — sending it also triggers error 2207057.
+        const containerQuery = `${isCarousel}${collaborators}${trialParams}${audioConfiguration}${caption}`;
         let photoId = '';
         if (isVideo) {
           const bytes = await this.instagramVideoBytes(mediaUrl);
