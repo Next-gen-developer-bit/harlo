@@ -37,10 +37,30 @@ class MockRedis {
   }
 }
 
+function createRedis() {
+  const redisUrl = (process.env.REDIS_URL || '').trim();
+  if (!redisUrl) {
+    return new MockRedis() as unknown as Redis;
+  }
+  try {
+    const parsed = new URL(redisUrl);
+    if (parsed.protocol !== 'redis:' && parsed.protocol !== 'rediss:') {
+      console.warn(
+        `REDIS_URL must start with redis:// or rediss:// (got ${parsed.protocol}). Using in-memory mock.`
+      );
+      return new MockRedis() as unknown as Redis;
+    }
+  } catch {
+    console.warn(
+      'REDIS_URL is not a valid URL. Using in-memory mock. Example: redis://default:PASSWORD@host:6379'
+    );
+    return new MockRedis() as unknown as Redis;
+  }
+  return new Redis(redisUrl, {
+    maxRetriesPerRequest: null,
+    connectTimeout: 10000,
+  });
+}
+
 // Use real Redis if REDIS_URL is defined, otherwise use MockRedis
-export const ioRedis = process.env.REDIS_URL
-  ? new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: null,
-      connectTimeout: 10000,
-    })
-  : (new MockRedis() as unknown as Redis); // Type cast to Redis to maintain interface compatibility
+export const ioRedis = createRedis();

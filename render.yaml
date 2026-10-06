@@ -2,14 +2,23 @@
 # This repo is a pnpm monorepo. Do not use `npm install`.
 #
 # In the Render dashboard, set:
-#   Build command: corepack enable && corepack prepare pnpm@10.6.1 --activate && pnpm install --frozen-lockfile && pnpm run build:backend
-#   Start command: npm run start
-#   (or: pnpm run start:prod:backend)
+#   Build command: corepack enable && corepack prepare pnpm@10.6.1 --activate && pnpm install --frozen-lockfile && NODE_OPTIONS=--max-old-space-size=4096 pnpm run build:backend
+#   Start command: pnpm run start
 # Do not use `pnpm run build` on this service — that also compiles the Next.js
 # frontend and will run the instance out of memory.
 # Frontend belongs on Vercel. Orchestrator is a second worker service with
 #   pnpm run build:orchestrator / pnpm run start:prod:orchestrator
 # and Temporal must be reachable at TEMPORAL_ADDRESS.
+#
+# Required env vars (full URLs with https:// — missing protocol causes Invalid URL):
+#   DATABASE_URL              Supabase session pooler :5432 + sslmode=require
+#   FRONTEND_URL              https://app.your-domain.com
+#   MAIN_URL                  https://app.your-domain.com
+#   NEXT_PUBLIC_BACKEND_URL   https://YOUR-SERVICE.onrender.com
+#   BACKEND_INTERNAL_URL      https://YOUR-SERVICE.onrender.com
+#   JWT_SECRET                openssl rand -base64 48
+#   REDIS_URL                 redis://... or rediss://... (optional but recommended)
+# URL-encode special characters in DB/Redis passwords (@ → %40, # → %23).
 
 services:
   - type: web
@@ -26,3 +35,5 @@ services:
         value: 22.23.2
       - key: NODE_ENV
         value: production
+      - key: HOST
+        value: 0.0.0.0

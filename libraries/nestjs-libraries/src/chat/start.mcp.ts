@@ -18,6 +18,23 @@ const fixAcceptHeader = (req: Request) => {
 };
 
 export const startMcp = async (app: INestApplication) => {
+  const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || '').trim();
+  if (!backendUrl) {
+    console.warn(
+      'Skipping MCP server: NEXT_PUBLIC_BACKEND_URL is not set (must be a full URL like https://api.example.com)'
+    );
+    return;
+  }
+  try {
+    // Validate early so a missing protocol (e.g. "api.example.com") fails clearly.
+    new URL(backendUrl);
+  } catch {
+    console.warn(
+      `Skipping MCP server: NEXT_PUBLIC_BACKEND_URL is not a valid URL: ${backendUrl}`
+    );
+    return;
+  }
+
   const mastraService = app.get(MastraService, { strict: false });
   const organizationService = app.get(OrganizationService, { strict: false });
   const oauthService = app.get(OAuthService, { strict: false });
@@ -44,7 +61,7 @@ export const startMcp = async (app: INestApplication) => {
 
   const server = new MCPServer(serverConfig);
 
-  const oauthResource = new URL('/mcp-oauth', process.env.NEXT_PUBLIC_BACKEND_URL!).toString();
+  const oauthResource = new URL('/mcp-oauth', backendUrl).toString();
   const oauthMiddleware = createOAuthMiddleware({
     oauth: {
       resource: oauthResource,
@@ -76,7 +93,7 @@ export const startMcp = async (app: INestApplication) => {
       return;
     }
 
-    const url = new URL('/.well-known/oauth-protected-resource', process.env.NEXT_PUBLIC_BACKEND_URL);
+    const url = new URL('/.well-known/oauth-protected-resource', backendUrl);
     await oauthMiddleware(req, res, url);
   });
 
@@ -101,7 +118,7 @@ export const startMcp = async (app: INestApplication) => {
       // belongs to the path-based issuer <backend>/mcp-oauth
       issuer: oauthResource,
       authorization_endpoint: `${process.env.FRONTEND_URL}/oauth/authorize`,
-      token_endpoint: `${process.env.NEXT_PUBLIC_OVERRIDE_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL}/oauth/token`,
+      token_endpoint: `${process.env.NEXT_PUBLIC_OVERRIDE_BACKEND_URL || backendUrl}/oauth/token`,
       response_types_supported: ['code'],
       grant_types_supported: ['authorization_code'],
       code_challenge_methods_supported: ['S256'],
@@ -116,7 +133,7 @@ export const startMcp = async (app: INestApplication) => {
       return;
     }
 
-    const url = new URL('/mcp-oauth', process.env.NEXT_PUBLIC_BACKEND_URL);
+    const url = new URL('/mcp-oauth', backendUrl);
 
     const result = await oauthMiddleware(req, res, url);
     if (!result.proceed) return;
@@ -175,7 +192,7 @@ export const startMcp = async (app: INestApplication) => {
       return;
     }
 
-    const url = new URL('/mcp', process.env.NEXT_PUBLIC_BACKEND_URL);
+    const url = new URL('/mcp', backendUrl);
 
     fixAcceptHeader(req);
     // @ts-ignore
@@ -213,10 +230,7 @@ export const startMcp = async (app: INestApplication) => {
       return;
     }
 
-    const url = new URL(
-      `/mcp/${req.params.id}`,
-      process.env.NEXT_PUBLIC_BACKEND_URL
-    );
+    const url = new URL(`/mcp/${req.params.id}`, backendUrl);
 
     fixAcceptHeader(req);
     await runWithContext(
@@ -257,7 +271,7 @@ export const startMcp = async (app: INestApplication) => {
       return;
     }
 
-    const url = new URL(req.originalUrl, process.env.NEXT_PUBLIC_BACKEND_URL);
+    const url = new URL(req.originalUrl, backendUrl);
 
     await runWithContext(
       // @ts-ignore

@@ -105,17 +105,20 @@ async function start() {
 
   loadSwagger(app);
 
-  const port = process.env.PORT || 3000;
+  // Render (and most PaaS) require binding 0.0.0.0 so the port scanner can see it.
+  const port = Number(process.env.PORT) || 3000;
+  const host = process.env.HOST || '0.0.0.0';
 
   try {
-    await app.listen(port);
-    console.log('Backend started successfully on port ' + port);
+    await app.listen(port, host);
+    console.log(`Backend started successfully on ${host}:${port}`);
 
     checkConfiguration(); // Do this last, so that users will see obvious issues at the end of the startup log without having to scroll up.
 
-    Logger.log(`🚀 Backend is running on: http://localhost:${port}`);
+    Logger.log(`🚀 Backend is running on: http://${host}:${port}`);
   } catch (e) {
-    Logger.error(`Backend failed to start on port ${port}`, e);
+    Logger.error(`Backend failed to start on ${host}:${port}`, e);
+    process.exit(1);
   }
 }
 
