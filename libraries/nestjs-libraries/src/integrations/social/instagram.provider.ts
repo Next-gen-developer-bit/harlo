@@ -489,6 +489,23 @@ export class InstagramProvider
       };
     }
 
+    // Media hosted on a private/local URL (common when STORAGE_PROVIDER=local
+    // on Render) — Instagram cannot download it.
+    if (
+      body.toLowerCase().includes('media download') ||
+      body.toLowerCase().includes('cannot download') ||
+      body.toLowerCase().includes('unable to download') ||
+      body.toLowerCase().includes('image_url is not a valid uri') ||
+      body.toLowerCase().includes('video_url is not a valid uri') ||
+      body.toLowerCase().includes('only photo or video can be accepted')
+    ) {
+      return {
+        type: 'bad-body' as const,
+        value:
+          'Instagram could not download the media. Use a public storage provider (Supabase or Cloudflare R2) and upload the file again.',
+      };
+    }
+
     return undefined;
   }
 

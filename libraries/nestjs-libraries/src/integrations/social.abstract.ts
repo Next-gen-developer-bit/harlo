@@ -474,6 +474,26 @@ export abstract class SocialAbstract {
     return value;
   }
 
+  /** Pull a human-readable message from Graph-style API error JSON. */
+  protected platformErrorMessage(json: string): string {
+    try {
+      const parsed = JSON.parse(json);
+      const err = parsed?.error || parsed;
+      const msg =
+        err?.error_user_msg ||
+        err?.error_user_title ||
+        err?.message ||
+        err?.error_message ||
+        err?.status;
+      if (typeof msg === 'string' && msg.trim()) {
+        return msg.replace(/\s+/g, ' ').trim().slice(0, 280);
+      }
+    } catch {
+      // not JSON
+    }
+    return '';
+  }
+
   async fetch(
     url: string,
     options: RequestInit = {},
@@ -501,13 +521,18 @@ export abstract class SocialAbstract {
       json = '{}';
     }
 
+    const handleError = this.handleErrors(json || '{}', request.status);
+    const nextMessage =
+      handleError?.value ||
+      message ||
+      this.platformErrorMessage(json) ||
+      'Unknown Error';
+
     if (totalRetries > 2) {
       // Include the platform's actual response body so the failure is
       // diagnosable, instead of an empty '{}'.
-      throw new BadBody(identifier, json, options.body || '{}', message);
+      throw new BadBody(identifier, json, options.body || '{}', nextMessage);
     }
-
-    const handleError = this.handleErrors(json || '{}', request.status);
 
     if (
       request.status === 429 ||
@@ -522,7 +547,7 @@ export abstract class SocialAbstract {
         identifier,
         totalRetries + 1,
         ignoreConcurrency,
-        handleError?.value || 'Unknown Error'
+        nextMessage
       );
     }
 
@@ -534,7 +559,7 @@ export abstract class SocialAbstract {
         identifier,
         totalRetries + 1,
         ignoreConcurrency,
-        handleError?.value || 'Unknown Error'
+        nextMessage
       );
     }
 
@@ -547,7 +572,7 @@ export abstract class SocialAbstract {
         identifier,
         json,
         options.body!,
-        handleError?.value
+        handleError?.value || this.platformErrorMessage(json)
       );
     }
 
@@ -555,7 +580,7 @@ export abstract class SocialAbstract {
       identifier,
       json,
       options.body!,
-      handleError?.value || 'Unknown Error'
+      nextMessage
     );
   }
 

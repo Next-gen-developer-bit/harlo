@@ -135,28 +135,83 @@ const polish = (message: string) => {
   return firstLine;
 };
 
+const fromPlatformJson = (json: unknown): string | undefined => {
+  if (!json) {
+    return undefined;
+  }
+  let parsed = json;
+  if (typeof json === 'string') {
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      return undefined;
+    }
+  }
+  const err = (parsed as any)?.error || parsed;
+  if ((err as any)?.code === 29) {
+    return TRIAL_MESSAGE;
+  }
+  const msg =
+    (err as any)?.error_user_msg ||
+    (err as any)?.error_user_title ||
+    (err as any)?.message ||
+    (err as any)?.error_message ||
+    (err as any)?.status;
+  if (typeof msg === 'string' && msg.trim()) {
+    return polish(msg);
+  }
+  return undefined;
+};
+
 const fromTemporalDetails = (value: unknown): string | undefined => {
   const payloads =
     (value as any)?.cause?.failure?.applicationFailureInfo?.details?.payloads ||
     (value as any)?.failure?.applicationFailureInfo?.details?.payloads ||
     (value as any)?.applicationFailureInfo?.details?.payloads ||
+    (value as any)?.cause?.details ||
+    (value as any)?.details ||
     [];
 
-  for (const payload of payloads) {
-    const raw = decodeBase64(payload?.data || '');
-    if (!raw) {
+  const list = Array.isArray(payloads) ? payloads : [payloads];
+
+  for (const payload of list) {
+    // Temporal base64 payload, or already-decoded BadBody detail object
+    const raw =
+      typeof payload?.data === 'string'
+        ? decodeBase64(payload.data)
+        : typeof payload === 'string'
+        ? payload
+        : '';
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        const json =
+          typeof parsed.json === 'string'
+            ? parsed.json
+            : parsed.json != null
+            ? parsed.json
+            : parsed;
+        const fromJson = fromPlatformJson(json);
+        if (fromJson) {
+          return fromJson;
+        }
+        if (typeof parsed?.message === 'string' && parsed.message.trim()) {
+          return polish(parsed.message);
+        }
+      } catch {
+        if (raw.includes('Trial access') || raw.includes('code":29')) {
+          return TRIAL_MESSAGE;
+        }
+      }
       continue;
     }
-    try {
-      const parsed = JSON.parse(raw);
-      const json =
-        typeof parsed.json === 'string' ? JSON.parse(parsed.json) : parsed.json;
-      if (json?.code === 29) {
-        return TRIAL_MESSAGE;
-      }
-    } catch {
-      if (raw.includes('Trial access') || raw.includes('code":29')) {
-        return TRIAL_MESSAGE;
+
+    if (payload && typeof payload === 'object') {
+      const fromJson = fromPlatformJson(
+        (payload as any).json ?? (payload as any).error ?? payload
+      );
+      if (fromJson) {
+        return fromJson;
       }
     }
   }
@@ -197,12 +252,23 @@ const fromObject = (value: unknown, depth = 0): string | undefined => {
     (obj.cause as any)?.failure?.cause,
     (obj.cause as any)?.cause,
     (obj.failure as any)?.cause,
+    (obj.cause as any)?.details,
+    (obj as any)?.details,
     (obj.cause as any)?.failure?.message,
     (obj.cause as any)?.message,
     (obj.failure as any)?.message,
     obj.message,
   ];
   for (const candidate of candidates) {
+    // BadBody details are often [{ identifier, json, body }]
+    if (Array.isArray(candidate)) {
+      const fromDetails = fromTemporalDetails({ details: candidate });
+      if (fromDetails && fromDetails !== FALLBACK && fromDetails !== PLATFORM_UNAVAILABLE) {
+        return fromDetails;
+      }
+      fallback ||= fromDetails;
+      continue;
+    }
     const result = fromObject(candidate, depth + 1);
     if (!result) {
       continue;
