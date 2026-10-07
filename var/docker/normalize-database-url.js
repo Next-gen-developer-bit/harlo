@@ -35,11 +35,19 @@ function stripWrappingQuotes(value) {
 }
 
 function ensureProtocol(raw) {
-  if (/^postgres(ql)?:\/\//i.test(raw)) return raw;
-  if (raw.includes('@') && raw.includes(':')) {
-    return `postgresql://${raw}`;
+  let value = String(raw || '').replace(/^\uFEFF/, '');
+  value = value.replace(/^DATABASE_URL\s*=\s*/i, '');
+  if (/^jdbc:postgresql:/i.test(value)) {
+    value = value.replace(/^jdbc:/i, '');
   }
-  return raw;
+  if (/^postgres(ql)?:\/\//i.test(value)) {
+    return value.replace(/^postgres(ql)?:\/\//i, (m) => m.toLowerCase());
+  }
+  const withoutSlashes = value.replace(/^\/\//, '');
+  if (withoutSlashes.includes('@')) {
+    return `postgresql://${withoutSlashes}`;
+  }
+  return value;
 }
 
 function encodeCredential(value) {

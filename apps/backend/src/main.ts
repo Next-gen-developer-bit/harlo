@@ -51,6 +51,7 @@ import { PostValidationExceptionFilter } from '@gitroom/backend/api/routes/posts
 import { HttpExceptionFilter } from '@gitroom/nestjs-libraries/services/exception.filter';
 import { ConfigurationChecker } from '@gitroom/helpers/configuration/configuration.checker';
 import { startMcp } from '@gitroom/nestjs-libraries/chat/start.mcp';
+import { normalizeDatabaseUrlEnv } from '@gitroom/helpers/utils/normalize-database-url';
 
 function corsOrigins() {
   const raw = [
@@ -80,6 +81,18 @@ function corsOrigins() {
 }
 
 async function start() {
+  try {
+    const dbUrl = normalizeDatabaseUrlEnv();
+    const preview = new URL(dbUrl);
+    if (preview.password) preview.password = '***';
+    console.log(`[env] DATABASE_URL ok → ${preview.toString()}`);
+  } catch (err) {
+    console.error(
+      `[env] ${err instanceof Error ? err.message : err}`
+    );
+    process.exit(1);
+  }
+
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
     cors: {

@@ -1,12 +1,18 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { normalizeDatabaseUrlEnv } from '@gitroom/helpers/utils/normalize-database-url';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
+    // Render sometimes stores DATABASE_URL without postgresql:// — fix before Prisma validates.
+    const url = normalizeDatabaseUrlEnv();
     super({
+      datasources: {
+        db: { url },
+      },
       log: ['warn', 'error'],
     });
   }
