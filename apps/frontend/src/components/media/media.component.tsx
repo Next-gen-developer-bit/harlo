@@ -22,7 +22,6 @@ import { useToaster } from '@gitroom/react/toaster/toaster';
 import clsx from 'clsx';
 import { VideoFrame } from '@gitroom/react/helpers/video.frame';
 import { useUppyUploader } from '@gitroom/frontend/components/media/new.uploader';
-import dynamic from 'next/dynamic';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { AiImage } from '@gitroom/frontend/components/launches/ai.image';
 import { DropFiles } from '@gitroom/frontend/components/layout/drop.files';
@@ -44,16 +43,12 @@ import {
   DragHandleIcon,
   MediaSettingsIcon,
   InsertMediaIcon,
-  DesignMediaIcon,
   NoMediaIcon,
 } from '@gitroom/frontend/components/ui/icons';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { useShallow } from 'zustand/react/shallow';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import { useDebounce } from 'use-debounce';
-const Polonto = dynamic(
-  () => import('@gitroom/frontend/components/launches/polonto')
-);
 const showModalEmitter = new EventEmitter();
 export const Pagination: FC<{
   current: number;
@@ -913,19 +908,6 @@ export const MultiMediaComponent: FC<{
     [currentMedia]
   );
 
-  const designMedia = useCallback(() => {
-    if (!!user?.tier?.ai && !dummy) {
-      modals.openModal({
-        askClose: false,
-        title: t('design_media', 'Design Media'),
-        size: '80%',
-        children: (close) => (
-          <Polonto setMedia={changeMedia} closeModal={close} />
-        ),
-      });
-    }
-  }, [changeMedia, t]);
-
   return (
     <>
       <div className="b1 flex flex-col gap-[8px] rounded-bl-[8px] select-none w-full">
@@ -1013,15 +995,6 @@ export const MultiMediaComponent: FC<{
                   {t('insert_media', 'Insert Media')}
                 </div>
               </div>
-              <div
-                onClick={designMedia}
-                className="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-[#e6e8ee] bg-white px-2.5"
-              >
-                <DesignMediaIcon />
-                <div className="hidden text-[12px] font-medium iconBreak:hidden sm:block">
-                  {t('design_media', 'Design Media')}
-                </div>
-              </div>
 
               <ThirdPartyMedia allData={allData} onChange={changeMedia} />
 
@@ -1066,7 +1039,6 @@ export const MediaComponent: FC<{
   type?: 'image' | 'video';
   width?: number;
   height?: number;
-  hideEditor?: boolean;
 }> = (props) => {
   const t = useT();
 
@@ -1077,12 +1049,8 @@ export const MediaComponent: FC<{
     description,
     onChange,
     value,
-    width,
-    height,
-    hideEditor,
   } = props;
   const { getValues } = useSettings();
-  const user = useUser();
   useEffect(() => {
     const settings = getValues()[props.name];
     if (settings) {
@@ -1093,24 +1061,6 @@ export const MediaComponent: FC<{
   const modals = useModals();
   const mediaDirectory = useMediaDirectory();
 
-  const showDesignModal = useCallback(() => {
-    modals.openModal({
-      title: t('media_editor', 'Media Editor'),
-      askClose: false,
-      closeOnEscape: true,
-      fullScreen: true,
-      size: 'calc(100% - 80px)',
-      height: 'calc(100% - 80px)',
-      children: (close) => (
-        <Polonto
-          width={width}
-          height={height}
-          setMedia={changeMedia}
-          closeModal={close}
-        />
-      ),
-    });
-  }, [t]);
   const changeMedia = useCallback((m: { path: string; id: string }[]) => {
     setCurrentMedia(m[0]);
     onChange({
@@ -1161,11 +1111,6 @@ export const MediaComponent: FC<{
             ? t('change_image', 'Change image')
             : t('select_image', 'Select image')}
         </Button>
-        {!hideEditor && (
-          <Button className="rounded-[8px]" onClick={showDesignModal}>
-            {t('editor', 'Editor')}
-          </Button>
-        )}
         {!!currentMedia && (
           <Button
             secondary={true}

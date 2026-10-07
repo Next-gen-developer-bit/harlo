@@ -21,7 +21,6 @@ const PinterestSettings: FC = () => {
       <PinterestBoard {...register('board')} />
       <MediaComponent
         type="image"
-        hideEditor={true}
         label="Cover image"
         description="Required for video pins. Image pins use the attached photo instead."
         {...register('cover')}
