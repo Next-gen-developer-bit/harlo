@@ -23,7 +23,6 @@ import clsx from 'clsx';
 import { VideoFrame } from '@gitroom/react/helpers/video.frame';
 import { useUppyUploader } from '@gitroom/frontend/components/media/new.uploader';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
-import { AiImage } from '@gitroom/frontend/components/launches/ai.image';
 import { DropFiles } from '@gitroom/frontend/components/layout/drop.files';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -999,10 +998,7 @@ export const MultiMediaComponent: FC<{
               <ThirdPartyMedia allData={allData} onChange={changeMedia} />
 
               {!!user?.tier?.ai && (
-                <>
-                  <AiImage value={text} onChange={changeMedia} />
-                  <AiVideo value={text} onChange={changeMedia} />
-                </>
+                <AiVideo value={text} onChange={changeMedia} />
               )}
             </div>
           )}
