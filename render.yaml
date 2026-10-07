@@ -11,14 +11,19 @@
 # and Temporal must be reachable at TEMPORAL_ADDRESS.
 #
 # Required env vars (full URLs with https:// — missing protocol causes Invalid URL):
-#   DATABASE_URL              Supabase session pooler :5432 + sslmode=require
+#   DATABASE_URL              Supabase Session pooler URI on port 5432 + sslmode=require
+#                             Example:
+#                             postgresql://postgres.REF:ENCODED_PASS@aws-0-REGION.pooler.supabase.com:5432/postgres?sslmode=require
+#                             Prisma P1013 "invalid port" = password special chars not encoded.
+#                             Encode password: node -e "console.log(encodeURIComponent('YOUR_PASSWORD'))"
+#                             Use Session mode :5432 for prisma db push (not Transaction :6543).
 #   FRONTEND_URL              https://app.your-domain.com
 #   MAIN_URL                  https://app.your-domain.com
 #   NEXT_PUBLIC_BACKEND_URL   https://YOUR-SERVICE.onrender.com
 #   BACKEND_INTERNAL_URL      https://YOUR-SERVICE.onrender.com
 #   JWT_SECRET                openssl rand -base64 48
 #   REDIS_URL                 redis://... or rediss://... (optional but recommended)
-# URL-encode special characters in DB/Redis passwords (@ → %40, # → %23).
+# URL-encode special characters in DB/Redis passwords (@ → %40, # → %23, / → %2F).
 
 services:
   - type: web
