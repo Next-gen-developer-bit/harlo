@@ -247,12 +247,18 @@ export class PostsRepository {
           };
 
     const orderDirection: 'asc' | 'desc' =
-      stateFilter === 'published' || stateFilter === 'failed' ? 'desc' : 'asc';
+      stateFilter === 'published' ||
+      stateFilter === 'failed' ||
+      stateFilter === 'all'
+        ? 'desc'
+        : 'asc';
 
+    // "all" must include published history; do not restrict to future dates + errors.
     const skipDateFilter =
       stateFilter === 'published' ||
       stateFilter === 'failed' ||
-      stateFilter === 'draft';
+      stateFilter === 'draft' ||
+      stateFilter === 'all';
 
     const where = {
       AND: [
@@ -265,15 +271,6 @@ export class PostsRepository {
         },
         ...(skipDateFilter
           ? []
-          : stateFilter === 'all'
-          ? [
-              {
-                OR: [
-                  { publishDate: { gte: dayjs.utc().toDate() } },
-                  { state: State.ERROR },
-                ],
-              },
-            ]
           : [{ publishDate: { gte: dayjs.utc().toDate() } }]),
       ],
       ...stateAndDate,
