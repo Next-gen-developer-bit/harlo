@@ -36,6 +36,19 @@ export type ListStateFilter =
   | 'published'
   | 'failed';
 
+const LIST_STATE_VALUES: ListStateFilter[] = [
+  'all',
+  'scheduled',
+  'draft',
+  'published',
+  'failed',
+];
+
+const parseListState = (value: string | null | undefined): ListStateFilter =>
+  value && (LIST_STATE_VALUES as string[]).includes(value)
+    ? (value as ListStateFilter)
+    : 'all';
+
 export const CalendarContext = createContext({
   startDate: newDayjs().startOf('isoWeek').format('YYYY-MM-DD'),
   endDate: newDayjs().endOf('isoWeek').format('YYYY-MM-DD'),
@@ -170,31 +183,31 @@ export const CalendarWeekProvider: FC<{
   // List view state
   const [listPage, setListPage] = useState(0);
   const [listState, setListStateRaw] = useState<ListStateFilter>(
-    stateParam === 'published'
-      ? 'published'
-      : stateParam === 'failed'
-      ? 'failed'
-      : (stateParam as ListStateFilter) || 'all'
+    parseListState(stateParam)
   );
 
   useEffect(() => {
-    if (stateParam) {
-      setListStateRaw(
-        stateParam === 'published'
-          ? 'published'
-          : stateParam === 'failed'
-          ? 'failed'
-          : (stateParam as ListStateFilter)
-      );
-      setListPage(0);
+    if (!stateParam) {
+      return;
     }
-  }, [stateParam]);
-
-  const setListState = useCallback((next: ListStateFilter) => {
+    const next = parseListState(stateParam);
     setListStateRaw(next);
     setListPage(0);
-    router.replace(`/launches?state=${next}`);
-  }, [router]);
+  }, [stateParam]);
+
+  const setListState = useCallback(
+    (next: ListStateFilter) => {
+      const safe = parseListState(next);
+      setListStateRaw(safe);
+      setListPage(0);
+      // Stay in list view and request the matching state from the API.
+      setFilters((current) =>
+        current.display === 'list' ? current : { ...current, display: 'list' }
+      );
+      router.replace(`/launches?state=${safe}`);
+    },
+    [router]
+  );
 
   // Initialize with current date range based on URL params or defaults
   const initStartDate = searchParams.get('startDate');

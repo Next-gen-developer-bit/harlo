@@ -227,13 +227,13 @@ export class PostsRepository {
     const page = query.page || 0;
     const limit = query.limit || 20;
     const skip = page * limit;
-
     const stateFilter = query.state || 'all';
-    const stateAndDate =
+
+    // Keep each tab mutually exclusive: failed→ERROR, published→PUBLISHED,
+    // scheduled→QUEUE, draft→DRAFT, all→every state (no date restriction).
+    const stateCondition =
       stateFilter === 'scheduled'
-        ? {
-            state: State.QUEUE,
-          }
+        ? { state: State.QUEUE }
         : stateFilter === 'draft'
         ? { state: State.DRAFT }
         : stateFilter === 'published'
@@ -247,50 +247,53 @@ export class PostsRepository {
           };
 
     const orderDirection: 'asc' | 'desc' =
-      stateFilter === 'published' ||
-      stateFilter === 'failed' ||
-      stateFilter === 'all'
-        ? 'desc'
-        : 'asc';
+      stateFilter === 'scheduled' || stateFilter === 'draft' ? 'asc' : 'desc';
 
-    // "all" must include published history; do not restrict to future dates + errors.
-    const skipDateFilter =
-      stateFilter === 'published' ||
-      stateFilter === 'failed' ||
-      stateFilter === 'draft' ||
-      stateFilter === 'all';
+    // Only the Scheduled tab is limited to upcoming posts.
+    const dateCondition =
+      stateFilter === 'scheduled'
+        ? { publishDate: { gte: dayjs.utc().toDate() } }
+        : {};
 
-    const where = {
-      AND: [
-        {
-          OR: [
-            {
-              organizationId: orgId,
-            },
-          ],
-        },
-        ...(skipDateFilter
-          ? []
-          : [{ publishDate: { gte: dayjs.utc().toDate() } }]),
-      ],
-      ...stateAndDate,
-      deletedAt: null as Date | null,
-      parentPostId: null as string | null,
-      intervalInDays: null as number | null,
-
-      integration: {
-        organizationId: orgId,
-        ...(query.customer
-          ? {
-              customerId: query.customer,
-            }
-          : {}),
-      },
-      OR: [
-        { state: State.PUBLISHED },
-        { integration: { deletedAt: null as Date | null } },
-      ],
+    // Published (and All, for published rows) may keep posts after a channel
+    // is removed. Other tabs require an active integration.
+    const integrationFilter = {
+      organizationId: orgId,
+      ...(query.customer ? { customerId: query.customer } : {}),
+      ...(stateFilter === 'published'
+        ? {}
+        : stateFilter === 'all'
+        ? {}
+        : { deletedAt: null as Date | null }),
     };
+
+    const where =
+      stateFilter === 'all'
+        ? {
+            organizationId: orgId,
+            deletedAt: null as Date | null,
+            parentPostId: null as string | null,
+            intervalInDays: null as number | null,
+            ...stateCondition,
+            integration: {
+              organizationId: orgId,
+              ...(query.customer ? { customerId: query.customer } : {}),
+            },
+            // Active channels, or published history for removed channels.
+            OR: [
+              { state: State.PUBLISHED },
+              { integration: { deletedAt: null as Date | null } },
+            ],
+          }
+        : {
+            organizationId: orgId,
+            deletedAt: null as Date | null,
+            parentPostId: null as string | null,
+            intervalInDays: null as number | null,
+            ...stateCondition,
+            ...dateCondition,
+            integration: integrationFilter,
+          };
 
     const [posts, total] = await Promise.all([
       this._post.model.post.findMany({
