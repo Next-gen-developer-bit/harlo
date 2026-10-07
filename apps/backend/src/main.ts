@@ -10,11 +10,36 @@ Runtime.install({ shutdownSignals: [] });
 process.env.TZ = 'UTC';
 
 process.on('uncaughtException', (err) => {
-  console.warn('Backend process caught uncaughtException:', err?.message || err);
+  console.warn(
+    'Backend process caught uncaughtException:',
+    err?.message || err
+  );
+  if (err instanceof Error && err.stack) {
+    console.warn(err.stack);
+  }
 });
 process.on('unhandledRejection', (reason) => {
   console.warn('Backend process caught unhandledRejection:', reason);
+  if (reason instanceof Error && reason.stack) {
+    console.warn(reason.stack);
+  }
 });
+
+// Render env values are often pasted without a protocol ("app.example.com"),
+// which later throws TypeError: Invalid URL. Fix the common HTTP ones early.
+for (const key of [
+  'FRONTEND_URL',
+  'MAIN_URL',
+  'NEXT_PUBLIC_BACKEND_URL',
+  'BACKEND_INTERNAL_URL',
+] as const) {
+  const raw = (process.env[key] || '').trim().replace(/\/+$/, '');
+  if (!raw) continue;
+  if (!/^https?:\/\//i.test(raw)) {
+    process.env[key] = `https://${raw}`;
+    console.warn(`[env] ${key}: prepended https:// → ${process.env[key]}`);
+  }
+}
 
 import cookieParser from 'cookie-parser';
 import { Logger, ValidationPipe } from '@nestjs/common';

@@ -11,19 +11,19 @@
 # and Temporal must be reachable at TEMPORAL_ADDRESS.
 #
 # Required env vars (full URLs with https:// — missing protocol causes Invalid URL):
-#   DATABASE_URL              Supabase Session pooler URI on port 5432 + sslmode=require
+#   DATABASE_URL              Paste Supabase Session pooler URI AS-IS (port 5432).
+#                             Dashboard: Project Settings → Database → Connection string → URI
 #                             Example:
-#                             postgresql://postgres.REF:ENCODED_PASS@aws-0-REGION.pooler.supabase.com:5432/postgres?sslmode=require
-#                             Prisma P1013 "invalid port" = password special chars not encoded.
-#                             Encode password: node -e "console.log(encodeURIComponent('YOUR_PASSWORD'))"
-#                             Use Session mode :5432 for prisma db push (not Transaction :6543).
-#   FRONTEND_URL              https://app.your-domain.com
+#                             postgresql://postgres.sqnqpiaauuxyrsofajzo:PASSWORD@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require
+#                             Do NOT wrap in quotes. Prefer a password without @ # / ? so you
+#                             can paste Supabase's URI unchanged. Start script auto-encodes if needed.
+#   FRONTEND_URL              https://app.your-domain.com   (must include https://)
 #   MAIN_URL                  https://app.your-domain.com
 #   NEXT_PUBLIC_BACKEND_URL   https://YOUR-SERVICE.onrender.com
 #   BACKEND_INTERNAL_URL      https://YOUR-SERVICE.onrender.com
 #   JWT_SECRET                openssl rand -base64 48
-#   REDIS_URL                 redis://... or rediss://... (optional but recommended)
-# URL-encode special characters in DB/Redis passwords (@ → %40, # → %23, / → %2F).
+#   REDIS_URL                 redis://... or rediss://... (optional; omit if unused)
+# Missing https:// on FRONTEND/MAIN/BACKEND URLs causes: uncaughtException Invalid URL.
 
 services:
   - type: web
