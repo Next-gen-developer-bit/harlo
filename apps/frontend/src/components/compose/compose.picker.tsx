@@ -170,10 +170,10 @@ export const ComposePosts = () => {
   }, [mutate]);
 
   const openComposer = useCallback(async () => {
-    const loaded = channels.length
+    const loaded: Integrations[] = channels.length
       ? channels
-      : ((await reloadIntegrations()) || []).filter(
-          (integration: Integrations) => !integration.disabled
+      : (((await reloadIntegrations()) || []) as Integrations[]).filter(
+          (integration) => !integration.disabled
         );
     if (!loaded.length) {
       router.push('/third-party');
@@ -242,10 +242,10 @@ export const ComposePosts = () => {
         return;
       }
 
-      const available = channels.length
+      const available: Integrations[] = channels.length
         ? channels
-        : ((await reloadIntegrations()) || []).filter(
-            (integration: Integrations) => !integration.disabled
+        : (((await reloadIntegrations()) || []) as Integrations[]).filter(
+            (integration) => !integration.disabled
           );
 
       modal.openModal({
