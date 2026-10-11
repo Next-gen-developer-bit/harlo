@@ -64,7 +64,7 @@ export const AppTopbar = () => {
       : titleForPath(pathname, searchParams.get('state'));
 
   const openCreatePost = useCallback(() => {
-    router.push('/compose');
+    router.push('/compose?create=1');
   }, [router]);
 
   return (

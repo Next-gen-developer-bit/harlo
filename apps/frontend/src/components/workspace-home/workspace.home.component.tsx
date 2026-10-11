@@ -62,7 +62,7 @@ export const WorkspaceHomeComponent = () => {
   });
 
   const openCreatePost = useCallback(() => {
-    router.push('/compose');
+    router.push('/compose?create=1');
   }, [router]);
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export const WorkspaceHomeComponent = () => {
       return;
     }
     openedCreate.current = true;
-    router.replace('/compose');
+    router.replace('/compose?create=1');
   }, [router, searchParams]);
 
   const accounts = integrations || [];

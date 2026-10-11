@@ -9,7 +9,7 @@ export const NewPost = () => {
   const t = useT();
 
   const createAPost = useCallback(() => {
-    router.push('/compose');
+    router.push('/compose?create=1');
   }, [router]);
 
   return (
