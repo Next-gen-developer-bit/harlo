@@ -686,7 +686,7 @@ export const ListView = () => {
             {emptyDetails.desc}
           </p>
           <button
-            onClick={() => router.push('/compose')}
+            onClick={() => router.push('/compose?create=1')}
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs px-5 py-2.5 rounded-lg transition-colors shadow-sm inline-flex items-center gap-2"
           >
             <svg

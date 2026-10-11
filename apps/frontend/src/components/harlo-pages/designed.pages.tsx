@@ -6,7 +6,7 @@ import { useClickAway } from '@uidotdev/usehooks';
 import useSWR from 'swr';
 import dayjs from 'dayjs';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
-import { ComposePicker } from '@gitroom/frontend/components/compose/compose.picker';
+import { ComposePosts } from '@gitroom/frontend/components/compose/compose.picker';
 import { useWorkspaceOverview } from '@gitroom/frontend/components/workspace-home/use.workspace.overview';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import { useOrganizations } from '@gitroom/frontend/components/layout/use.organizations';
@@ -89,7 +89,7 @@ export const DashboardPage = () => {
         eyebrow="Dashboard"
         title={user?.orgName || 'Workspace'}
         subtitle="Your connected channels, team, campaigns and upcoming content."
-        action={<PrimaryLink href="/compose">Create post</PrimaryLink>}
+        action={<PrimaryLink href="/compose?create=1">Create post</PrimaryLink>}
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Stat label="Connected accounts" value={connected} hint="Ready to publish" />
@@ -142,7 +142,7 @@ export const DashboardPage = () => {
 };
 
 export const ComposePage = () => {
-  return <ComposePicker />;
+  return <ComposePosts />;
 };
 
 export const QueuePage = () => {
@@ -159,7 +159,7 @@ export const QueuePage = () => {
   return (
     <div className={shell}>
       <div className="mb-6 flex justify-end">
-        <PrimaryLink href="/compose">Add to queue</PrimaryLink>
+        <PrimaryLink href="/compose?create=1">Add to queue</PrimaryLink>
       </div>
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <Stat label="Posts in your queue" value={isLoading ? '…' : posts.length} />
@@ -194,7 +194,7 @@ export const QueuePage = () => {
 export const CampaignsPage = () => (
   <div className={shell}>
     <div className="mb-6 flex justify-end">
-      <PrimaryLink href="/compose">Create post</PrimaryLink>
+      <PrimaryLink href="/compose?create=1">Create post</PrimaryLink>
     </div>
     <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
       <h2 className="text-lg font-semibold text-slate-900">No campaigns yet</h2>
@@ -203,7 +203,7 @@ export const CampaignsPage = () => (
         then follow them on the calendar and in analytics.
       </p>
       <div className="mt-5 flex justify-center gap-3">
-        <PrimaryLink href="/compose">Create post</PrimaryLink>
+        <PrimaryLink href="/compose?create=1">Create post</PrimaryLink>
         <Link href="/launches" className="inline-flex h-10 items-center text-sm font-semibold text-blue-600">
           Open calendar
         </Link>
@@ -412,7 +412,7 @@ export const WorkspacesPage = () => {
               </div>
             ) : null}
           </div>
-          <PrimaryLink href="/compose">Create post</PrimaryLink>
+          <PrimaryLink href="/compose?create=1">Create post</PrimaryLink>
         </div>
       </div>
       <div className="grid gap-3">
