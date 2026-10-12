@@ -58,19 +58,19 @@ export const TiktokPreview: FC<{
   });
   return (
     <div className="p-[15px] absolute left-0 top-0 w-full h-full flex justify-center bg-newBgColorInner">
-      <div className="relative">
+      <div className="relative aspect-[9/16] w-[220px] shrink-0">
         <SliderComponent
           list={renderContent?.[0]?.images.map((image, index) => (
             <a
               key={`image_${index}`}
-              className="flex-1"
+              className="absolute inset-0 block"
               href={mediaDir.set(image.path)}
               target="_blank"
             >
               <VideoOrImage autoplay={true} src={mediaDir.set(image.path)} />
             </a>
           ))}
-          className="h-full bg-black aspect-[calc(9/16)] rounded-[3px] overflow-hidden"
+          className="absolute inset-0 bg-black overflow-hidden rounded-[3px]"
         />
         <div className="absolute pointer-events-none w-full h-full start-0 top-0 px-[12px] py-[25px] justify-end items-start text-white flex flex-col">
           <div className="text-[14px] font-[500]">@{integration?.name}</div>

@@ -1,13 +1,11 @@
 import { useIntegration } from '@gitroom/frontend/components/launches/helpers/use.integration';
-import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
-import { useMediaDirectory } from '@gitroom/react/helpers/use.media.directory';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { textSlicer } from '@gitroom/helpers/utils/count.length';
 import { FACEBOOK_PRESET_MAX_CHARS } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/facebook.dto';
 import { getPresetBackground } from '@gitroom/frontend/components/new-launch/providers/facebook/facebook.background';
 import { FC } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
-import { VideoOrImage } from '@gitroom/react/helpers/video.or.image';
+import { PreviewMedia } from '@gitroom/frontend/components/launches/preview.media';
 import { usePostAnalytics } from '@gitroom/frontend/components/platform-analytics/use.post.analytics';
 
 const Icons = () => {
@@ -67,8 +65,6 @@ export const FacebookPreview: FC<{
   maximumCharacters?: number;
 }> = (props) => {
   const { value: topValue, integration } = useIntegration();
-  const current = useLaunchStore((state) => state.current);
-  const mediaDir = useMediaDirectory();
   const { totals } = usePostAnalytics(topValue?.[0]?.id);
 
   // Facebook only renders the background on text-only posts up to 130 chars, so
@@ -170,18 +166,11 @@ export const FacebookPreview: FC<{
         />
       )}
       {!!renderContent?.[0]?.images?.length && (
-        <div className="h-[280px] -mx-[15px] overflow-hidden flex">
-          {renderContent?.[0]?.images.map((image, index) => (
-            <a
-              key={`image_${index}`}
-              className="flex-1"
-              href={mediaDir.set(image.path)}
-              target="_blank"
-            >
-              <VideoOrImage autoplay={true} src={mediaDir.set(image.path)} />
-            </a>
-          ))}
-        </div>
+        <PreviewMedia
+          identifier={integration?.identifier}
+          images={renderContent[0].images}
+          className="-mx-[15px] w-[calc(100%+30px)]"
+        />
       )}
       <div className="flex text-textLinkedin text-[12px] font-[400] items-center">
         <div className="flex flex-1 gap-[10px] items-center">
@@ -303,21 +292,11 @@ export const FacebookPreview: FC<{
                       }}
                     />
                     {!!value.images?.length && (
-                      <div className="h-[100px] mt-[12px] -mx-[15px] overflow-hidden flex">
-                        {value.images.map((image, index) => (
-                          <a
-                            key={`image_${index}`}
-                            className="flex-1"
-                            href={mediaDir.set(image.path)}
-                            target="_blank"
-                          >
-                            <VideoOrImage
-                              autoplay={true}
-                              src={mediaDir.set(image.path)}
-                            />
-                          </a>
-                        ))}
-                      </div>
+                      <PreviewMedia
+                        identifier={integration?.identifier}
+                        images={value.images}
+                        className="mt-[12px] rounded-[12px]"
+                      />
                     )}
                   </div>
                   <div className="flex font-[400] text-[12px] text-textLinkedin items-center">

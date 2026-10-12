@@ -138,17 +138,14 @@ export const PinterestPreview: FC<{
           Save
         </div>
       </div>
-      <div
-        style={{ background: 'url(/no-video-youtube.png)' }}
-        className="!bg-cover w-full aspect-[calc(16/9)] rounded-[20px] overflow-hidden"
-      >
+      <div className="relative w-full aspect-[2/3] overflow-hidden rounded-[20px] bg-black">
         {!!renderContent?.[0]?.images?.[0]?.path && (
-          <VideoOrImage
-            imageClassName="w-full aspect-[calc(16/9)]"
-            videoClassName="w-full aspect-[calc(16/9)] bg-black"
-            autoplay={true}
-            src={mediaDir.set(renderContent?.[0]?.images?.[0]?.path || '')}
-          />
+          <div className="absolute inset-0">
+            <VideoOrImage
+              autoplay={true}
+              src={mediaDir.set(renderContent?.[0]?.images?.[0]?.path || '')}
+            />
+          </div>
         )}
       </div>
       <div
