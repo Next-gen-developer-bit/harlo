@@ -55,7 +55,6 @@ export const CalendarContext = createContext({
   customer: null as string | null,
   loading: true,
   sets: [] as { name: string; id: string; content: string[] }[],
-  signature: undefined as any,
   comments: [] as Array<{
     date: string;
     total: number;
@@ -291,23 +290,11 @@ export const CalendarWeekProvider: FC<{
     }
   );
 
-  const defaultSign = useCallback(async () => {
-    return await (await fetch('/signatures/default')).json();
-  }, []);
-
   const setList = useCallback(async () => {
     return (await fetch('/sets')).json();
   }, []);
 
   const { data: sets, mutate } = useSWR('sets', setList, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    revalidateIfStale: false,
-    revalidateOnMount: true,
-    refreshWhenHidden: false,
-    refreshWhenOffline: false,
-  });
-  const { data: sign } = useSWR('default-sign', defaultSign, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     revalidateIfStale: false,
@@ -436,7 +423,6 @@ export const CalendarWeekProvider: FC<{
         changeDate,
         comments,
         sets: sets || [],
-        signature: sign,
         // List view specific
         listPosts,
         listPage,

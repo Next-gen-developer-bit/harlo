@@ -876,7 +876,6 @@ export const CalendarColumn: FC<{
     display,
     reloadCalendarView,
     sets,
-    signature,
     loading,
     comments,
     setFilters,
@@ -1144,15 +1143,6 @@ export const CalendarColumn: FC<{
             ...p,
           }))}
           mutate={reloadCalendarView}
-          {...(signature?.id && !set
-            ? {
-                onlyValues: [
-                  {
-                    content: '\n' + signature.content,
-                  },
-                ],
-              }
-            : {})}
           date={
             randomHour
               ? getDate.hour(Math.floor(Math.random() * 24))
@@ -1167,7 +1157,7 @@ export const CalendarColumn: FC<{
       ),
       size: '80%',
     });
-  }, [integrations, getDate, sets, signature]);
+  }, [integrations, getDate, sets]);
 
   const addProvider = useAddProvider();
   const postCards = list.map((group) => {
