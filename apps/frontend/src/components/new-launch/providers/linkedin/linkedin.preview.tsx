@@ -363,7 +363,6 @@ export const LinkedinPreview: FC<{
               fill="currentColor"
             />
           </svg>
-          <div>Like</div>
         </div>
         <div className="flex gap-[4px] items-center">
           <svg
@@ -379,7 +378,6 @@ export const LinkedinPreview: FC<{
               strokeWidth="2"
             />
           </svg>
-          <div>Comments</div>
         </div>
         <div className="flex gap-[4px] items-center">
           <svg
@@ -404,8 +402,7 @@ export const LinkedinPreview: FC<{
                 <rect width="17.83" height="24.28" fill="white" />
               </clipPath>
             </defs>
-          </svg>
-          <div>Repost</div>
+            </svg>
         </div>
         <div className="flex gap-[4px] items-center">
           <svg
@@ -420,7 +417,6 @@ export const LinkedinPreview: FC<{
               fill="currentColor"
             />
           </svg>
-          <div>Send</div>
         </div>
       </div>
       {renderContent.length > 1 && (
