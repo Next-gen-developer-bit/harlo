@@ -1,10 +1,8 @@
 import { useIntegration } from '@gitroom/frontend/components/launches/helpers/use.integration';
-import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
-import { useMediaDirectory } from '@gitroom/react/helpers/use.media.directory';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { textSlicer } from '@gitroom/helpers/utils/count.length';
 import { FC } from 'react';
-import { VideoOrImage } from '@gitroom/react/helpers/video.or.image';
+import { PreviewMedia } from '@gitroom/frontend/components/launches/preview.media';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { usePostAnalytics } from '@gitroom/frontend/components/platform-analytics/use.post.analytics';
 
@@ -250,8 +248,6 @@ export const LinkedinPreview: FC<{
   maximumCharacters?: number;
 }> = (props) => {
   const { value: topValue, integration, date } = useIntegration();
-  const current = useLaunchStore((state) => state.current);
-  const mediaDir = useMediaDirectory();
   const { totals } = usePostAnalytics(topValue?.[0]?.id);
   const now = newDayjs();
   const minutesAgo = date?.isValid?.() ? Math.max(0, now.diff(date, 'minute')) : 0;
@@ -334,18 +330,11 @@ export const LinkedinPreview: FC<{
         }}
       />
       {!!renderContent?.[0]?.images?.length && (
-        <div className="h-[280px] -mx-[15px] overflow-hidden flex">
-          {renderContent?.[0]?.images.map((image, index) => (
-            <a
-              key={`image_${index}`}
-              className="flex-1"
-              href={mediaDir.set(image.path)}
-              target="_blank"
-            >
-              <VideoOrImage autoplay={true} src={mediaDir.set(image.path)} />
-            </a>
-          ))}
-        </div>
+        <PreviewMedia
+          identifier={integration?.identifier}
+          images={renderContent[0].images}
+          className="-mx-[15px] w-[calc(100%+30px)]"
+        />
       )}
       <div className="flex text-textLinkedin text-[12px] font-[400] items-center">
         <div className="flex flex-1 gap-[11px] items-center">

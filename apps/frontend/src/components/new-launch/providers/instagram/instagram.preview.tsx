@@ -1,19 +1,14 @@
 import { useIntegration } from '@gitroom/frontend/components/launches/helpers/use.integration';
-import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
-import { useMediaDirectory } from '@gitroom/react/helpers/use.media.directory';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { textSlicer } from '@gitroom/helpers/utils/count.length';
 import { FC } from 'react';
-import { VideoOrImage } from '@gitroom/react/helpers/video.or.image';
-import { SliderComponent } from '@gitroom/frontend/components/third-parties/slider.component';
+import { PreviewMedia } from '@gitroom/frontend/components/launches/preview.media';
 import { usePostAnalytics } from '@gitroom/frontend/components/platform-analytics/use.post.analytics';
 
 export const InstagramPreview: FC<{
   maximumCharacters?: number;
 }> = (props) => {
   const { value: topValue, integration } = useIntegration();
-  const current = useLaunchStore((state) => state.current);
-  const mediaDir = useMediaDirectory();
   const { totals } = usePostAnalytics(topValue?.[0]?.id);
 
   const renderContent = topValue.map((p) => {
@@ -64,18 +59,10 @@ export const InstagramPreview: FC<{
         </div>
       </div>
       {!!renderContent?.[0]?.images?.length ? (
-        <SliderComponent
-          className="h-[585px] rounded-[8px] overflow-hidden"
-          list={renderContent?.[0]?.images.map((image, index) => (
-            <a
-              key={`image_${index}`}
-              className="flex-1"
-              href={mediaDir.set(image.path)}
-              target="_blank"
-            >
-              <VideoOrImage autoplay={true} src={mediaDir.set(image.path)} />
-            </a>
-          ))}
+        <PreviewMedia
+          identifier={integration?.identifier}
+          images={renderContent[0].images}
+          className="rounded-[8px]"
         />
       ) : (
         <div

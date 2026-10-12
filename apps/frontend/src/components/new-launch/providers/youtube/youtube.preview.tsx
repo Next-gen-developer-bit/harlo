@@ -48,17 +48,14 @@ export const YoutubePreview: FC<{
 
   return (
     <div className="absolute left-0 top-0 gap-[12px] w-full h-full flex flex-col p-[16px] bg-bgYoutube">
-      <div
-        style={{ background: 'url(/no-video-youtube.png)' }}
-        className="!bg-cover w-full aspect-[calc(16/9)] rounded-[4px] overflow-hidden"
-      >
+      <div className="relative w-full aspect-video overflow-hidden rounded-[4px] bg-black">
         {!!renderContent?.[0]?.images?.[0]?.path && (
-          <VideoOrImage
-            imageClassName="w-full aspect-[calc(16/9)]"
-            videoClassName="w-full aspect-[calc(16/9)] bg-black"
-            autoplay={true}
-            src={mediaDir.set(renderContent?.[0]?.images?.[0]?.path || '')}
-          />
+          <div className="absolute inset-0">
+            <VideoOrImage
+              autoplay={true}
+              src={mediaDir.set(renderContent?.[0]?.images?.[0]?.path || '')}
+            />
+          </div>
         )}
       </div>
       <div className="flex items-center">

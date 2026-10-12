@@ -19,10 +19,6 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
 import { InternalChannels } from '@gitroom/frontend/components/launches/internal.channels';
-import {
-  PLATFORM_LABELS,
-  platformFamily,
-} from '@gitroom/frontend/components/launches/helpers/mvp.platforms';
 
 class Empty {
   @IsOptional()
@@ -237,10 +233,6 @@ export const withProvider = function <T extends object>(params: {
               selectedIntegration.integration.additionalSettings || '[]'
             )
           );
-    const family = platformFamily(selectedIntegration.integration.identifier);
-    const platformLabel =
-      PLATFORM_LABELS[family] ||
-      selectedIntegration.integration.identifier.replace(/-/g, ' ');
     const hasContent = !!value?.[0]?.content?.length || !!value?.[0]?.media?.length;
     const showSettings =
       !!SettingsComponent || (!!data?.internalPlugs?.length && !dummy);
@@ -263,21 +255,6 @@ export const withProvider = function <T extends object>(params: {
             id={`platform-section-${props.id}`}
             className="mb-8 flex scroll-mt-4 flex-col gap-4"
           >
-            <div className="flex items-center gap-3">
-              <img
-                src={`/icons/platforms/${selectedIntegration.integration.identifier}.png`}
-                alt=""
-                className="h-8 w-8 shrink-0 rounded-lg"
-              />
-              <div className="min-w-0">
-                <h2 className="text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
-                  {platformLabel}
-                </h2>
-                <p className="truncate text-sm font-medium text-slate-500">
-                  {selectedIntegration.integration.name}
-                </p>
-              </div>
-            </div>
             {showSettings ? (
               <div className="rounded-xl border border-slate-200 bg-white p-3">
                 {SettingsComponent ? <SettingsComponent /> : null}
