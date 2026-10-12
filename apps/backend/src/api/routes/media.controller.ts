@@ -106,8 +106,22 @@ export class MediaController {
     @GetOrgFromRequest() org: Organization,
     @Req() req: Request,
     @Body('name') name: string,
-    @Body('originalName') originalName: string
+    @Body('originalName') originalName: string,
+    @Body('url') fileUrl?: string
   ) {
+    // Transloadit hands back its own https URL. Copy that file into our
+    // storage. Recording CLOUDFLARE_BUCKET_URL + filename does not, the file
+    // is not there, and TikTok then has nothing to upload.
+    if (fileUrl) {
+      const stored = await this.storage.uploadSimple(fileUrl);
+      const storedName = String(stored).split('/').pop() || name;
+      return this._mediaService.saveFile(
+        org.id,
+        storedName,
+        stored,
+        originalName || undefined
+      );
+    }
     if (!name) {
       return false;
     }

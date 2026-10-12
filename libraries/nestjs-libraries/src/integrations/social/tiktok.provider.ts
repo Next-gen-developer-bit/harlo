@@ -16,8 +16,9 @@ import {
 import { TikTokDto } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/tiktok.dto';
 import { timer } from '@gitroom/helpers/utils/timer';
 import { hasExtension } from '@gitroom/helpers/utils/has.extension';
-import { createReadStream } from 'fs';
-import { getSsrfSafeDispatcher } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
+import { createReadStream, existsSync } from 'fs';
+import { resolve, sep } from 'path';
+import { ssrfSafeFetch } from '@gitroom/nestjs-libraries/dtos/webhooks/ssrf.safe.dispatcher';
 import { Integration } from '@prisma/client';
 import { Rules } from '@gitroom/nestjs-libraries/chat/rules.description.decorator';
 
@@ -504,6 +505,145 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
       : 'DIRECT_POST';
   }
 
+  // Local storage saves media as FRONTEND_URL/uploads/..., which is not a
+  // public URL. Video upload sends the bytes itself, so read that file from
+  // disk instead of fetching it (SSRF blocks localhost, and the uploads route
+  // does not answer Range requests).
+  private ownUploadFile(path: string): string | undefined {
+    const frontend = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+    const uploadDir = process.env.UPLOAD_DIRECTORY;
+    if (!frontend || !uploadDir || !path || path.indexOf('http') !== 0) {
+      return undefined;
+    }
+
+    let url: URL;
+    try {
+      url = new URL(path);
+    } catch {
+      return undefined;
+    }
+
+    let origin: URL;
+    try {
+      origin = new URL(frontend);
+    } catch {
+      return undefined;
+    }
+
+    if (url.origin !== origin.origin || !url.pathname.startsWith('/uploads/')) {
+      return undefined;
+    }
+
+    const relative = decodeURIComponent(url.pathname.slice('/uploads/'.length));
+    if (!relative || relative.includes('\0')) {
+      return undefined;
+    }
+
+    const base = resolve(uploadDir);
+    const filePath = resolve(base, relative);
+    if (filePath !== base && !filePath.startsWith(base + sep)) {
+      return undefined;
+    }
+
+    return existsSync(filePath) ? filePath : undefined;
+  }
+
+  // TikTok photo posts are PULL_FROM_URL only: TikTok's servers download the
+  // image. A localhost or plain-http link can never succeed.
+  private assertTikTokCanPullPhoto(path: string) {
+    let url: URL | undefined;
+    try {
+      url = new URL(path);
+    } catch {
+      url = undefined;
+    }
+
+    const host = url?.hostname || '';
+    if (
+      !url ||
+      url.protocol !== 'https:' ||
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1'
+    ) {
+      throw new BadBody(
+        'tiktok-error-upload',
+        '{}',
+        '{}',
+        'TikTok downloads photo posts from a public HTTPS link. This file is only on this server. Use a public storage provider (Cloudflare R2 or Supabase) and verify that domain in the TikTok developer portal.'
+      );
+    }
+  }
+
+  // Unaudited TikTok apps reject every privacy level except SELF_ONLY, and an
+  // account can disable comments, duets, or stitches. Asking for a level TikTok
+  // will not allow fails the publish, so use a level the creator info call
+  // actually returned.
+  private async withCreatorPrivacy(
+    accessToken: string,
+    firstPost: PostDetails<TikTokDto>
+  ): Promise<PostDetails<TikTokDto>> {
+    if (this.contentPostingMethod(firstPost) !== 'DIRECT_POST') {
+      return firstPost;
+    }
+
+    let options: string[] = [];
+    let commentDisabled = false;
+    let duetDisabled = false;
+    let stitchDisabled = false;
+    try {
+      const info = await (
+        await this.fetch(
+          'https://open.tiktokapis.com/v2/post/publish/creator_info/query/',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json; charset=UTF-8',
+              Authorization: `Bearer ${accessToken}`,
+            },
+          },
+          'tiktok-error-upload'
+        )
+      ).json();
+      options = info?.data?.privacy_level_options || [];
+      commentDisabled = !!info?.data?.comment_disabled;
+      duetDisabled = !!info?.data?.duet_disabled;
+      stitchDisabled = !!info?.data?.stitch_disabled;
+    } catch (err) {
+      if (err instanceof RefreshToken) {
+        throw err;
+      }
+      return firstPost;
+    }
+
+    const settings = { ...(firstPost.settings || {}) };
+    const wanted = settings.privacy_level || 'PUBLIC_TO_EVERYONE';
+    if (options.length && !options.includes(wanted)) {
+      const fallback = (
+        [
+          'SELF_ONLY',
+          'FOLLOWER_OF_CREATOR',
+          'MUTUAL_FOLLOW_FRIENDS',
+          'PUBLIC_TO_EVERYONE',
+        ] as const
+      ).find((level) => options.includes(level));
+      if (fallback) {
+        settings.privacy_level = fallback;
+      }
+    }
+    if (commentDisabled) {
+      settings.comment = false;
+    }
+    if (duetDisabled) {
+      settings.duet = false;
+    }
+    if (stitchDisabled) {
+      settings.stitch = false;
+    }
+
+    return { ...firstPost, settings };
+  }
+
   private postingMethod(
     method: TikTokDto['content_posting_method'],
     isPhoto: boolean
@@ -690,17 +830,23 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
     if (path.indexOf('http') === 0) {
       // identity encoding so the store keeps content-length and can answer
       // with the requested range, matching every other media read
-      const response = await fetch(path, {
+      const response = await ssrfSafeFetch(path, {
         headers: {
           Range: `bytes=${start}-${end}`,
           'accept-encoding': 'identity',
         },
-        dispatcher: getSsrfSafeDispatcher(),
-      } as any);
+      });
 
-      // A store that ignores Range (200 with the full file) or answers with an
-      // error page would corrupt the upload at this offset.
-      if (response.status !== 206) {
+      const expected = end - start + 1;
+      const contentLength = Number(response.headers.get('content-length'));
+      // A full-file read is often answered with 200 instead of 206. That body
+      // is the chunk we asked for. A 200 whose length does not match is the
+      // whole file returned for a partial range and would corrupt the upload.
+      const fullBody =
+        response.status === 200 &&
+        Number.isFinite(contentLength) &&
+        contentLength === expected;
+      if (response.status !== 206 && !fullBody) {
         throw new BadBody(
           'tiktok-error-upload',
           '{}',
@@ -804,9 +950,20 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
     postDetails: PostDetails<TikTokDto>[],
     integration: Integration
   ): Promise<PostResponse[]> {
-    const [firstPost] = postDetails;
+    const [rawPost] = postDetails;
+    const firstPost = await this.withCreatorPrivacy(accessToken, rawPost);
     const isPhoto = !hasExtension(firstPost?.media?.[0]?.path, 'mp4');
-    const videoPath = firstPost?.media?.[0]?.path!;
+    if (isPhoto) {
+      for (const media of firstPost?.media || []) {
+        this.assertTikTokCanPullPhoto(media?.path);
+      }
+    }
+
+    // Our own /uploads URL points at a file on disk. Reading it directly avoids
+    // the SSRF guard and the uploads route, which does not support Range.
+    const videoPath =
+      this.ownUploadFile(firstPost?.media?.[0]?.path!) ||
+      firstPost?.media?.[0]?.path!;
 
     // For videos we only need the total size up front (HEAD / statSync) so we
     // can init the upload; the bytes themselves are streamed later, never fully
@@ -815,9 +972,7 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
       ? undefined
       : await this.mediaSize(videoPath, 'tiktok-error-upload');
 
-    const {
-      data: { publish_id, upload_url },
-    } = await (
+    const init = await (
       await this.fetch(
         `https://open.tiktokapis.com/v2/post/publish${this.postingMethod(
           this.contentPostingMethod(firstPost),
@@ -833,9 +988,25 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
             ...this.buildTikokPostInfoBody(firstPost),
             ...this.buildTikokSourceInfoBody(firstPost, videoSize),
           }),
-        }
+        },
+        'tiktok-error-upload'
       )
     ).json();
+
+    const publish_id = init?.data?.publish_id;
+    const upload_url = init?.data?.upload_url;
+    if (!publish_id) {
+      const raw = JSON.stringify(init || {});
+      const handleError = this.handleErrors(raw);
+      throw new BadBody(
+        'tiktok-error-upload',
+        raw,
+        Buffer.from(raw),
+        handleError?.value ||
+          init?.error?.message ||
+          'TikTok refused to publish your post'
+      );
+    }
 
     // Videos: stream the bytes to the upload_url returned by the init call.
     if (!isPhoto && upload_url && videoSize) {

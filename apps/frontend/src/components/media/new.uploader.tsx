@@ -215,23 +215,27 @@ export function useUppyUploader(props: {
         return orderA - orderB;
       });
 
-      if (storageProvider === 'local' || storageProvider === 'supabase') {
-        setLocked(false);
-        fileOrderIndex = 0;
-        onUploadSuccess(sortedSuccessful.map((p) => p.response.body));
-        return;
-      }
-
-      if (transloadit.length > 0) {
-        // @ts-ignore
-        const allRes = result.transloadit[0].results;
-        const toSave = uniqBy<{ name: string; originalName: string; order: number }>(
-          // @ts-ignore
-          Object.values(allRes).flatMap((p: any[]) => {
+      // Transloadit replaces the uploaded video with output_progressive_*.mp4.
+      // That result has to be saved before the storage-provider shortcut,
+      // otherwise the composer keeps the raw upload response and TikTok never
+      // receives a file it can download.
+      // @ts-ignore
+      const transloaditResults = result.transloadit?.[0]?.results;
+      if (transloadit.length > 0 && transloaditResults) {
+        const toSave = uniqBy<{
+          name: string;
+          originalName: string;
+          order: number;
+          url: string;
+        }>(
+          Object.values(transloaditResults).flatMap((p: any[]) => {
             return p.flatMap((item) => ({
-              name: item.url.split('/').pop(),
+              name: String(item.ssl_url || item.url || '')
+                .split('/')
+                .pop(),
               originalName: item.name || '',
-              order: +item.user_meta.addedOrder,
+              order: +(item.user_meta?.addedOrder ?? 0),
+              url: item.ssl_url || item.url,
             }));
           }),
           (item) => item.name
@@ -239,13 +243,17 @@ export function useUppyUploader(props: {
 
         const loadAllMedia = (
           await Promise.all(
-            toSave.map(async ({ name, originalName, order }) => ({
+            toSave.map(async ({ name, originalName, order, url }) => ({
               file: await (
                 await fetch('/media/save-media', {
                   method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
                   body: JSON.stringify({
                     name,
                     originalName,
+                    url,
                   }),
                 })
               ).json(),
@@ -261,6 +269,13 @@ export function useUppyUploader(props: {
         setLocked(false);
         fileOrderIndex = 0;
         onUploadSuccess(loadAllMedia);
+        return;
+      }
+
+      if (storageProvider === 'local' || storageProvider === 'supabase') {
+        setLocked(false);
+        fileOrderIndex = 0;
+        onUploadSuccess(sortedSuccessful.map((p) => p.response.body));
         return;
       }
 
