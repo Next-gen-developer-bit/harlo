@@ -219,8 +219,8 @@ export function useUppyUploader(props: {
       // That result has to be saved before the storage-provider shortcut,
       // otherwise the composer keeps the raw upload response and TikTok never
       // receives a file it can download.
-      // @ts-ignore
-      const transloaditResults = result.transloadit?.[0]?.results;
+      const transloaditResults = (result as { transloadit?: { results?: Record<string, any[]> }[] })
+        .transloadit?.[0]?.results;
       if (transloadit.length > 0 && transloaditResults) {
         const toSave = uniqBy<{
           name: string;
@@ -228,14 +228,12 @@ export function useUppyUploader(props: {
           order: number;
           url: string;
         }>(
-          Object.values(transloaditResults).flatMap((p: any[]) => {
-            return p.flatMap((item) => ({
-              name: String(item.ssl_url || item.url || '')
-                .split('/')
-                .pop(),
+          Object.values(transloaditResults).flatMap((group) => {
+            return group.flatMap((item) => ({
+              name: String(item.ssl_url || item.url || '').split('/').pop() || '',
               originalName: item.name || '',
               order: +(item.user_meta?.addedOrder ?? 0),
-              url: item.ssl_url || item.url,
+              url: item.ssl_url || item.url || '',
             }));
           }),
           (item) => item.name
