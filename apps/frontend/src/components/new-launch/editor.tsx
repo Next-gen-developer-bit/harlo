@@ -15,9 +15,6 @@ import clsx from 'clsx';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import EmojiPicker from 'emoji-picker-react';
 import { Theme } from 'emoji-picker-react';
-import { BoldText } from '@gitroom/frontend/components/new-launch/bold.text';
-import { UText } from '@gitroom/frontend/components/new-launch/u.text';
-import { SignatureBox } from '@gitroom/frontend/components/signature';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import {
   SelectedIntegrations,
@@ -37,14 +34,11 @@ import Link from '@tiptap/extension-link';
 import {
   useEditor,
   EditorContent,
-  Extension,
   mergeAttributes,
 } from '@tiptap/react';
 import Document from '@tiptap/extension-document';
-import Bold from '@tiptap/extension-bold';
 import Text from '@tiptap/extension-text';
 import Paragraph from '@tiptap/extension-paragraph';
-import Underline from '@tiptap/extension-underline';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { History } from '@tiptap/extension-history';
 import { BulletList, ListItem } from '@tiptap/extension-list';
@@ -69,34 +63,6 @@ import {
 import { DelayComponent } from '@gitroom/frontend/components/new-launch/delay.component';
 
 const MAX_UPLOAD_SIZE = 1024 * 1024 * 1024; // 1 GB
-
-const InterceptBoldShortcut = Extension.create({
-  name: 'preventBoldWithUnderline',
-
-  addKeyboardShortcuts() {
-    return {
-      'Mod-b': () => {
-        // For example, toggle bold while removing underline
-        this?.editor?.commands?.unsetUnderline();
-        return this?.editor?.commands?.toggleBold();
-      },
-    };
-  },
-});
-
-const InterceptUnderlineShortcut = Extension.create({
-  name: 'preventUnderlineWithUnderline',
-
-  addKeyboardShortcuts() {
-    return {
-      'Mod-u': () => {
-        // For example, toggle bold while removing underline
-        this?.editor?.commands?.unsetBold();
-        return this?.editor?.commands?.toggleUnderline();
-      },
-    };
-  },
-});
 
 export const EditorWrapper: FC<{
   totalPosts: number;
@@ -773,19 +739,6 @@ export const Editor: FC<{
                   }
                   toolBar={
                     <div className="flex items-center gap-1.5">
-                      <SignatureBox editor={editorRef?.current?.editor} />
-                      {editorType !== 'none' && (
-                        <>
-                          <UText
-                            editor={editorRef?.current?.editor}
-                            currentValue={props.value!}
-                          />
-                          <BoldText
-                            editor={editorRef?.current?.editor}
-                            currentValue={props.value!}
-                          />
-                        </>
-                      )}
                       {(editorType === 'markdown' || editorType === 'html') &&
                         identifier !== 'telegram' && (
                           <>
@@ -905,10 +858,6 @@ export const OnlyEditor = forwardRef<
       Document,
       Paragraph,
       Text,
-      Underline,
-      Bold,
-      InterceptBoldShortcut,
-      InterceptUnderlineShortcut,
       BulletList,
       ListItem,
       Placeholder.configure({
