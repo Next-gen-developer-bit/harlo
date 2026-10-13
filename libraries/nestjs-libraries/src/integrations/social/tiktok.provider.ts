@@ -616,7 +616,7 @@ export class TiktokProvider extends SocialAbstract implements SocialProvider {
       return firstPost;
     }
 
-    const settings = { ...(firstPost.settings || {}) };
+    const settings = { ...firstPost.settings } as TikTokDto;
     const wanted = settings.privacy_level || 'PUBLIC_TO_EVERYONE';
     if (options.length && !options.includes(wanted)) {
       const fallback = (
