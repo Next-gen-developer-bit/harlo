@@ -13,7 +13,10 @@ import clsx from 'clsx';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { PicksSocialsComponent } from '@gitroom/frontend/components/new-launch/picks.socials.component';
 import { EditorWrapper } from '@gitroom/frontend/components/new-launch/editor';
-import { SelectCurrent } from '@gitroom/frontend/components/new-launch/select.current';
+import {
+  ChannelFields,
+  SelectCurrent,
+} from '@gitroom/frontend/components/new-launch/select.current';
 import { ShowAllProviders } from '@gitroom/frontend/components/new-launch/providers/show.all.providers';
 import { useExistingData } from '@gitroom/frontend/components/launches/helpers/use.existing.data';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
@@ -70,10 +73,14 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     activateExitButton,
     setHide,
     global,
+    ensureChannelDrafts,
+    globalLength,
   } = useLaunchStore(
     useShallow((state) => ({
       hide: state.hide,
       setHide: state.setHide,
+      ensureChannelDrafts: state.ensureChannelDrafts,
+      globalLength: state.global.length,
       date: state.date,
       setDate: state.setDate,
       repeater: state.repeater,
@@ -94,6 +101,17 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       setHide(false);
     }
   }, [hide]);
+
+  const channelKey = selectedIntegrations
+    .map((item) => item.integration.id)
+    .join(',');
+
+  useEffect(() => {
+    if (globalLength < 1 || selectedIntegrations.length > 1) {
+      return;
+    }
+    ensureChannelDrafts();
+  }, [channelKey, globalLength]);
 
   const changeCustomer = useCallback(
     (customer: string) => {
@@ -699,10 +717,19 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                     </div>
                   </div>
                   <div className="flex min-h-[280px] flex-1 flex-col gap-2">
-                    <div>{!existingData.integration && <SelectCurrent />}</div>
-                    <div className="flex flex-1">
-                      {!hide && <EditorWrapper totalPosts={1} value="" />}
-                    </div>
+                    {!existingData.integration &&
+                    selectedIntegrations.length > 1 ? (
+                      !hide && <ChannelFields />
+                    ) : (
+                      <>
+                        <div>
+                          {!existingData.integration && <SelectCurrent />}
+                        </div>
+                        <div className="flex flex-1">
+                          {!hide && <EditorWrapper totalPosts={1} value="" />}
+                        </div>
+                      </>
+                    )}
                     <div id="social-empty" className="pb-2" />
                   </div>
                 </div>

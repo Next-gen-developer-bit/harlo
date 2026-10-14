@@ -6,6 +6,7 @@ import { Integrations } from '@gitroom/frontend/components/launches/calendar.con
 import { createRef, RefObject } from 'react';
 import { PostComment } from '@gitroom/frontend/components/new-launch/providers/post-comment.enum';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
+import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 
 interface Values {
   id: string;
@@ -63,6 +64,7 @@ interface StoreState {
   deleteGlobalValue: (index: number) => void;
   deleteInternalValue: (integrationId: string, index: number) => void;
   addRemoveInternal: (integrationId: string) => void;
+  ensureChannelDrafts: () => void;
   changeOrderGlobal: (index: number, direction: 'up' | 'down') => void;
   changeOrderInternal: (
     integrationId: string,
@@ -296,6 +298,65 @@ export const useLaunchStore = create<StoreState>()((set) => ({
           }
           return item;
         }),
+      };
+    }),
+  ensureChannelDrafts: () =>
+    set((state) => {
+      if (state.isCreateSet || state.selectedIntegrations.length < 2) {
+        if (state.selectedIntegrations.length === 1) {
+          const only = state.selectedIntegrations[0].integration.id;
+          const hasInternal = state.internal.some(
+            (item) => item.integration.id === only
+          );
+          if (hasInternal && state.current !== only) {
+            return { current: only };
+          }
+        }
+        return {};
+      }
+
+      if (!state.global.length) {
+        return {};
+      }
+
+      const currentInternal = state.internal.find(
+        (item) => item.integration.id === state.current
+      );
+      const source = currentInternal?.integrationValue?.length
+        ? currentInternal.integrationValue
+        : state.global;
+      const clone = source.map((item) => ({
+        id: makeId(10),
+        content: item.content,
+        delay: item.delay || 0,
+        media: (item.media || []).map((media) => ({ ...media })),
+      }));
+      const existingIds = new Set(
+        state.internal.map((item) => item.integration.id)
+      );
+      const additions = state.selectedIntegrations
+        .filter((item) => !existingIds.has(item.integration.id))
+        .map((item) => ({
+          integration: item.integration,
+          integrationValue: clone.map((value) => ({
+            ...value,
+            id: makeId(10),
+            media: value.media.map((media) => ({ ...media })),
+          })),
+        }));
+      const nextCurrent = state.selectedIntegrations.some(
+        (item) => item.integration.id === state.current
+      )
+        ? state.current
+        : state.selectedIntegrations[0].integration.id;
+
+      if (!additions.length && nextCurrent === state.current) {
+        return {};
+      }
+
+      return {
+        internal: [...state.internal, ...additions],
+        current: nextCurrent,
       };
     }),
   addRemoveInternal: (integrationId: string) =>

@@ -350,8 +350,14 @@ export const LinkedinPreview: FC<{
           <div>{totals.shares.toLocaleString()} Reposts</div>
         </div>
       </div>
-      <div className="pt-[8px] flex text-[14px] font-[700] px-[32px] justify-between border-t border-borderLinkedin text-textLinkedin">
-        <div className="flex gap-[4px] items-center">
+      <div className="flex items-center gap-[12px] border-t border-borderLinkedin pt-[10px] text-[13px] font-[600] text-textLinkedin">
+        <img
+          src={integration?.picture || '/no-picture.jpg'}
+          alt=""
+          className="h-7 w-7 shrink-0 rounded-full object-cover"
+        />
+        <div className="flex flex-1 items-center justify-between">
+        <div className="flex gap-[6px] items-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="20"
@@ -364,8 +370,9 @@ export const LinkedinPreview: FC<{
               fill="currentColor"
             />
           </svg>
+          <span>Like</span>
         </div>
-        <div className="flex gap-[4px] items-center">
+        <div className="flex gap-[6px] items-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="21"
@@ -379,8 +386,9 @@ export const LinkedinPreview: FC<{
               strokeWidth="2"
             />
           </svg>
+          <span>Comment</span>
         </div>
-        <div className="flex gap-[4px] items-center">
+        <div className="flex gap-[6px] items-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="18"
@@ -404,8 +412,9 @@ export const LinkedinPreview: FC<{
               </clipPath>
             </defs>
             </svg>
+          <span>Repost</span>
         </div>
-        <div className="flex gap-[4px] items-center">
+        <div className="flex gap-[6px] items-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="21"
@@ -418,6 +427,8 @@ export const LinkedinPreview: FC<{
               fill="currentColor"
             />
           </svg>
+          <span>Send</span>
+        </div>
         </div>
       </div>
       {renderContent.length > 1 && (

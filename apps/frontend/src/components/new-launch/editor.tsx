@@ -429,7 +429,9 @@ export const EditorWrapper: FC<{
                             />
                           )}
                         </div>
-                        {!!internal && !existingData?.integration && (
+                        {!!internal &&
+                          !existingData?.integration &&
+                          selectedIntegration.length < 2 && (
                           <div
                             className="mt-[12px] flex gap-[20px] items-center cursor-pointer select-none"
                             onClick={goBackToGlobal}
@@ -627,6 +629,13 @@ export const Editor: FC<{
     return stripHtmlValidation('normal', props.value || '', true);
   }, [props.value]);
 
+  const channelIcon =
+    identifier && identifier !== 'global'
+      ? identifier
+      : props.selectedIntegration.length === 1
+      ? props.selectedIntegration[0].integration.identifier
+      : '';
+
   const addText = useCallback(
     (emoji: string) => {
       editorRef?.current?.editor?.commands?.insertContent(emoji);
@@ -771,6 +780,17 @@ export const Editor: FC<{
                   onClose={() => {}}
                 >
                   <div className="relative z-[99] bg-white px-3 pt-3">
+                    {!!channelIcon && (
+                      <img
+                        src={
+                          channelIcon === 'youtube'
+                            ? '/icons/platforms/youtube.svg'
+                            : `/icons/platforms/${channelIcon}.png`
+                        }
+                        alt=""
+                        className="mb-2 h-5 w-5 rounded-[4px]"
+                      />
+                    )}
                     <OnlyEditor
                       value={props.value}
                       editorType={editorType}
