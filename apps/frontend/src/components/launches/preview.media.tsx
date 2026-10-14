@@ -26,10 +26,28 @@ export const PreviewMedia: FC<{
   identifier?: string;
   images?: { path: string }[];
   className?: string;
-}> = ({ identifier, images, className }) => {
+  natural?: boolean;
+}> = ({ identifier, images, className, natural }) => {
   const mediaDir = useMediaDirectory();
   if (!images?.length) {
     return null;
+  }
+
+  if (natural) {
+    return (
+      <div className={clsx('flex w-full flex-col', className)}>
+        {images.map((image, index) => (
+          <VideoOrImage
+            key={`preview-media-${index}`}
+            autoplay={true}
+            isContain={true}
+            src={mediaDir.set(image.path)}
+            imageClassName="!h-auto !w-full !object-contain"
+            videoClassName="!h-auto !w-full bg-black"
+          />
+        ))}
+      </div>
+    );
   }
 
   const aspect = previewAspectClass(identifier);

@@ -19,6 +19,10 @@ import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import useSWR from 'swr';
 import { InternalChannels } from '@gitroom/frontend/components/launches/internal.channels';
+import {
+  PLATFORM_LABELS,
+  platformFamily,
+} from '@gitroom/frontend/components/launches/helpers/mvp.platforms';
 
 class Empty {
   @IsOptional()
@@ -234,6 +238,10 @@ export const withProvider = function <T extends object>(params: {
             )
           );
     const hasContent = !!value?.[0]?.content?.length || !!value?.[0]?.media?.length;
+    const family = platformFamily(selectedIntegration.integration.identifier);
+    const platformLabel =
+      PLATFORM_LABELS[family] ||
+      selectedIntegration.integration.identifier.replace(/-/g, ' ');
     const showSettings =
       !!SettingsComponent || (!!data?.internalPlugs?.length && !dummy);
 
@@ -263,6 +271,14 @@ export const withProvider = function <T extends object>(params: {
                 ) : null}
               </div>
             ) : null}
+            <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-[#334155]">
+              <img
+                src={`/icons/platforms/${selectedIntegration.integration.identifier}.png`}
+                alt=""
+                className="h-4 w-4 rounded"
+              />
+              <span>{platformLabel}</span>
+            </div>
             <div className="relative overflow-hidden rounded-xl border border-[#e6e8ee] bg-white [&>div.absolute]:!relative [&>div.absolute]:!inset-auto [&>div.absolute]:!h-auto [&>div.absolute]:!w-full">
               {hasContent ? (
                 CustomPreviewComponent ? (
