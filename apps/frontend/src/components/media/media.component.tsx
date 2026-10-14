@@ -819,6 +819,7 @@ export const MultiMediaComponent: FC<{
   onClose?: () => void;
   toolBar?: React.ReactNode;
   information?: React.ReactNode;
+  children?: React.ReactNode;
   onChange: (event: {
     target: {
       name: string;
@@ -843,6 +844,7 @@ export const MultiMediaComponent: FC<{
     toolBar,
     information,
     mediaNotAvailable,
+    children,
   } = props;
   const user = useUser();
   const modals = useModals();
@@ -925,7 +927,10 @@ export const MultiMediaComponent: FC<{
               {currentMedia.map((media, index) => (
                 <div
                   key={media.id}
-                  className="cursor-pointer rounded-[5px] w-[40px] h-[40px] border-2 border-tableBorder relative flex transition-all"
+                  className={clsx(
+                    'relative flex cursor-pointer rounded-[5px] border-2 border-tableBorder transition-all',
+                    children ? 'h-[88px] w-[88px]' : 'h-[40px] w-[40px]'
+                  )}
                 >
                   <DragHandleIcon className="z-[20] dragging absolute pe-[1px] pb-[3px] -start-[4px] -top-[4px] cursor-move" />
 
@@ -981,6 +986,7 @@ export const MultiMediaComponent: FC<{
             </ReactSortable>
           )}
         </div>
+        {children}
         <div className="flex w-full flex-col gap-2 border-t border-[#e6e8ee] px-3 py-2 text-[#475569]">
           <div className="flex flex-wrap items-center gap-1.5">
           {!mediaNotAvailable && (

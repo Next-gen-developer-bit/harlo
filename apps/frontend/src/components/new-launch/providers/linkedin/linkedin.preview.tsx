@@ -333,6 +333,7 @@ export const LinkedinPreview: FC<{
         <PreviewMedia
           identifier={integration?.identifier}
           images={renderContent[0].images}
+          natural
           className="-mx-[15px] w-[calc(100%+30px)]"
         />
       )}

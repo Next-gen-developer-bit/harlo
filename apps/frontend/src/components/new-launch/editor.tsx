@@ -677,23 +677,6 @@ export const Editor: FC<{
             >
               {t('drop_files_here_to_upload', 'Drop your files here to upload')}
             </div>
-            <div className="relative z-[99] rounded-t-md bg-white px-3 pt-3">
-              <OnlyEditor
-                value={props.value}
-                editorType={editorType}
-                onChange={props.onChange}
-                paste={paste}
-                ref={editorRef}
-              />
-            </div>
-            <div className="flex-1 bg-white"
-              onClick={() => {
-                if (editorRef?.current?.editor?.isFocused) {
-                  return;
-                }
-                editorRef?.current?.editor?.commands?.focus('end');
-              }}
-            />
             <div className="w-full pointer-events-none">
               <div className="w-full h-[46px] overflow-hidden absolute left-0 bg-newBgColorInner uppyChange">
                 <Dashboard
@@ -709,15 +692,7 @@ export const Editor: FC<{
                 />
               </div>
             </div>
-            <div className="h-[46px] w-full cursor-text bg-white"
-              onClick={() => {
-                if (editorRef?.current?.editor?.isFocused) {
-                  return;
-                }
-                editorRef?.current?.editor?.commands?.focus('end');
-              }}
-            />
-            <div className="flex cursor-default rounded-b-md bg-white">
+            <div className="flex cursor-default rounded-md bg-white">
               {setImages && (
                 <MultiMediaComponent
                   mediaNotAvailable={num > 0 && comments === 'no-media'}
@@ -794,7 +769,26 @@ export const Editor: FC<{
                   }}
                   onOpen={() => {}}
                   onClose={() => {}}
-                />
+                >
+                  <div className="relative z-[99] bg-white px-3 pt-3">
+                    <OnlyEditor
+                      value={props.value}
+                      editorType={editorType}
+                      onChange={props.onChange}
+                      paste={paste}
+                      ref={editorRef}
+                    />
+                  </div>
+                  <div
+                    className="min-h-[120px] flex-1 cursor-text bg-white"
+                    onClick={() => {
+                      if (editorRef?.current?.editor?.isFocused) {
+                        return;
+                      }
+                      editorRef?.current?.editor?.commands?.focus('end');
+                    }}
+                  />
+                </MultiMediaComponent>
               )}
             </div>
             <div>{childButton}</div>
