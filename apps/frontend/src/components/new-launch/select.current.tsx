@@ -90,7 +90,7 @@ export const ChannelFields: FC = () => {
     .join(',');
 
   useEffect(() => {
-    if (!global.length || selectedIntegrations.length < 2) {
+    if (selectedIntegrations.length < 2) {
       return;
     }
     ensureChannelDrafts();

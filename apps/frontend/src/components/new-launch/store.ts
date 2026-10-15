@@ -315,16 +315,18 @@ export const useLaunchStore = create<StoreState>()((set) => ({
         return {};
       }
 
-      if (!state.global.length) {
-        return {};
-      }
+      const emptyPost: Values[] = [
+        { id: makeId(10), content: '', delay: 0, media: [] },
+      ];
 
       const currentInternal = state.internal.find(
         (item) => item.integration.id === state.current
       );
       const source = currentInternal?.integrationValue?.length
         ? currentInternal.integrationValue
-        : state.global;
+        : state.global.length
+          ? state.global
+          : emptyPost;
       const clone = source.map((item) => ({
         id: makeId(10),
         content: item.content,
@@ -381,7 +383,9 @@ export const useLaunchStore = create<StoreState>()((set) => ({
           ...state.internal,
           {
             integration: integration.integration,
-            integrationValue: state.global.slice(0).map((p) => p),
+            integrationValue: state.global.length
+              ? state.global.slice(0).map((p) => p)
+              : [{ id: makeId(10), content: '', delay: 0, media: [] }],
           },
         ],
       };
