@@ -160,8 +160,18 @@ export const withProvider = function <T extends object>(params: {
       }
     );
 
+    const hasMeaningfulContent = (values?: any[]) =>
+      (values || []).some(
+        (v: any) =>
+          (v.content || '').replace(/<[^>]*>/g, '').trim() ||
+          (v.media || []).length
+      );
+
     const value = useMemo(() => {
-      if (internal?.integrationValue?.length) {
+      if (
+        internal?.integrationValue?.length &&
+        hasMeaningfulContent(internal.integrationValue)
+      ) {
         return internal.integrationValue;
       }
 
@@ -238,7 +248,7 @@ export const withProvider = function <T extends object>(params: {
               selectedIntegration.integration.additionalSettings || '[]'
             )
           );
-    const hasContent = !!value?.[0]?.content?.length || !!value?.[0]?.media?.length;
+    const hasContent = hasMeaningfulContent(value);
     const family = platformFamily(selectedIntegration.integration.identifier);
     const platformLabel =
       PLATFORM_LABELS[family] ||

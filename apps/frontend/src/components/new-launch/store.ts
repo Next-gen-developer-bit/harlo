@@ -8,7 +8,7 @@ import { PostComment } from '@gitroom/frontend/components/new-launch/providers/p
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 
-interface Values {
+export interface Values {
   id: string;
   content: string;
   delay: number;
@@ -315,49 +315,83 @@ export const useLaunchStore = create<StoreState>()((set) => ({
         return {};
       }
 
-      const emptyPost: Values[] = [
-        { id: makeId(10), content: '', delay: 0, media: [] },
-      ];
-
-      const currentInternal = state.internal.find(
-        (item) => item.integration.id === state.current
-      );
-      const source = currentInternal?.integrationValue?.length
-        ? currentInternal.integrationValue
-        : state.global.length
-          ? state.global
-          : emptyPost;
-      const clone = source.map((item) => ({
-        id: makeId(10),
-        content: item.content,
-        delay: item.delay || 0,
-        media: (item.media || []).map((media) => ({ ...media })),
-      }));
-      const existingIds = new Set(
-        state.internal.map((item) => item.integration.id)
-      );
-      const additions = state.selectedIntegrations
-        .filter((item) => !existingIds.has(item.integration.id))
-        .map((item) => ({
-          integration: item.integration,
-          integrationValue: clone.map((value) => ({
-            ...value,
-            id: makeId(10),
-            media: value.media.map((media) => ({ ...media })),
-          })),
-        }));
       const nextCurrent = state.selectedIntegrations.some(
         (item) => item.integration.id === state.current
       )
         ? state.current
         : state.selectedIntegrations[0].integration.id;
 
-      if (!additions.length && nextCurrent === state.current) {
-        return {};
+      const hasContent = (values?: any[]) =>
+        (values || []).some(
+          (v: any) =>
+            (v.content || '').replace(/<[^>]*>/g, '').trim() ||
+            (v.media || []).length
+        );
+
+      const currentInternal = state.internal.find(
+        (item) => item.integration.id === state.current
+      );
+      const source = hasContent(currentInternal?.integrationValue)
+        ? currentInternal!.integrationValue
+        : hasContent(state.global)
+        ? state.global
+        : null;
+
+      if (!source) {
+        if (nextCurrent === state.current) {
+          return {};
+        }
+        return { current: nextCurrent };
       }
 
+      const clone = source.map((item) => ({
+        id: makeId(10),
+        content: item.content,
+        delay: item.delay || 0,
+        media: (item.media || []).map((media) => ({ ...media })),
+      }));
+
+      const updatedInternal = [...state.internal];
+      for (const item of state.selectedIntegrations) {
+        const existingIdx = updatedInternal.findIndex(
+          (int) => int.integration.id === item.integration.id
+        );
+        if (existingIdx === -1) {
+          updatedInternal.push({
+            integration: item.integration,
+            integrationValue: clone.map((v) => ({
+              ...v,
+              id: makeId(10),
+              media: v.media.map((m) => ({ ...m })),
+            })),
+          });
+        } else if (
+          !hasContent(updatedInternal[existingIdx].integrationValue) &&
+          item.integration.id !== state.current
+        ) {
+          updatedInternal[existingIdx] = {
+            integration: item.integration,
+            integrationValue: clone.map((v) => ({
+              ...v,
+              id: makeId(10),
+              media: v.media.map((m) => ({ ...m })),
+            })),
+          };
+        }
+      }
+
+      const nextGlobal =
+        !hasContent(state.global) && hasContent(source)
+          ? clone.map((v) => ({
+              ...v,
+              id: makeId(10),
+              media: v.media.map((m) => ({ ...m })),
+            }))
+          : state.global;
+
       return {
-        internal: [...state.internal, ...additions],
+        internal: updatedInternal,
+        global: nextGlobal,
         current: nextCurrent,
       };
     }),
@@ -383,9 +417,7 @@ export const useLaunchStore = create<StoreState>()((set) => ({
           ...state.internal,
           {
             integration: integration.integration,
-            integrationValue: state.global.length
-              ? state.global.slice(0).map((p) => p)
-              : [{ id: makeId(10), content: '', delay: 0, media: [] }],
+            integrationValue: state.global.slice(0).map((p) => p),
           },
         ],
       };

@@ -18,6 +18,7 @@ import { Theme } from 'emoji-picker-react';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import {
   SelectedIntegrations,
+  Values,
   useLaunchStore,
 } from '@gitroom/frontend/components/new-launch/store';
 import { useShallow } from 'zustand/react/shallow';
@@ -149,16 +150,55 @@ export const EditorWrapper: FC<{
   }, [loaded, loadedState]);
 
   const canEdit = useMemo(() => {
-    return current === 'global' || !!internal;
-  }, [current, internal]);
+    return (
+      current === 'global' ||
+      !!internal ||
+      selectedIntegration.some((p) => p.integration.id === current)
+    );
+  }, [current, internal, selectedIntegration]);
+
+  const hasMeaningfulContent = useCallback((values?: any[]) => {
+    return (values || []).some(
+      (v: any) =>
+        (v.content || '').replace(/<[^>]*>/g, '').trim() ||
+        (v.media || []).length
+    );
+  }, []);
 
   const items = useMemo(() => {
-    if (internal) {
+    if (
+      internal?.integrationValue?.length &&
+      hasMeaningfulContent(internal.integrationValue)
+    ) {
       return internal.integrationValue;
     }
 
     return global;
-  }, [internal, global]);
+  }, [internal, global, hasMeaningfulContent]);
+
+  const isPrimary = useMemo(() => {
+    return (
+      current === 'global' ||
+      (selectedIntegration.length > 0 &&
+        current === selectedIntegration[0]?.integration?.id)
+    );
+  }, [current, selectedIntegration]);
+
+  const ensureInternalForCurrent = useCallback(() => {
+    if (internal) return;
+    const base = hasMeaningfulContent(global) ? global : items;
+    const clone = base.map((item) => ({
+      ...item,
+      id: makeId(10),
+      media: (item.media || []).map((m) => ({ ...m })),
+    }));
+    setInternalValue(
+      current,
+      clone.length
+        ? clone
+        : [{ id: makeId(10), content: '', delay: 0, media: [] }]
+    );
+  }, [internal, global, items, current, setInternalValue, hasMeaningfulContent]);
 
   const setValue = useCallback(
     (value: string[]) => {
@@ -173,12 +213,15 @@ export const EditorWrapper: FC<{
         };
       });
       if (internal) {
-        return setInternalValue(current, newValue);
+        setInternalValue(current, newValue);
+      } else if (!isPrimary) {
+        setInternalValue(current, newValue);
       }
-
-      return setGlobalValue(newValue);
+      if (isPrimary || !internal) {
+        setGlobalValue(newValue);
+      }
     },
-    [internal, items]
+    [internal, isPrimary, items, current, setInternalValue, setGlobalValue]
   );
 
   useCopilotReadable({
@@ -203,79 +246,90 @@ export const EditorWrapper: FC<{
 
   const changeValue = useCallback(
     (index: number) => (value: string) => {
-      if (internal) {
-        return setInternalValueText(current, index, value);
+      if (isPrimary) {
+        if (internal) {
+          setInternalValueText(current, index, value);
+        }
+        setGlobalValueText(index, value);
+      } else {
+        ensureInternalForCurrent();
+        setInternalValueText(current, index, value);
       }
-
-      return setGlobalValueText(index, value);
     },
-    [current, global, internal]
+    [current, isPrimary, internal, ensureInternalForCurrent, setInternalValueText, setGlobalValueText]
   );
 
   const changeImages = useCallback(
     (index: number) => (value: any[]) => {
-      if (internal) {
-        return setInternalValueMedia(current, index, value);
+      if (isPrimary) {
+        if (internal) {
+          setInternalValueMedia(current, index, value);
+        }
+        setGlobalValueMedia(index, value);
+      } else {
+        ensureInternalForCurrent();
+        setInternalValueMedia(current, index, value);
       }
-
-      return setGlobalValueMedia(index, value);
     },
-    [current, global, internal]
+    [current, isPrimary, internal, ensureInternalForCurrent, setInternalValueMedia, setGlobalValueMedia]
   );
 
   const appendImages = useCallback(
     (index: number) => (value: any[]) => {
-      if (internal) {
-        return appendInternalValueMedia(current, index, value);
+      if (isPrimary) {
+        if (internal) {
+          appendInternalValueMedia(current, index, value);
+        }
+        appendGlobalValueMedia(index, value);
+      } else {
+        ensureInternalForCurrent();
+        appendInternalValueMedia(current, index, value);
       }
-
-      return appendGlobalValueMedia(index, value);
     },
-    [current, global, internal]
+    [current, isPrimary, internal, ensureInternalForCurrent, appendInternalValueMedia, appendGlobalValueMedia]
   );
 
   const changeOrder = useCallback(
     (index: number) => (direction: 'up' | 'down') => {
-      if (internal) {
+      if (isPrimary) {
+        if (internal) {
+          changeOrderInternal(current, index, direction);
+        }
+        changeOrderGlobal(index, direction);
+      } else {
+        ensureInternalForCurrent();
         changeOrderInternal(current, index, direction);
-        return setLoaded(false);
       }
-
-      changeOrderGlobal(index, direction);
       setLoaded(false);
     },
-    [changeOrderInternal, changeOrderGlobal, current, global, internal]
+    [current, isPrimary, internal, ensureInternalForCurrent, changeOrderInternal, changeOrderGlobal]
   );
 
   const addValue = useCallback(
     (index: number) => () => {
       setTimeout(() => {
         // scroll the the bottom
-        document.querySelector('#social-content').scrollTo({
-          top: document.querySelector('#social-content').scrollHeight,
+        document.querySelector('#social-content')?.scrollTo({
+          top: document.querySelector('#social-content')?.scrollHeight,
         });
       }, 20);
-      if (internal) {
-        return addInternalValue(index, current, [
-          {
-            delay: 0,
-            content: '',
-            id: makeId(10),
-            media: [],
-          },
-        ]);
+      const newPost: Values = {
+        delay: 0,
+        content: '',
+        id: makeId(10),
+        media: [],
+      };
+      if (isPrimary) {
+        if (internal) {
+          addInternalValue(index, current, [newPost]);
+        }
+        addGlobalValue(index, [newPost]);
+      } else {
+        ensureInternalForCurrent();
+        addInternalValue(index, current, [newPost]);
       }
-
-      return addGlobalValue(index, [
-        {
-          delay: 0,
-          content: '',
-          id: makeId(10),
-          media: [],
-        },
-      ]);
     },
-    [current, global, internal]
+    [current, isPrimary, internal, ensureInternalForCurrent, addInternalValue, addGlobalValue]
   );
 
   const deletePost = useCallback(
@@ -292,15 +346,17 @@ export const EditorWrapper: FC<{
         return;
       }
 
-      if (internal) {
+      if (isPrimary) {
+        if (internal) {
+          deleteInternalValue(current, index);
+        }
+        deleteGlobalValue(index);
+      } else {
         deleteInternalValue(current, index);
-        return setLoaded(false);
       }
-
-      deleteGlobalValue(index);
       setLoaded(false);
     },
-    [current, global, internal, t]
+    [current, isPrimary, internal, deleteInternalValue, deleteGlobalValue, t]
   );
 
   if (!loaded || !loadedState) {

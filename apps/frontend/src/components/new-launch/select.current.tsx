@@ -102,9 +102,14 @@ export const ChannelFields: FC = () => {
         const draft = internal.find(
           (item) => item.integration.id === integration.id
         );
-        const values = draft?.integrationValue?.length
-          ? draft.integrationValue
-          : global;
+        const hasCustomContent =
+          draft?.integrationValue?.length &&
+          draft.integrationValue.some(
+            (v) =>
+              (v.content || '').replace(/<[^>]*>/g, '').trim() ||
+              (v.media || []).length
+          );
+        const values = hasCustomContent ? draft.integrationValue : global;
         return {
           integration,
           text: plainText(values?.[0]?.content),

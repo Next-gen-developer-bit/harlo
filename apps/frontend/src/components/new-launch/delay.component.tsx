@@ -37,13 +37,29 @@ export const DelayComponent: FC<{
     }
   }, [isOpen, isCustomDelay, currentDelay]);
 
-  const { current, setInternalDelay, setGlobalDelay } = useLaunchStore(
+  const {
+    current,
+    setInternalDelay,
+    setGlobalDelay,
+    selectedIntegrations,
+    internal,
+  } = useLaunchStore(
     useShallow((state) => ({
       current: state.current,
+      selectedIntegrations: state.selectedIntegrations,
+      internal: state.internal.find((p) => p.integration.id === state.current),
       setGlobalDelay: state.setGlobalDelay,
       setInternalDelay: state.setInternalDelay,
     }))
   );
+
+  const isPrimary = React.useMemo(() => {
+    return (
+      current === 'global' ||
+      (selectedIntegrations.length > 0 &&
+        current === selectedIntegrations[0]?.integration?.id)
+    );
+  }, [current, selectedIntegrations]);
 
   const ref = useClickOutside(() => {
     if (!isOpen) {
@@ -54,13 +70,14 @@ export const DelayComponent: FC<{
 
   const setDelay = useCallback(
     (index: number) => (minutes: number) => {
-      if (current !== 'global') {
-        return setInternalDelay(current, index, minutes);
+      if (internal) {
+        setInternalDelay(current, index, minutes);
       }
-
-      return setGlobalDelay(index, minutes);
+      if (isPrimary || !internal) {
+        setGlobalDelay(index, minutes);
+      }
     },
-    [currentIndex, current]
+    [currentIndex, current, internal, isPrimary, setInternalDelay, setGlobalDelay]
   );
 
   const handleSelectDelay = useCallback(
