@@ -23,6 +23,7 @@ import {
   PLATFORM_LABELS,
   platformFamily,
 } from '@gitroom/frontend/components/launches/helpers/mvp.platforms';
+import { platformIconSrc } from '@gitroom/frontend/components/harlo-pages/ui';
 
 class Empty {
   @IsOptional()
@@ -241,7 +242,11 @@ export const withProvider = function <T extends object>(params: {
     const family = platformFamily(selectedIntegration.integration.identifier);
     const platformLabel =
       PLATFORM_LABELS[family] ||
-      selectedIntegration.integration.identifier.replace(/-/g, ' ');
+      family
+        .split('-')
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
     const showSettings =
       !!SettingsComponent || (!!data?.internalPlugs?.length && !dummy);
 
@@ -261,25 +266,19 @@ export const withProvider = function <T extends object>(params: {
         <FormProvider {...form}>
           <section
             id={`platform-section-${props.id}`}
-            className="mb-8 flex scroll-mt-4 flex-col gap-4"
+            className="mb-4 flex scroll-mt-4 flex-col overflow-hidden rounded-xl border border-[#e6e8ee] bg-white"
           >
-            {showSettings ? (
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                {SettingsComponent ? <SettingsComponent /> : null}
-                {!!data?.internalPlugs?.length && !dummy ? (
-                  <InternalChannels plugs={data.internalPlugs} />
-                ) : null}
-              </div>
-            ) : null}
-            <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-[#334155]">
+            <div className="flex items-center gap-2.5 border-b border-[#e6e8ee] px-3 py-3">
               <img
-                src={`/icons/platforms/${selectedIntegration.integration.identifier}.png`}
-                alt=""
-                className="h-4 w-4 rounded"
+                src={platformIconSrc(selectedIntegration.integration.identifier)}
+                alt={platformLabel}
+                className="h-5 w-5 rounded-full object-contain"
               />
-              <span>{platformLabel}</span>
+              <span className="text-[14px] font-semibold text-[#0f172a]">
+                {platformLabel}
+              </span>
             </div>
-            <div className="relative overflow-hidden rounded-xl border border-[#e6e8ee] bg-white [&>div.absolute]:!relative [&>div.absolute]:!inset-auto [&>div.absolute]:!h-auto [&>div.absolute]:!w-full">
+            <div className="relative overflow-hidden bg-white [&>div.absolute]:!relative [&>div.absolute]:!inset-auto [&>div.absolute]:!h-auto [&>div.absolute]:!w-full">
               {hasContent ? (
                 CustomPreviewComponent ? (
                   <CustomPreviewComponent maximumCharacters={characterLimit} />
@@ -298,6 +297,14 @@ export const withProvider = function <T extends object>(params: {
                 </div>
               )}
             </div>
+            {showSettings ? (
+              <div className="border-t border-[#e6e8ee] p-3">
+                {SettingsComponent ? <SettingsComponent /> : null}
+                {!!data?.internalPlugs?.length && !dummy ? (
+                  <InternalChannels plugs={data.internalPlugs} />
+                ) : null}
+              </div>
+            ) : null}
           </section>
         </FormProvider>
       </IntegrationContext.Provider>
