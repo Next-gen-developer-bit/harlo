@@ -57,7 +57,9 @@ export const Checkbox = forwardRef<
           'cursor-pointer rounded-[4px] select-none flex-shrink-0 w-[24px] h-[24px] justify-center items-center flex text-white transition-colors',
           variant === 'default' || !variant
             ? 'bg-forth'
-            : 'border-customColor1 border-2 bg-customColor2',
+            : val
+              ? 'bg-forth border-2 border-forth'
+              : 'border-customColor1 border-2 bg-customColor2',
           className
         )}
       >
