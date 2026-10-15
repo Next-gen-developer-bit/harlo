@@ -55,6 +55,39 @@ const Invalid: FC = () => {
     </svg>
   );
 };
+const DEFAULT_PROVIDER_LIMITS: Record<string, number> = {
+  instagram: 2200,
+  tiktok: 2000,
+  x: 280,
+  threads: 500,
+  bluesky: 300,
+  linkedin: 3000,
+  'linkedin-page': 3000,
+  youtube: 5000,
+  pinterest: 500,
+  facebook: 63206,
+  reddit: 10000,
+  telegram: 4096,
+  vk: 2048,
+  mastodon: 500,
+  dribbble: 10000,
+  medium: 100000,
+  devto: 100000,
+  hashnode: 100000,
+  wordpress: 100000,
+  listmonk: 100000,
+  gmb: 1500,
+  moltbook: 300,
+  skool: 50000,
+  whop: 2000,
+  mewe: 63206,
+  tumblr: 32768,
+  lemmy: 10000,
+  wrapcast: 1024,
+  warpcast: 1024,
+  nostr: 100000,
+};
+
 export const InformationComponent: FC<{
   chars: Record<string, number>;
   totalChars: number;
@@ -63,17 +96,23 @@ export const InformationComponent: FC<{
   text?: string;
 }> = ({ totalChars, totalAllowedChars, chars, isPicture, text }) => {
   const t = useT();
-  const { isGlobal, selectedIntegrations, internal, currentIntegration } =
-    useLaunchStore(
-      useShallow((state) => ({
-        isGlobal: state.current === 'global',
-        selectedIntegrations: state.selectedIntegrations,
-        internal: state.internal,
-        currentIntegration: state.integrations.find(
-          (p) => p.id === state.current
-        ),
-      }))
-    );
+  const {
+    isGlobal,
+    selectedIntegrations,
+    internal,
+    currentIntegration,
+    integrations,
+  } = useLaunchStore(
+    useShallow((state) => ({
+      isGlobal: state.current === 'global',
+      selectedIntegrations: state.selectedIntegrations,
+      internal: state.internal,
+      currentIntegration: state.integrations.find(
+        (p) => p.id === state.current
+      ),
+      integrations: state.integrations,
+    }))
+  );
 
   const stripLinkNames = useMemo(() => {
     if (!hasLinks(text)) {
@@ -141,6 +180,8 @@ export const InformationComponent: FC<{
     isPicture,
     chars,
     showStripLinkWarning,
+    isGlobal,
+    selectedIntegrations,
   ]);
 
   const globalDisplayLimit = useMemo(() => {
@@ -168,6 +209,50 @@ export const InformationComponent: FC<{
     return validLimit ?? limits[0];
   }, [isGlobal, selectedIntegrations, chars, isInternal, totalChars]);
 
+  const effectiveLimit = useMemo(() => {
+    if (!isGlobal) {
+      if (totalAllowedChars > 0) {
+        return totalAllowedChars;
+      }
+      if (currentIntegration) {
+        return (
+          chars?.[currentIntegration.id] ||
+          DEFAULT_PROVIDER_LIMITS[currentIntegration.identifier] ||
+          2200
+        );
+      }
+      return 2200;
+    }
+
+    if (globalDisplayLimit !== null && globalDisplayLimit > 0) {
+      return globalDisplayLimit;
+    }
+
+    const fallbackLimits = integrations
+      .map((i) => chars?.[i.id] || DEFAULT_PROVIDER_LIMITS[i.identifier] || 0)
+      .filter((limit) => limit > 0)
+      .sort((a, b) => a - b);
+
+    if (fallbackLimits.length) {
+      const validFallback = fallbackLimits.find((limit) => totalChars <= limit);
+      return validFallback ?? fallbackLimits[0];
+    }
+
+    if (totalAllowedChars > 0) {
+      return totalAllowedChars;
+    }
+
+    return 2200;
+  }, [
+    isGlobal,
+    totalAllowedChars,
+    currentIntegration,
+    chars,
+    globalDisplayLimit,
+    integrations,
+    totalChars,
+  ]);
+
   const showInlineWarning =
     showStripLinkWarning || (totalChars > 0 && !isValid);
 
@@ -182,16 +267,9 @@ export const InformationComponent: FC<{
         )}
       >
         {showInlineWarning ? <Invalid /> : <Valid />}
-        {!isGlobal && (
-          <span>
-            {totalChars}/{totalAllowedChars}
-          </span>
-        )}
-        {isGlobal && globalDisplayLimit !== null && (
-          <span>
-            {totalChars}/{globalDisplayLimit}
-          </span>
-        )}
+        <span>
+          {totalChars}/{effectiveLimit}
+        </span>
       </div>
       {showInlineWarning && (
         <div className="w-full rounded-md border border-[#fecaca] bg-[#fff7f7] px-3 py-2 text-[12px] leading-5 text-[#9f1239]">
