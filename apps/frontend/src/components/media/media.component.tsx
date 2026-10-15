@@ -993,11 +993,13 @@ export const MultiMediaComponent: FC<{
             <div className="flex items-center gap-1.5">
               <div
                 onClick={showModal}
-                className="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-[#e6e8ee] bg-white px-2.5"
+                data-tooltip-id="tooltip"
+                data-tooltip-content={t('upload_media', 'Upload media')}
+                className="flex h-8 cursor-pointer select-none items-center justify-center gap-1.5 rounded-md border border-[#e6e8ee] bg-white px-2.5 text-[#475569]"
               >
                 <InsertMediaIcon />
                 <div className="hidden text-[12px] font-medium maxMedia:hidden sm:block">
-                  {t('insert_media', 'Insert Media')}
+                  {t('upload_media', 'Upload media')}
                 </div>
               </div>
 

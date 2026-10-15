@@ -55,7 +55,6 @@ import { InformationComponent } from '@gitroom/frontend/components/launches/info
 import {
   LockIcon,
   ConnectionLineIcon,
-  ResetIcon,
   TrashIcon,
   EmojiIcon,
   DelayIcon,
@@ -248,21 +247,6 @@ export const EditorWrapper: FC<{
     [changeOrderInternal, changeOrderGlobal, current, global, internal]
   );
 
-  const goBackToGlobal = useCallback(async () => {
-    if (
-      await deleteDialog(
-        t(
-          'are_you_sure_go_back_to_global_mode',
-          'This action is irreversible. Are you sure you want to go back to global mode?'
-        ),
-        t('yes_go_back_to_global_mode', 'Yes, go back to global mode')
-      )
-    ) {
-      setLoaded(false);
-      addRemoveInternal(current);
-    }
-  }, [addRemoveInternal, current, t]);
-
   const addValue = useCallback(
     (index: number) => () => {
       setTimeout(() => {
@@ -429,32 +413,7 @@ export const EditorWrapper: FC<{
                             />
                           )}
                         </div>
-                        {!!internal &&
-                          !existingData?.integration &&
-                          selectedIntegration.length < 2 && (
-                          <div
-                            className="mt-[12px] flex gap-[20px] items-center cursor-pointer select-none"
-                            onClick={goBackToGlobal}
-                          >
-                            <div className="flex gap-[6px] items-center">
-                              <div className="w-[8px] h-[8px] rounded-full bg-[#FC69FF]" />
-                              <div className="text-[14px] font-[600]">
-                                {t(
-                                  'editing_a_specific_network',
-                                  'Editing a Specific Network'
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex gap-[6px] items-center">
-                              <div>
-                                <ResetIcon />
-                              </div>
-                              <div className="text-[13px] font-[600]">
-                                {t('back_to_global', 'Back to global')}
-                              </div>
-                            </div>
-                          </div>
-                        )}
+
                       </div>
                     ) : null}
                   </>
