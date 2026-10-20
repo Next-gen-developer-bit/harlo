@@ -10,14 +10,18 @@ const ModeComponent = () => {
   const [mode, setMode] = useCookie('mode', 'light');
 
   const changeMode = useCallback(() => {
-    // Only support light mode now
-    modeEmitter.emit('mode', 'light');
-    setMode('light');
-  }, []);
+    const next = mode === 'dark' ? 'light' : 'dark';
+    modeEmitter.emit('mode', next);
+    setMode(next);
+  }, [mode, setMode]);
 
   useEffect(() => {
+    const next = mode === 'dark' ? 'dark' : 'light';
+    document.documentElement.classList.remove('dark', 'light');
     document.body.classList.remove('dark', 'light');
-    document.body.classList.add('light');
+    document.documentElement.classList.add(next);
+    document.body.classList.add(next);
+    modeEmitter.emit('mode', next);
   }, [mode]);
   return (
     <div onClick={changeMode} className="select-none cursor-pointer">

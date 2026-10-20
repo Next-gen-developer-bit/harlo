@@ -1,15 +1,6 @@
 'use client';
 
 import React, { ReactNode, useCallback, useEffect } from 'react';
-import { Logo } from '@gitroom/frontend/components/new-layout/logo';
-const ModeComponent = dynamic(
-  () => import('@gitroom/frontend/components/layout/mode.component'),
-  {
-    ssr: false,
-  }
-);
-
-import dynamic from 'next/dynamic';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useSearchParams } from 'next/navigation';
@@ -68,8 +59,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
   if (!user) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center text-sm text-gray-500"
-        style={{ background: '#f8fafc' }}
+        className="flex min-h-screen items-center justify-center bg-[#f8fafc] text-sm text-gray-500 dark:bg-[#0f1419] dark:text-slate-400"
       >
         Loading workspace…
       </div>
@@ -96,8 +86,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
             <NewSubscription />
             <ContinueProvider />
             <div
-              className="flex h-dvh max-h-dvh min-h-0 min-w-screen flex-col overflow-hidden text-newTextColor"
-              style={{ background: '#f7f8fa' }}
+              className="flex h-dvh max-h-dvh min-h-0 min-w-screen flex-col overflow-hidden bg-[#f7f8fa] text-newTextColor dark:bg-[#0b0f14]"
             >
               <div>{user?.admin ? <Impersonate /> : <div />}</div>
               <>
@@ -108,8 +97,7 @@ export const LayoutComponent = ({ children }: { children: ReactNode }) => {
                     <Sidebar />
                   </div>
                   <div
-                    className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden bg-[#f8fafc]"
-                    style={{ background: '#f8fafc' }}
+                    className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f1419]"
                   >
                     <AppTopbar />
                     <div className="flex-1 flex flex-col">{children}</div>

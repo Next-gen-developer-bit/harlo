@@ -826,3 +826,57 @@ html[dir='rtl'] [dir='ltr'] {
   text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black,
     1px 1px 0 black;
 }
+
+/* Keep page titles as the one heavier weight. Labels, nav, and section
+   titles stay medium so the interface is less heavy. */
+html body .font-bold,
+html body .font-semibold {
+  font-weight: 500;
+}
+html body h1.font-semibold,
+html body h1.font-bold,
+html body .pb-brand-name,
+html body .pb-create-post {
+  font-weight: 600;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+html.dark body {
+  background: #0b0f14 !important;
+  color: #e7e9ea;
+}
+html.dark .bg-white,
+html.dark .bg-slate-50,
+html.dark .bg-\[\#ffffff\],
+html.dark .bg-\[\#f8fafc\],
+html.dark .bg-\[\#f7f8fa\],
+html.dark .bg-\[\#fafbfc\],
+html.dark .bg-\[\#f8fafc\]\/95 {
+  background-color: #161b22 !important;
+}
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark .text-\[\#0f172a\],
+html.dark .text-\[\#334155\] {
+  color: #f1f5f9 !important;
+}
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-\[\#e6e8ee\],
+html.dark .border-\[\#e2e8f0\] {
+  border-color: #1e293b !important;
+}
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #0f1419;
+  color: #f1f5f9;
+  border-color: #1e293b;
+}

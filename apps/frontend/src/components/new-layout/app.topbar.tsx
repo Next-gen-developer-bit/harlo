@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { useOrganizations } from '@gitroom/frontend/components/layout/use.organizations';
+import ModeComponent from '@gitroom/frontend/components/layout/mode.component';
 
 const LIST_STATES = new Set([
   'all',
@@ -68,44 +69,26 @@ export const AppTopbar = () => {
   }, [router]);
 
   return (
-    <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-100 bg-[#f8fafc]/95 px-6 py-3 backdrop-blur md:px-8">
+    <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-100 bg-[#f8fafc]/95 px-6 py-3 backdrop-blur dark:border-slate-800 dark:bg-[#0f1419]/95 md:px-8">
       {pathname === '/overview' || pathname === '/dashboard' ? (
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
             Current workspace
           </p>
-          <h1 className="truncate text-[28px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+          <h1 className="truncate text-[28px] font-semibold leading-tight tracking-[-0.03em] text-slate-900 dark:text-slate-100">
             {workspaceName}
           </h1>
         </div>
       ) : pageTitle ? (
-        <h1 className="shrink-0 text-[32px] font-bold leading-tight tracking-[-0.03em] text-slate-900">
+        <h1 className="shrink-0 text-[32px] font-semibold leading-tight tracking-[-0.03em] text-slate-900 dark:text-slate-100">
           {pageTitle}
         </h1>
       ) : null}
       <div className="ml-auto flex shrink-0 items-center gap-2">
-      <div className="relative w-[320px] max-w-[40vw]">
-        <svg
-          className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"
-          />
-        </svg>
-        <input
-          readOnly
-          onClick={() => router.push('/launches?state=all')}
-          placeholder="Search posts, campaigns or accounts..."
-          className="h-10 w-full cursor-pointer rounded-full border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none placeholder:text-slate-400"
-        />
+      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+        <ModeComponent />
       </div>
-      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
         <NotificationComponent />
       </div>
       <button

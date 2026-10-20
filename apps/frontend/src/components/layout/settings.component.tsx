@@ -1,10 +1,13 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
-import { GlobalSettings } from '@gitroom/frontend/components/settings/global.settings';
+import EmailNotificationsComponent from '@gitroom/frontend/components/settings/email-notifications.component';
+import ShortlinkPreferenceComponent from '@gitroom/frontend/components/settings/shortlink-preference.component';
+import MetricComponent from '@gitroom/frontend/components/settings/metric.component';
 import { ApprovedAppsComponent } from '@gitroom/frontend/components/approved-apps/approved-apps.component';
 import { Webhooks } from '@gitroom/frontend/components/webhooks/webhooks';
 import { showMediaBox } from '@gitroom/frontend/components/media/media.component';
@@ -34,7 +37,14 @@ export const SettingsPopup = () => {
   const mediaDirectory = useMediaDirectory();
 
   const [activeTab, setActiveTab] = useState<
-    'profile' | 'security' | 'notifications' | 'preferences' | 'apps'
+    | 'profile'
+    | 'preferences'
+    | 'notifications'
+    | 'general'
+    | 'roles'
+    | 'channels'
+    | 'billing'
+    | 'security'
   >('profile');
 
   // Profile State
@@ -298,18 +308,21 @@ export const SettingsPopup = () => {
           <nav className="flex space-x-6 overflow-x-auto">
             {[
               { id: 'profile', label: 'Profile' },
-              { id: 'security', label: 'Email & Security' },
+              { id: 'preferences', label: 'Preferences' },
               { id: 'notifications', label: 'Notifications' },
-              { id: 'preferences', label: 'Platform & Weekly Goal' },
-              { id: 'apps', label: 'Connected Apps' },
+              { id: 'general', label: 'General' },
+              { id: 'roles', label: 'Roles & Permissions' },
+              { id: 'channels', label: 'Channels' },
+              { id: 'billing', label: 'Billing' },
+              { id: 'security', label: 'Email & Security' },
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={clsx(
-                  'whitespace-nowrap pb-2 text-xs font-semibold border-b-2 transition-colors',
+                  'whitespace-nowrap border-b-2 pb-2 text-[13px] font-medium transition-colors',
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600 font-bold'
+                    ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 )}
               >
@@ -425,9 +438,6 @@ export const SettingsPopup = () => {
               </>
             )}
 
-            <div className="border-t border-slate-100 pt-6">
-              <GlobalSettings />
-            </div>
           </div>
         )}
 
@@ -575,16 +585,52 @@ export const SettingsPopup = () => {
           </div>
         )}
 
-        {activeTab === 'notifications' && (
-          <div className="space-y-5 max-w-xl">
-            <h3 className="text-sm font-bold text-slate-900 mb-2">
-              Notification Preferences
-            </h3>
+        {activeTab === 'preferences' && (
+          <div className="max-w-xl space-y-6">
+            <div>
+              <h3 className="text-sm font-medium text-slate-900">Preferences</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                How Harlo writes links and tracks your posting pace.
+              </p>
+            </div>
+            <div>
+              <h3 className="mb-2 text-sm font-medium text-slate-900">
+                Weekly posting goal
+              </h3>
+              <p className="mb-3 text-xs text-slate-500">
+                Set target posts per week to track posting consistency.
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={weeklyGoal}
+                  onChange={(e) => setWeeklyGoal(Number(e.target.value))}
+                  className="w-24 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-center text-xs text-slate-800"
+                />
+                <span className="text-xs text-slate-500">posts / week</span>
+              </div>
+            </div>
+            <div className="border-t border-slate-100 pt-4">
+              <ShortlinkPreferenceComponent />
+            </div>
+          </div>
+        )}
 
-            <label className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer">
+        {activeTab === 'notifications' && (
+          <div className="max-w-xl space-y-5">
+            <div>
+              <h3 className="text-sm font-medium text-slate-900">Notifications</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Choose which email updates Harlo sends you.
+              </p>
+            </div>
+
+            <label className="flex cursor-pointer items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3.5">
               <div>
-                <div className="text-xs font-bold text-slate-900">
-                  Weekly Summary Digest
+                <div className="text-xs font-medium text-slate-900">
+                  Weekly summary digest
                 </div>
                 <div className="text-[11px] text-slate-500">
                   Receive a weekly overview of post performance
@@ -594,14 +640,14 @@ export const SettingsPopup = () => {
                 type="checkbox"
                 checked={emailDigest}
                 onChange={(e) => setEmailDigest(e.target.checked)}
-                className="text-blue-500 focus:ring-blue-400 w-4 h-4 rounded"
+                className="h-4 w-4 rounded text-blue-500 focus:ring-blue-400"
               />
             </label>
 
-            <label className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer">
+            <label className="flex cursor-pointer items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3.5">
               <div>
-                <div className="text-xs font-bold text-slate-900">
-                  Failed Post Alerts
+                <div className="text-xs font-medium text-slate-900">
+                  Failed post alerts
                 </div>
                 <div className="text-[11px] text-slate-500">
                   Instant notification if a post fails to publish
@@ -611,68 +657,118 @@ export const SettingsPopup = () => {
                 type="checkbox"
                 checked={postAlerts}
                 onChange={(e) => setPostAlerts(e.target.checked)}
-                className="text-blue-500 focus:ring-blue-400 w-4 h-4 rounded"
+                className="h-4 w-4 rounded text-blue-500 focus:ring-blue-400"
               />
             </label>
+
+            <div className="border-t border-slate-100 pt-4">
+              <EmailNotificationsComponent />
+            </div>
           </div>
         )}
 
-        {activeTab === 'preferences' && (
-          <div className="space-y-6 max-w-xl">
+        {activeTab === 'general' && (
+          <div className="max-w-xl space-y-4">
             <div>
-              <h3 className="text-sm font-bold text-slate-900 mb-2">
-                Weekly Posting Goal
-              </h3>
-              <p className="text-xs text-slate-500 mb-3">
-                Set target posts per week to track posting consistency
+              <h3 className="text-sm font-medium text-slate-900">General</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Time and date defaults used when you schedule posts.
               </p>
-              <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  min="1"
-                  max="50"
-                  value={weeklyGoal}
-                  onChange={(e) => setWeeklyGoal(Number(e.target.value))}
-                  className="w-24 bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 p-2.5 rounded-xl text-center"
-                />
-                <span className="text-xs text-slate-500 font-medium">
-                  posts / week
-                </span>
-              </div>
             </div>
-
-            <div className="pt-4 border-t border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900 mb-2">Timezone</h3>
-              <p className="text-xs text-slate-500 mb-2">
-                Default schedule timezone
-              </p>
-              <input
-                type="text"
-                disabled
-                value={Intl.DateTimeFormat().resolvedOptions().timeZone}
-                className="w-full bg-slate-50 border border-slate-200 text-xs text-slate-600 p-2.5 rounded-xl cursor-not-allowed"
-              />
-            </div>
+            <MetricComponent />
           </div>
         )}
 
-        {activeTab === 'apps' && (
+        {activeTab === 'roles' && (
+          <div className="max-w-xl space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-slate-900">
+                Roles & Permissions
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Workspace access is managed with the team. Social accounts stay
+                on the Channels tab.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {[
+                ['Owner', 'Full access, including billing, channels, and members.'],
+                ['Admin', 'Manage posts, channels, and members. Billing stays with the owner.'],
+                ['Editor', 'Create and schedule posts for the channels they can access.'],
+              ].map(([title, body]) => (
+                <div
+                  key={title}
+                  className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+                >
+                  <div className="text-xs font-medium text-slate-900">{title}</div>
+                  <p className="mt-1 text-xs text-slate-500">{body}</p>
+                </div>
+              ))}
+            </div>
+            <Link
+              href="/teams"
+              className="inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Manage team members
+            </Link>
+          </div>
+        )}
+
+        {activeTab === 'channels' && (
           <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 mb-2">
-                Approved Applications
+            <div className="max-w-xl">
+              <h3 className="text-sm font-medium text-slate-900">Channels</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Social accounts you publish to. Connected tools are apps that
+                can access Harlo, not extra social networks.
+              </p>
+              <Link
+                href="/third-party"
+                className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700"
+              >
+                Manage social accounts
+              </Link>
+            </div>
+            <div className="border-t border-slate-100 pt-6">
+              <h3 className="mb-2 text-sm font-medium text-slate-900">
+                Connected tools
               </h3>
-              <p className="text-xs text-slate-500 mb-4">
-                OAuth apps and third-party tools connected to your account
+              <p className="mb-4 text-xs text-slate-500">
+                OAuth apps allowed to act on this workspace.
               </p>
               <ApprovedAppsComponent />
             </div>
-
             {user?.tier?.webhooks && (
-              <div className="pt-6 border-t border-slate-100">
+              <div className="border-t border-slate-100 pt-6">
                 <Webhooks />
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'billing' && (
+          <div className="max-w-xl space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-slate-900">Billing</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Plan, payment method, and invoices live on the billing page so
+                this tab stays a summary.
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <div className="text-xs font-medium text-slate-900">
+                {user?.tier?.current || 'Current plan'}
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                Open billing to change the plan or update payment details.
+              </p>
+            </div>
+            <Link
+              href="/billing"
+              className="inline-flex rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white hover:bg-slate-800"
+            >
+              Open billing
+            </Link>
           </div>
         )}
       </div>
