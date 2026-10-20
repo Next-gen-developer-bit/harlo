@@ -61,6 +61,11 @@ import {
   DelayIcon,
 } from '@gitroom/frontend/components/ui/icons';
 import { DelayComponent } from '@gitroom/frontend/components/new-launch/delay.component';
+import {
+  MetaFormatSwitch,
+  isMetaFormatPlatform,
+  type MetaPostFormat,
+} from '@gitroom/frontend/components/new-launch/meta.format.switch';
 
 const MAX_UPLOAD_SIZE = 1024 * 1024 * 1024; // 1 GB
 
@@ -545,6 +550,13 @@ export const Editor: FC<{
   const toaster = useToaster();
   const editorRef = useRef<undefined | { editor: any }>(undefined);
   const [loading, setLoading] = useState(false);
+  const { current, metaPostType, setMetaPostType } = useLaunchStore(
+    useShallow((state) => ({
+      current: state.current,
+      metaPostType: state.metaPostType,
+      setMetaPostType: state.setMetaPostType,
+    }))
+  );
 
   const uppy = useUppyUploader({
     onUploadSuccess: (result: any) => {
@@ -650,6 +662,14 @@ export const Editor: FC<{
       : props.selectedIntegration.length === 1
       ? props.selectedIntegration[0].integration.identifier
       : '';
+  const activeChannel =
+    props.selectedIntegration.find((item) => item.integration.id === current) ||
+    (props.selectedIntegration.length === 1
+      ? props.selectedIntegration[0]
+      : undefined);
+  const metaFormat = (metaPostType[activeChannel?.integration.id || ''] ||
+    activeChannel?.settings?.post_type ||
+    'post') as MetaPostFormat;
 
   const addText = useCallback(
     (emoji: string) => {
@@ -795,16 +815,30 @@ export const Editor: FC<{
                   onClose={() => {}}
                 >
                   <div className="relative z-[99] bg-white px-3 pt-3">
-                    {!!channelIcon && (
-                      <img
-                        src={
-                          channelIcon === 'youtube'
-                            ? '/icons/platforms/youtube.svg'
-                            : `/icons/platforms/${channelIcon}.png`
+                    {isMetaFormatPlatform(channelIcon) && activeChannel ? (
+                      <MetaFormatSwitch
+                        identifier={channelIcon}
+                        value={
+                          metaFormat === 'reel' || metaFormat === 'story'
+                            ? metaFormat
+                            : 'post'
                         }
-                        alt=""
-                        className="mb-2 h-5 w-5 rounded-[4px]"
+                        onChange={(next) =>
+                          setMetaPostType(activeChannel.integration.id, next)
+                        }
                       />
+                    ) : (
+                      !!channelIcon && (
+                        <img
+                          src={
+                            channelIcon === 'youtube'
+                              ? '/icons/platforms/youtube.svg'
+                              : `/icons/platforms/${channelIcon}.png`
+                          }
+                          alt=""
+                          className="mb-2 h-5 w-5 rounded-[4px]"
+                        />
+                      )
                     )}
                     <OnlyEditor
                       value={props.value}

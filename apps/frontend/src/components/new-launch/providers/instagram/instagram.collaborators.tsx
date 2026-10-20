@@ -4,7 +4,7 @@ import {
   PostComment,
   withProvider,
 } from '@gitroom/frontend/components/new-launch/providers/high.order.provider';
-import { FC } from 'react';
+import { FC, useEffect } from 'react';
 import { Select } from '@gitroom/react/form/select';
 import { Checkbox } from '@gitroom/react/form/checkbox';
 import { useSettings } from '@gitroom/frontend/components/launches/helpers/use.values';
@@ -14,16 +14,8 @@ import { InstagramAudioSelector } from '@gitroom/frontend/components/new-launch/
 import { useIntegration } from '@gitroom/frontend/components/launches/helpers/use.integration';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { InstagramPreview } from '@gitroom/frontend/components/new-launch/providers/instagram/instagram.preview';
-const postType = [
-  {
-    value: 'post',
-    label: 'Post / Reel',
-  },
-  {
-    value: 'story',
-    label: 'Story',
-  },
-];
+import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
+import { useShallow } from 'zustand/react/shallow';
 
 const graduationStrategies = [
   {
@@ -39,27 +31,26 @@ const InstagramCollaborators: FC<{
   values?: any;
 }> = (props) => {
   const t = useT();
-  const { watch, register, formState, control } = useSettings();
+  const { watch, register, formState, control, setValue } = useSettings();
   const { integration } = useIntegration();
+  const chosenType = useLaunchStore(
+    useShallow((state) => state.metaPostType[integration?.id || ''] || '')
+  );
   const postCurrentType = watch('post_type');
   const isTrialReel = watch('is_trial_reel');
   // The Audio API is only available with Facebook Login, not Instagram Login
   const supportsAudio = integration?.identifier === 'instagram';
+  const isReel = postCurrentType === 'reel';
+
+  useEffect(() => {
+    if (chosenType) {
+      setValue('post_type', chosenType);
+    }
+  }, [chosenType, setValue]);
+
   return (
     <>
-      <Select
-        label="Post Type"
-        {...register('post_type', {
-          value: 'post',
-        })}
-      >
-        <option value="">{t('select_post_type', 'Select Post Type...')}</option>
-        {postType.map((item) => (
-          <option key={item.value} value={item.value}>
-            {item.label}
-          </option>
-        ))}
-      </Select>
+      <input type="hidden" {...register('post_type', { value: 'post' })} />
 
       {postCurrentType !== 'story' && (
         <InstagramCollaboratorsTags
@@ -70,7 +61,7 @@ const InstagramCollaborators: FC<{
         />
       )}
 
-      {postCurrentType === 'post' && (
+      {isReel && (
         <div className="mt-[18px]">
           <InstagramAudioSelector
             label={t(
@@ -83,7 +74,7 @@ const InstagramCollaborators: FC<{
         </div>
       )}
 
-      {postCurrentType === 'post' && (
+      {isReel && (
         <div className="mt-[18px] flex flex-col gap-[18px]">
           <Checkbox
             {...register('is_trial_reel', {

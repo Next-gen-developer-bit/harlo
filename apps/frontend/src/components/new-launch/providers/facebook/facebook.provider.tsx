@@ -16,28 +16,25 @@ import { useIntegration } from '@gitroom/frontend/components/launches/helpers/us
 import { FacebookPreview } from '@gitroom/frontend/components/new-launch/providers/facebook/facebook.preview';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useEffect } from 'react';
-
-const postType = [
-  {
-    value: 'post',
-    label: 'Post',
-  },
-  {
-    value: 'story',
-    label: 'Story',
-  },
-];
+import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
+import { useShallow } from 'zustand/react/shallow';
 
 export const FacebookSettings = () => {
   const t = useT();
   const { register, watch, setValue } = useSettings();
-  const { value } = useIntegration();
+  const { value, integration } = useIntegration();
+  const chosenType = useLaunchStore(
+    useShallow(
+      (state) => state.metaPostType[integration?.id || ''] || ''
+    )
+  );
   const postCurrentType = watch('post_type');
   const preset = watch('text_format_preset_id');
 
   // Facebook background presets only render on text-only Page posts (no media).
   const hasMedia = !!value?.some((p) => !!p.image?.length);
-  const presetAvailable = postCurrentType !== 'story' && !hasMedia;
+  const presetAvailable =
+    postCurrentType !== 'story' && postCurrentType !== 'reel' && !hasMedia;
   const selectedBg = getPresetBackground(preset);
 
   // Clear any selected background when it can no longer apply (story / media),
@@ -48,25 +45,15 @@ export const FacebookSettings = () => {
     }
   }, [presetAvailable, preset, setValue]);
 
+  useEffect(() => {
+    if (chosenType) {
+      setValue('post_type', chosenType);
+    }
+  }, [chosenType, setValue]);
+
   return (
     <>
-      <div className="pt-[20px]">
-        <Select
-          label="Post Type"
-          {...register('post_type', {
-            value: 'post',
-          })}
-        >
-          <option value="">
-            {t('select_post_type', 'Select Post Type...')}
-          </option>
-          {postType.map((item) => (
-            <option key={item.value} value={item.value}>
-              {item.label}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <input type="hidden" {...register('post_type', { value: 'post' })} />
 
       {postCurrentType !== 'story' && (
         <Input

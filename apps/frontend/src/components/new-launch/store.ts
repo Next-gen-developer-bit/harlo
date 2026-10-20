@@ -103,6 +103,11 @@ interface StoreState {
   ) => void;
   setAllIntegrations: (integrations: Integrations[]) => void;
   setCurrent: (current: string) => void;
+  metaPostType: Record<string, 'post' | 'reel' | 'story'>;
+  setMetaPostType: (
+    integrationId: string,
+    postType: 'post' | 'reel' | 'story'
+  ) => void;
   addOrRemoveSelectedIntegration: (
     integration: Integrations,
     settings: any
@@ -150,6 +155,7 @@ const initialState = {
   tab: 0 as 0,
   isCreateSet: false,
   current: 'global',
+  metaPostType: {} as Record<string, 'post' | 'reel' | 'story'>,
   locked: false,
   hide: false,
   integrations: [] as Integrations[],
@@ -164,6 +170,10 @@ export const useLaunchStore = create<StoreState>()((set) => ({
   setCurrent: (current: string) =>
     set((state) => ({
       current: current,
+    })),
+  setMetaPostType: (integrationId, postType) =>
+    set((state) => ({
+      metaPostType: { ...state.metaPostType, [integrationId]: postType },
     })),
   addOrRemoveSelectedIntegration: (
     integration: Integrations,
