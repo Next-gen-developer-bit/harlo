@@ -849,52 +849,72 @@ html.dark body {
 }
 html.dark .bg-white,
 html.dark .bg-slate-50,
+html.dark .bg-slate-100,
+html.dark .bg-slate-200,
+html.dark .bg-gray-50,
+html.dark .bg-gray-100,
+html.dark .bg-gray-200,
 html.dark .bg-\[\#ffffff\],
 html.dark .bg-\[\#f8fafc\],
 html.dark .bg-\[\#f7f8fa\],
 html.dark .bg-\[\#fafbfc\],
 html.dark .bg-\[\#f8fafc\]\/95,
+html.dark .bg-\[\#f3f4f6\],
+html.dark .bg-\[\#f4f2fb\],
+html.dark .bg-\[\#f9fafb\],
+html.dark .bg-\[\#f6f7f9\],
+html.dark .bg-\[\#eff6ff\],
 html.dark .bg-white\/90 {
-  background-color: #161b22 !important;
-}
-html.dark .bg-slate-100,
-html.dark .bg-slate-200,
-html.dark .bg-\[\#eff6ff\] {
-  background-color: #172033 !important;
+  background-color: #1c2430 !important;
 }
 html.dark .hover\:bg-slate-50:hover,
 html.dark .hover\:bg-slate-100:hover,
 html.dark .hover\:bg-slate-200:hover,
-html.dark .hover\:bg-white:hover {
+html.dark .hover\:bg-white:hover,
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover,
+html.dark .hover\:bg-\[\#f8f7fc\]:hover,
+html.dark .hover\:bg-\[\#f9fafb\]:hover,
+html.dark .hover\:bg-\[\#e5e7eb\]:hover {
   background-color: #243044 !important;
 }
 html.dark .text-slate-900,
 html.dark .text-slate-800,
 html.dark .text-slate-700,
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-gray-700,
 html.dark .text-\[\#0f172a\],
-html.dark .text-\[\#334155\] {
+html.dark .text-\[\#334155\],
+html.dark .text-\[\#374151\] {
   color: #f1f5f9 !important;
 }
 html.dark .text-slate-600,
-html.dark .text-slate-500 {
+html.dark .text-slate-500,
+html.dark .text-gray-600,
+html.dark .text-gray-500,
+html.dark .text-\[\#6b7280\] {
   color: #94a3b8 !important;
 }
 html.dark .border-slate-100,
 html.dark .border-slate-200,
+html.dark .border-gray-200,
 html.dark .border-\[\#e6e8ee\],
-html.dark .border-\[\#e2e8f0\] {
-  border-color: #1e293b !important;
+html.dark .border-\[\#e2e8f0\],
+html.dark .border-\[\#e5e7eb\],
+html.dark .border-\[\#f3f4f6\] {
+  border-color: #2a3544 !important;
 }
 html.dark input,
 html.dark textarea,
 html.dark select {
-  background-color: #172033;
+  background-color: #1c2430 !important;
   color: #f1f5f9;
-  border: 1px solid #334155;
+  border: 1px solid #2a3544;
 }
 html.dark .repeated-strip {
-  background: #0c1117;
-  box-shadow: inset 0 0 0 1px #1e293b;
+  background: #121820;
+  box-shadow: inset 0 0 0 1px #2a3544;
 }
 html.dark .col-calendar:hover:before {
   color: #94a3b8;
