@@ -441,18 +441,17 @@ export const WeekView = () => {
               }
               className="p-2 text-center bg-newTableHeader flex justify-center items-center flex-col h-[62px] rounded-[8px] sticky top-0 z-[20]"
             >
-              <div className="text-[14px] font-[500] text-newTableText">
+              <div className="text-[14px] font-medium text-slate-500">
                 {day.name}
               </div>
               <div
                 className={clsx(
-                  'text-[14px] font-[600] flex items-center justify-center gap-[6px]',
-                  day.day === newDayjs().format('L') &&
-                    'text-newTableTextFocused'
+                  'text-[14px] font-medium flex items-center justify-center gap-[6px] text-slate-800',
+                  day.day === newDayjs().format('L') && 'text-[#2563eb]'
                 )}
               >
                 {day.day === newDayjs().format('L') && (
-                  <div className="w-[6px] h-[6px] bg-newTableTextFocused rounded-full" />
+                  <div className="w-[6px] h-[6px] bg-[#2563eb] rounded-full" />
                 )}
                 {day.day}
               </div>
@@ -518,7 +517,7 @@ export const MonthView = () => {
 
     const days = [];
     for (let i = 1; i <= 7; i++) {
-      days.push(newDayjs().day(i).format('ddd').toUpperCase());
+      days.push(newDayjs().day(i).format('ddd'));
     }
     return days;
   }, [i18next.resolvedLanguage]);
@@ -568,7 +567,7 @@ export const MonthView = () => {
             {localizedDays.map((day) => (
               <div
                 key={day}
-                className="px-3 py-2.5 text-[11px] font-medium tracking-[0.14em] text-slate-400"
+                className="px-3 py-3 text-center text-[13px] font-medium text-slate-500"
               >
                 {day}
               </div>
@@ -1209,30 +1208,55 @@ export const CalendarColumn: FC<{
       <div
         id={isToday ? 'calendar-today' : undefined}
         className={clsx(
-          'flex flex-col min-h-[168px] border-b border-e border-slate-200 p-2.5 relative bg-white [&:nth-child(7n)]:border-e-0 [&:nth-last-child(-n+7)]:border-b-0',
+          'group flex flex-col min-h-[168px] border-b border-e border-slate-200 p-2.5 relative bg-white [&:nth-child(7n)]:border-e-0 [&:nth-last-child(-n+7)]:border-b-0',
           loading && 'animate-pulse',
-          canDrop && 'bg-violet-50',
-          outsideMonth && 'bg-slate-50/60',
-          isBeforeNow && 'bg-slate-50/80 opacity-40'
+          canDrop && 'bg-[#eff6ff]',
+          outsideMonth && 'bg-slate-50/70'
         )}
         ref={drop as any}
       >
-        <button
-          type="button"
-          onClick={openDayView}
-          className={clsx(
-            'mb-2 w-6 h-6 text-[13px] leading-6 text-left',
-            outsideMonth
-              ? 'text-slate-300'
-              : isToday
-              ? 'flex items-center justify-center rounded-full bg-blue-600 font-semibold text-white'
-              : isBeforeNow
-              ? 'font-medium text-slate-400'
-              : 'font-medium text-slate-700'
+        <div className="mb-2 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={openDayView}
+            className={clsx(
+              'text-left text-[13px] font-medium',
+              outsideMonth
+                ? 'text-slate-300'
+                : isToday
+                ? 'text-[#2563eb]'
+                : 'text-slate-700'
+            )}
+          >
+            {getDate.format('MMM D')}
+          </button>
+          {!outsideMonth && (
+            <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <button
+                type="button"
+                aria-label={t('edit', 'Edit')}
+                onClick={openDayView}
+                className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:text-[#2563eb]"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {!isBeforeNow && (
+                <button
+                  type="button"
+                  aria-label={t('add_post', 'Add post')}
+                  onClick={integrations.length ? addModal : addProvider}
+                  className="flex h-6 w-6 items-center justify-center rounded-md bg-[#2563eb] text-white hover:bg-blue-700"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
           )}
-        >
-          {getDate.date()}
-        </button>
+        </div>
         <div className="flex flex-col gap-1.5 flex-1 overflow-auto">
           {dayTags.map((tag) => (
             <div
@@ -1261,14 +1285,10 @@ export const CalendarColumn: FC<{
               {t('show_less', '- Show less')}
             </button>
           )}
-          {!isBeforeNow && (
-            <button
-              type="button"
-              className="mt-auto min-h-[28px] rounded-lg text-transparent hover:bg-slate-50 hover:text-slate-400 text-lg leading-none"
-              onClick={integrations.length ? addModal : addProvider}
-            >
-              +
-            </button>
+          {!loading && groupedPostList.length === 0 && !outsideMonth && (
+            <div className="flex flex-1 items-center justify-center text-[13px] font-normal text-slate-300">
+              {t('no_posts', 'No posts')}
+            </div>
           )}
         </div>
       </div>

@@ -3,10 +3,17 @@
 import { useCalendar, ListStateFilter } from '@gitroom/frontend/components/launches/calendar.context';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import i18next from 'i18next';
-import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
+import {
+  getTimezone,
+  newDayjs,
+} from '@gitroom/frontend/components/layout/set.timezone';
+import {
+  PLATFORM_LABELS,
+  platformFamily,
+} from '@gitroom/frontend/components/launches/helpers/mvp.platforms';
 
 // Helper function to get start and end dates based on display type
 function getDateRange(
@@ -238,18 +245,35 @@ export const Filters = () => {
         : 'text-slate-500 hover:text-slate-800'
     );
 
+  const platforms = useMemo(() => {
+    const families = new Set(
+      calendar.integrations
+        .map((integration) => platformFamily(integration.identifier))
+        .filter(Boolean)
+    );
+    return [...families];
+  }, [calendar.integrations]);
+
+  const selectClass =
+    'h-9 appearance-none rounded-lg bg-slate-100 px-3 pr-8 text-[13px] font-medium text-slate-700 outline-none';
+
+  const viewButtonClass = (active: boolean) =>
+    clsx(
+      'inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium',
+      active
+        ? 'bg-[#2563eb] text-white'
+        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+    );
+
   return (
     <div className="text-textColor flex flex-wrap gap-3 items-center justify-between select-none w-full mb-4">
       {!isListView && (
-          <div className="flex items-center text-slate-400">
-            <span className="px-1 text-sm font-medium text-slate-600">
-              {getDisplayText()}
-            </span>
+          <div className="flex items-center gap-1 text-slate-500">
             <button
               type="button"
               onClick={previous}
               aria-label={t('previous', 'Previous')}
-              className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-slate-100 hover:text-slate-700 rtl:rotate-180"
+              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100 hover:text-slate-800 rtl:rotate-180"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -267,6 +291,9 @@ export const Filters = () => {
                 />
               </svg>
             </button>
+            <span className="min-w-[148px] px-1 text-center text-[15px] font-medium text-slate-800">
+              {getDisplayText()}
+            </span>
             <button
               type="button"
               onClick={next}
@@ -367,32 +394,80 @@ export const Filters = () => {
           </>
         )}
         {!isListView && (
-          <button
-            type="button"
-            onClick={setToday}
-            className="h-8 px-3 rounded-full text-[13px] font-medium text-slate-600 hover:bg-slate-100"
-          >
-            {t('today', 'Today')}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={setToday}
+              title={getTimezone()}
+              className="h-9 rounded-lg bg-slate-100 px-3 text-[13px] font-medium text-slate-700 hover:bg-slate-200"
+            >
+              {t('my_time', 'My time')}
+            </button>
+            <div className="relative">
+              <select
+                aria-label={t('all_platforms', 'All Platforms')}
+                value={calendar.calendarPlatform}
+                onChange={(event) =>
+                  calendar.setCalendarPlatform(event.target.value)
+                }
+                className={selectClass}
+              >
+                <option value="all">{t('all_platforms', 'All Platforms')}</option>
+                {platforms.map((platform) => (
+                  <option key={platform} value={platform}>
+                    {PLATFORM_LABELS[platform] || platform}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative">
+              <select
+                aria-label={t('show_all', 'Show all')}
+                value={calendar.calendarStatus}
+                onChange={(event) =>
+                  calendar.setCalendarStatus(
+                    event.target.value as typeof calendar.calendarStatus
+                  )
+                }
+                className={selectClass}
+              >
+                <option value="all">{t('show_all', 'Show all')}</option>
+                <option value="QUEUE">{t('scheduled', 'Scheduled')}</option>
+                <option value="DRAFT">{t('draft', 'Draft')}</option>
+                <option value="PUBLISHED">{t('published', 'Published')}</option>
+                <option value="ERROR">{t('failed', 'Failed')}</option>
+              </select>
+            </div>
+          </>
         )}
-        <div className="flex rounded-full bg-slate-100 p-1 text-[13px] font-medium">
+        <div className="flex items-center gap-1.5 text-[13px] font-medium">
           <button
             type="button"
-            className={viewToggleClass(calendar.display === 'month')}
+            className={viewButtonClass(calendar.display === 'month')}
             onClick={setMonth}
           >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
             {t('month', 'Month')}
           </button>
           <button
             type="button"
-            className={viewToggleClass(calendar.display === 'week')}
+            className={viewButtonClass(calendar.display === 'week')}
             onClick={setWeek}
           >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+              <rect x="13" y="4" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+              <rect x="4" y="13" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+              <rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
             {t('week', 'Week')}
           </button>
           <button
             type="button"
-            className={viewToggleClass(isListView)}
+            className={viewButtonClass(isListView)}
             onClick={setList}
           >
             {t('list', 'List')}

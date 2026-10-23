@@ -104,6 +104,16 @@ export const CalendarContext = createContext({
   setListState: (state: ListStateFilter) => {
     /** empty **/
   },
+  calendarPlatform: 'all',
+  setCalendarPlatform: (_platform: string) => {
+    /** empty **/
+  },
+  calendarStatus: 'all' as 'all' | 'QUEUE' | 'DRAFT' | 'PUBLISHED' | 'ERROR',
+  setCalendarStatus: (
+    _status: 'all' | 'QUEUE' | 'DRAFT' | 'PUBLISHED' | 'ERROR'
+  ) => {
+    /** empty **/
+  },
 });
 
 export interface Integrations {
@@ -180,6 +190,10 @@ export const CalendarWeekProvider: FC<{
   const display = stateParam ? 'list' : calendarDisplay;
 
   // List view state
+  const [calendarPlatform, setCalendarPlatform] = useState('all');
+  const [calendarStatus, setCalendarStatus] = useState<
+    'all' | 'QUEUE' | 'DRAFT' | 'PUBLISHED' | 'ERROR'
+  >('all');
   const [listPage, setListPage] = useState(0);
   const [listState, setListStateRaw] = useState<ListStateFilter>(
     parseListState(stateParam)
@@ -367,7 +381,25 @@ export const CalendarWeekProvider: FC<{
     });
   }, [searchKey, stateParam, calendarDisplay, urlDisplay]);
 
-  const posts = useMemo(() => calendarData?.posts || [], [calendarData?.posts]);
+  const posts = useMemo(() => {
+    const rows = calendarData?.posts || [];
+    return rows.filter((post) => {
+      const family = post.integration?.providerIdentifier || '';
+      const normalized =
+        family === 'instagram-standalone'
+          ? 'instagram'
+          : family === 'linkedin-page'
+          ? 'linkedin'
+          : family;
+      if (calendarPlatform !== 'all' && normalized !== calendarPlatform) {
+        return false;
+      }
+      if (calendarStatus !== 'all' && post.state !== calendarStatus) {
+        return false;
+      }
+      return true;
+    });
+  }, [calendarData?.posts, calendarPlatform, calendarStatus]);
   const comments = useMemo(
     () => calendarData?.comments || [],
     [calendarData?.comments]
@@ -430,6 +462,10 @@ export const CalendarWeekProvider: FC<{
         setListPage,
         listState,
         setListState,
+        calendarPlatform,
+        setCalendarPlatform,
+        calendarStatus,
+        setCalendarStatus,
       }}
     >
       {children}
