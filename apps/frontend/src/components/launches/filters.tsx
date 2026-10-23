@@ -398,7 +398,7 @@ export const Filters = () => {
             <button
               type="button"
               onClick={setToday}
-              title={getTimezone()}
+              aria-label={getTimezone()}
               className="h-9 rounded-lg bg-slate-100 px-3 text-[13px] font-medium text-slate-700 hover:bg-slate-200"
             >
               {t('my_time', 'My time')}
