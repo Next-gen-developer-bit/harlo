@@ -389,7 +389,7 @@ export const DayView = () => {
                   'p-2 pe-4 text-center items-center justify-center flex text-[14px] text-newTableText',
                   isToday &&
                     hour === currentHour &&
-                    'text-newTableTextFocused font-[600]'
+                    'font-medium text-[#2563eb]'
                 )}
               >
                 {convertTimeFormatBasedOnLocality(hour)}
@@ -1303,7 +1303,7 @@ export const CalendarColumn: FC<{
         loading && 'animate-pulse',
         isBeforeNow
           ? 'cursor-not-allowed'
-          : 'border border-newTextColor/5 rounded-[8px]'
+          : 'rounded-[8px] border border-slate-200 bg-white'
       )}
       ref={drop as any}
     >
