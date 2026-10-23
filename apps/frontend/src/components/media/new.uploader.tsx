@@ -11,6 +11,7 @@ import { useVariables } from '@gitroom/react/helpers/variable.context';
 import Compressor from '@uppy/compressor';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useToaster } from '@gitroom/react/toaster/toaster';
+import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
 import { uniqBy } from 'lodash';
 
@@ -43,6 +44,8 @@ export function useUppyUploader(props: {
   allowedFileTypes: string;
 }) {
   const setLocked = useLaunchStore((state) => state.setLocked);
+  const user = useUser();
+  const maxFileSize = (user?.tier?.max_file_mb || 1024) * 1024 * 1024;
   const toast = useToaster();
   const { storageProvider, backendUrl, disableImageCompression, transloadit } =
     useVariables();
@@ -57,7 +60,7 @@ export function useUppyUploader(props: {
       restrictions: {
         // maxNumberOfFiles: 5,
         // allowedFileTypes: allowedFileTypes.split(','),
-        maxFileSize: 1000000000, // Default 1GB, but we'll override with custom validation
+        maxFileSize,
       },
     });
 
@@ -293,5 +296,5 @@ export function useUppyUploader(props: {
       });
     });
     return uppy2;
-  }, []);
+  }, [maxFileSize]);
 }

@@ -205,6 +205,24 @@ export class OrganizationRepository {
     });
   }
 
+  async getSubscriptionTier(orgId: string) {
+    const org = await this._organization.model.organization.findUnique({
+      where: { id: orgId },
+      select: {
+        subscription: {
+          select: {
+            subscriptionTier: true,
+            deletedAt: true,
+          },
+        },
+      },
+    });
+    if (!org?.subscription || org.subscription.deletedAt) {
+      return 'FREE';
+    }
+    return org.subscription.subscriptionTier;
+  }
+
   async getOrgById(id: string) {
     return this._organization.model.organization.findUnique({
       where: {

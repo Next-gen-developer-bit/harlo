@@ -6,7 +6,10 @@ import { OrganizationService } from '@gitroom/nestjs-libraries/database/prisma/o
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import { BillingSubscribeDto } from '@gitroom/nestjs-libraries/dtos/billing/billing.subscribe.dto';
 import { groupBy } from 'lodash';
-import { pricing } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
+import {
+  pricing,
+  stripeUnitAmount,
+} from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
 import { AuthService } from '@gitroom/helpers/auth/auth.service';
 import { TrackService } from '@gitroom/nestjs-libraries/track/track.service';
 import { UsersService } from '@gitroom/nestjs-libraries/database/prisma/users/users.service';
@@ -117,7 +120,7 @@ export class StripeService {
       billing,
       period,
     } = event.data.object.metadata as {
-      billing: 'STANDARD' | 'PRO';
+      billing: 'STANDARD' | 'PRO' | 'TEAM' | 'ULTIMATE' | 'CREATOR' | 'AGENCY';
       period: 'MONTHLY' | 'YEARLY';
       uniqueId: string;
     };
@@ -147,7 +150,7 @@ export class StripeService {
       billing,
       period,
     } = event.data.object.metadata as {
-      billing: 'STANDARD' | 'PRO';
+      billing: 'STANDARD' | 'PRO' | 'TEAM' | 'ULTIMATE' | 'CREATOR' | 'AGENCY';
       period: 'MONTHLY' | 'YEARLY';
       uniqueId: string;
     };
@@ -235,10 +238,12 @@ export class StripeService {
       active: true,
       expand: ['data.tiers', 'data.product'],
       lookup_keys: [
-        'standard_monthly',
-        'standard_yearly',
+        'creator_monthly',
+        'creator_yearly',
         'pro_monthly',
         'pro_yearly',
+        'agency_monthly',
+        'agency_yearly',
       ],
     });
 
@@ -254,54 +259,66 @@ export class StripeService {
     return { ...productsList };
   }
 
-  async prorate(organizationId: string, body: BillingSubscribeDto) {
-    const org = await this._organizationService.getOrgById(organizationId);
-    const customer = await this.createOrGetCustomer(org!);
+  private async getOrCreatePrice(body: BillingSubscribeDto) {
     const priceData = pricing[body.billing];
+    const unitAmount = stripeUnitAmount(
+      body.period === 'MONTHLY' ? priceData.month_price : priceData.year_price
+    );
     const allProducts = await stripe.products.list({
       active: true,
-      expand: ['data.prices'],
+      limit: 100,
     });
 
     const findProduct =
       allProducts.data.find(
-        (product) => product.name.toUpperCase() === body.billing.toUpperCase()
+        (product) =>
+          product.metadata?.plan === body.billing ||
+          product.name.toUpperCase() === body.billing.toUpperCase() ||
+          product.name.toUpperCase() === priceData.label.toUpperCase()
       ) ||
       (await stripe.products.create({
         active: true,
-        name: body.billing,
+        name: priceData.label,
+        metadata: { plan: body.billing },
       }));
 
     const pricesList = await stripe.prices.list({
       active: true,
-      product: findProduct!.id,
+      product: findProduct.id,
+      limit: 100,
     });
 
-    const findPrice =
-      pricesList.data.find(
-        (p) =>
-          p?.recurring?.interval?.toLowerCase() ===
-            (body.period === 'MONTHLY' ? 'month' : 'year') &&
-          p?.nickname === body.billing + ' ' + body.period &&
-          p?.unit_amount ===
-            (body.period === 'MONTHLY'
-              ? priceData.month_price
-              : priceData.year_price) *
-              100
-      ) ||
-      (await stripe.prices.create({
-        active: true,
-        product: findProduct!.id,
-        currency: 'usd',
-        nickname: body.billing + ' ' + body.period,
-        unit_amount:
-          (body.period === 'MONTHLY'
-            ? priceData.month_price
-            : priceData.year_price) * 100,
-        recurring: {
-          interval: body.period === 'MONTHLY' ? 'month' : 'year',
-        },
-      }));
+    const existing = pricesList.data.find(
+      (price) =>
+        price.recurring?.interval?.toLowerCase() ===
+          (body.period === 'MONTHLY' ? 'month' : 'year') &&
+        price.unit_amount === unitAmount
+    );
+    if (existing) {
+      return existing.id;
+    }
+
+    const created = await stripe.prices.create({
+      active: true,
+      product: findProduct.id,
+      currency: 'usd',
+      nickname: `${priceData.label} ${body.period}`,
+      lookup_key: `${body.billing.toLowerCase()}_${
+        body.period === 'MONTHLY' ? 'monthly' : 'yearly'
+      }`,
+      unit_amount: unitAmount,
+      recurring: {
+        interval: body.period === 'MONTHLY' ? 'month' : 'year',
+      },
+    });
+
+    return created.id;
+  }
+
+  async prorate(organizationId: string, body: BillingSubscribeDto) {
+    const org = await this._organizationService.getOrgById(organizationId);
+    const customer = await this.createOrGetCustomer(org!);
+    const findPrice = await this.getOrCreatePrice(body);
 
     const proration_date = Math.floor(Date.now() / 1000);
 
@@ -324,7 +341,7 @@ export class StripeService {
           items: [
             {
               id: currentUserSubscription?.data?.[0]?.items?.data?.[0]?.id,
-              price: findPrice?.id!,
+              price: findPrice,
               quantity: 1,
             },
           ],
@@ -708,59 +725,16 @@ export class StripeService {
     allowTrial: boolean
   ) {
     const id = makeId(10);
-    const priceData = pricing[body.billing];
     const org = await this._organizationService.getOrgById(organizationId);
     const customer = await this.createOrGetCustomer(org!);
-    const allProducts = await stripe.products.list({
-      active: true,
-      expand: ['data.prices'],
-    });
-
-    const findProduct =
-      allProducts.data.find(
-        (product) => product.name.toUpperCase() === body.billing.toUpperCase()
-      ) ||
-      (await stripe.products.create({
-        active: true,
-        name: body.billing,
-      }));
-
-    const pricesList = await stripe.prices.list({
-      active: true,
-      product: findProduct!.id,
-    });
-
-    const findPrice =
-      pricesList.data.find(
-        (p) =>
-          p?.recurring?.interval?.toLowerCase() ===
-            (body.period === 'MONTHLY' ? 'month' : 'year') &&
-          p?.unit_amount ===
-            (body.period === 'MONTHLY'
-              ? priceData.month_price
-              : priceData.year_price) *
-              100
-      ) ||
-      (await stripe.prices.create({
-        active: true,
-        product: findProduct!.id,
-        currency: 'usd',
-        nickname: body.billing + ' ' + body.period,
-        unit_amount:
-          (body.period === 'MONTHLY'
-            ? priceData.month_price
-            : priceData.year_price) * 100,
-        recurring: {
-          interval: body.period === 'MONTHLY' ? 'month' : 'year',
-        },
-      }));
+    const findPrice = await this.getOrCreatePrice(body);
 
     return this.createEmbeddedCheckout(
       uniqueId,
       id,
       customer,
       body,
-      findPrice!.id,
+      findPrice,
       userId,
       allowTrial
     );
@@ -774,52 +748,9 @@ export class StripeService {
     allowTrial: boolean
   ) {
     const id = makeId(10);
-    const priceData = pricing[body.billing];
     const org = await this._organizationService.getOrgById(organizationId);
     const customer = await this.createOrGetCustomer(org!);
-    const allProducts = await stripe.products.list({
-      active: true,
-      expand: ['data.prices'],
-    });
-
-    const findProduct =
-      allProducts.data.find(
-        (product) => product.name.toUpperCase() === body.billing.toUpperCase()
-      ) ||
-      (await stripe.products.create({
-        active: true,
-        name: body.billing,
-      }));
-
-    const pricesList = await stripe.prices.list({
-      active: true,
-      product: findProduct!.id,
-    });
-
-    const findPrice =
-      pricesList.data.find(
-        (p) =>
-          p?.recurring?.interval?.toLowerCase() ===
-            (body.period === 'MONTHLY' ? 'month' : 'year') &&
-          p?.unit_amount ===
-            (body.period === 'MONTHLY'
-              ? priceData.month_price
-              : priceData.year_price) *
-              100
-      ) ||
-      (await stripe.prices.create({
-        active: true,
-        product: findProduct!.id,
-        currency: 'usd',
-        nickname: body.billing + ' ' + body.period,
-        unit_amount:
-          (body.period === 'MONTHLY'
-            ? priceData.month_price
-            : priceData.year_price) * 100,
-        recurring: {
-          interval: body.period === 'MONTHLY' ? 'month' : 'year',
-        },
-      }));
+    const findPrice = await this.getOrCreatePrice(body);
 
     const getCurrentSubscriptions =
       await this._subscriptionService.getSubscription(organizationId);
@@ -830,7 +761,7 @@ export class StripeService {
         id,
         customer,
         body,
-        findPrice!.id,
+        findPrice,
         userId,
         allowTrial
       );
@@ -859,7 +790,7 @@ export class StripeService {
         items: [
           {
             id: currentUserSubscription.data[0].items.data[0].id,
-            price: findPrice!.id,
+            price: findPrice,
             quantity: 1,
           },
         ],

@@ -931,6 +931,8 @@ enum SubscriptionTier {
   PRO
   TEAM
   ULTIMATE
+  CREATOR
+  AGENCY
 }
 
 enum Period {

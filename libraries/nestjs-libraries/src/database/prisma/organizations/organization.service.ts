@@ -17,7 +17,27 @@ export class OrganizationService {
     private _organizationRepository: OrganizationRepository,
     private _notificationsService: NotificationService
   ) {}
-  createWorkspaceForUser(userId: string, name: string, description?: string) {
+  async createWorkspaceForUser(
+    userId: string,
+    name: string,
+    description?: string
+  ) {
+    if (process.env.STRIPE_PUBLISHABLE_KEY) {
+      const orgs = await this._organizationRepository.getOrgsByUserId(userId);
+      const owned = orgs.filter(
+        (org) => org.users?.[0]?.role === 'SUPERADMIN' && !org.users?.[0]?.disabled
+      );
+      const limit = owned.reduce((max, org) => {
+        const tier = org.subscription?.subscriptionTier || 'FREE';
+        return Math.max(max, pricing[tier]?.workspaces || 1);
+      }, pricing.FREE.workspaces);
+      if (owned.length >= limit) {
+        throw new HttpException(
+          `Your plan includes ${limit} workspace${limit === 1 ? '' : 's'}. Upgrade to add another.`,
+          402
+        );
+      }
+    }
     return this._organizationRepository.createWorkspaceForUser(
       userId,
       name,
@@ -184,6 +204,20 @@ export class OrganizationService {
         throw new HttpException('Workspace not found', 400);
       }
       target = found;
+    }
+    if (process.env.STRIPE_PUBLISHABLE_KEY) {
+      const tier =
+        (await this._organizationRepository.getSubscriptionTier(target.id)) ||
+        'FREE';
+      const seatLimit = pricing[tier]?.users || 1;
+      const team = await this._organizationRepository.getTeam(target.id);
+      const seats = team?.users?.length || 0;
+      if (seats >= seatLimit) {
+        throw new HttpException(
+          `Your plan includes ${seatLimit} user${seatLimit === 1 ? '' : 's'}. Upgrade to add another teammate.`,
+          402
+        );
+      }
     }
     const timeLimit = dayjs().add(2, 'day').format('YYYY-MM-DD HH:mm:ss');
     const id = makeId(5);

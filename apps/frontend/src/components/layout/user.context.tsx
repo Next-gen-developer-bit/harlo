@@ -3,7 +3,7 @@
 import { createContext, FC, ReactNode, useContext } from 'react';
 import { User } from '@prisma/client';
 import {
-  pricing,
+  planFor,
   PricingInnerInterface,
 } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
 export const UserContext = createContext<
@@ -26,7 +26,14 @@ export const ContextWrapper: FC<{
   user: User & {
     orgId: string;
     orgName?: string;
-    tier: 'FREE' | 'STANDARD' | 'PRO' | 'ULTIMATE' | 'TEAM';
+    tier:
+      | 'FREE'
+      | 'STANDARD'
+      | 'PRO'
+      | 'ULTIMATE'
+      | 'TEAM'
+      | 'CREATOR'
+      | 'AGENCY';
     role: 'USER' | 'ADMIN' | 'SUPERADMIN';
     publicApi: string;
     totalChannels: number;
@@ -36,7 +43,7 @@ export const ContextWrapper: FC<{
   const values = user
     ? {
         ...user,
-        tier: pricing[user.tier],
+        tier: planFor(user.tier),
       }
     : ({} as any);
   return <UserContext.Provider value={values}>{children}</UserContext.Provider>;

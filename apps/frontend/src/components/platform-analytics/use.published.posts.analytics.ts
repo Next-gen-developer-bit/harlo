@@ -67,7 +67,7 @@ export const formatMetric = (value?: number | null) => {
   return value.toLocaleString();
 };
 
-export type AnalyticsPeriod = 7 | 30 | 90;
+export type AnalyticsPeriod = 7 | 30 | 90 | 365 | 730;
 
 export const usePublishedPostsAnalytics = (date: AnalyticsPeriod) => {
   const fetch = useFetch();

@@ -38,13 +38,17 @@ import { CloseIcon, TrashIcon } from '@gitroom/frontend/components/ui/icons';
 import { useHasScroll } from '@gitroom/frontend/components/ui/is.scroll.hook';
 import { useShortlinkPreference } from '@gitroom/frontend/components/settings/shortlink-preference.component';
 import dayjs from 'dayjs';
+import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { Button } from '@gitroom/react/form/button';
 
 export const COMPOSER_LOCAL_DRAFT_KEY = 'poscally-composer-unsaved';
 
 export const ManageModal: FC<AddEditModalProps> = (props) => {
   const t = useT();
+  const user = useUser();
   const fetch = useFetch();
+  const canQueue = user?.tier?.queue !== false;
+  const canRecur = user?.tier?.recurring !== false;
   const ref = useRef(null);
   const existingData = useExistingData();
   const [loading, setLoading] = useState(false);
@@ -766,7 +770,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               />
             )}
 
-            {!dummy && (
+            {!dummy && (canRecur || !!repeater) && (
               <RepeatComponent repeat={repeater} onChange={setRepeater} />
             )}
           </div>
@@ -830,7 +834,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                 Save Set
               </button>
             )}
-            {!addEditSets && !dummy && (
+            {!addEditSets && !dummy && canQueue && (
               <button
                 type="button"
                 onClick={addToQueue}

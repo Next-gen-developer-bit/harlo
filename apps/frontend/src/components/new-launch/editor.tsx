@@ -12,6 +12,8 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import clsx from 'clsx';
+import { useUser } from '@gitroom/frontend/components/layout/user.context';
+import { formatStorage } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 import EmojiPicker from 'emoji-picker-react';
 import { Theme } from 'emoji-picker-react';
@@ -67,7 +69,6 @@ import {
   type MetaPostFormat,
 } from '@gitroom/frontend/components/new-launch/meta.format.switch';
 
-const MAX_UPLOAD_SIZE = 1024 * 1024 * 1024; // 1 GB
 
 export const EditorWrapper: FC<{
   totalPosts: number;
@@ -547,6 +548,8 @@ export const Editor: FC<{
   const [id] = useState(makeId(10));
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const t = useT();
+  const user = useUser();
+  const maxUpload = (user?.tier?.max_file_mb || 1024) * 1024 * 1024;
   const toaster = useToaster();
   const editorRef = useRef<undefined | { editor: any }>(undefined);
   const [loading, setLoading] = useState(false);
@@ -572,12 +575,11 @@ export const Editor: FC<{
     (acceptedFiles: File[]) => {
       const totalSize = acceptedFiles.reduce((acc, file) => acc + file.size, 0);
 
-      if (totalSize > MAX_UPLOAD_SIZE) {
+      if (totalSize > maxUpload) {
         toaster.show(
-          t(
-            'upload_size_limit_exceeded',
-            'Upload size limit exceeded. Maximum 1 GB per upload session.'
-          ),
+          `Upload size limit exceeded. Maximum ${formatStorage(
+            user?.tier?.max_file_mb || 1024
+          )} per file on your plan.`,
           'warning'
         );
         return;
@@ -589,7 +591,7 @@ export const Editor: FC<{
         uppy.addFile(file);
       }
     },
-    [uppy, toaster, t]
+    [uppy, toaster, maxUpload, user?.tier?.max_file_mb]
   );
 
   const paste = useCallback(
@@ -616,12 +618,11 @@ export const Editor: FC<{
 
       const totalSize = files.reduce((acc, file) => acc + file.size, 0);
 
-      if (totalSize > MAX_UPLOAD_SIZE) {
+      if (totalSize > maxUpload) {
         toaster.show(
-          t(
-            'upload_size_limit_exceeded',
-            'Upload size limit exceeded. Maximum 1 GB per upload session.'
-          ),
+          `Upload size limit exceeded. Maximum ${formatStorage(
+            user?.tier?.max_file_mb || 1024
+          )} per file on your plan.`,
           'warning'
         );
         return;
@@ -635,7 +636,7 @@ export const Editor: FC<{
         uppy.addFile(file);
       }
     },
-    [uppy, num, comments, toaster, t]
+    [uppy, num, comments, toaster, maxUpload, user?.tier?.max_file_mb]
   );
 
   const { getRootProps, isDragActive } = useDropzone({

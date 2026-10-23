@@ -18,6 +18,7 @@ import {
   usePublishedPostsAnalytics,
 } from '@gitroom/frontend/components/platform-analytics/use.published.posts.analytics';
 import { resolveMediaUrl } from '@gitroom/helpers/utils/has.extension';
+import { useUser } from '@gitroom/frontend/components/layout/user.context';
 
 const PLATFORM_COLORS: Record<string, string> = {
   instagram: '#ec4899',
@@ -426,12 +427,29 @@ const PostMetric = ({
   </div>
 );
 
+const ANALYTICS_OPTIONS: { value: AnalyticsPeriod; label: string; days: number }[] =
+  [
+    { value: 7, label: 'Last 7 days', days: 7 },
+    { value: 30, label: 'Last 30 days', days: 30 },
+    { value: 90, label: 'Last 90 days', days: 90 },
+    { value: 365, label: 'Last 12 months', days: 365 },
+    { value: 730, label: 'Last 24 months', days: 730 },
+  ];
+
 export const AnalyticsDashboard = () => {
+  const user = useUser();
+  const historyDays = user?.tier?.analytics_days || 30;
+  const periods = ANALYTICS_OPTIONS.filter((option) => option.days <= historyDays);
   const [period, setPeriod] = useState<AnalyticsPeriod>(30);
+  const activePeriod = periods.some((option) => option.value === period)
+    ? period
+    : periods[periods.length - 1]?.value || 30;
   const [channelId, setChannelId] = useState('all');
   const [showPosts, setShowPosts] = useState(false);
   const { data: integrations } = useIntegrationList();
-  const { data, isLoading, error, mutate } = usePublishedPostsAnalytics(period);
+  const { data, isLoading, error, mutate } = usePublishedPostsAnalytics(
+    activePeriod
+  );
   const modals = useModals();
 
   const posts = useMemo(() => data?.posts || [], [data?.posts]);
@@ -508,16 +526,18 @@ export const AnalyticsDashboard = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
-            value={period}
+            value={activePeriod}
             onChange={(event) =>
               setPeriod(Number(event.target.value) as AnalyticsPeriod)
             }
             className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700"
             aria-label="Analytics period"
           >
-            <option value={7}>Last 7 days</option>
-            <option value={30}>Last 30 days</option>
-            <option value={90}>Last 90 days</option>
+            {periods.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
           <select
             value={channelId}

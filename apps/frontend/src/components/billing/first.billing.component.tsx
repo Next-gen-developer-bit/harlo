@@ -11,8 +11,11 @@ import { AttachToFeedbackIcon } from '@gitroom/frontend/components/new-layout/se
 import NotificationComponent from '@gitroom/frontend/components/notifications/notification.component';
 import dynamic from 'next/dynamic';
 import { LogoTextComponent } from '@gitroom/frontend/components/ui/logo-text.component';
-import { pricing } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
-import { capitalize } from 'lodash';
+import {
+  formatAnalyticsHistory,
+  formatStorage,
+  pricing,
+} from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
 import clsx from 'clsx';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import { CheckIconComponent } from '@gitroom/frontend/components/ui/check.icon.component';
@@ -51,7 +54,7 @@ export const FirstBillingComponent = () => {
   const user = useUser();
   const dub = useDubClickId();
   const [stripe, setStripe] = useState<null | Promise<Stripe>>(null);
-  const [tier, setTier] = useState('STANDARD');
+  const [tier, setTier] = useState('CREATOR');
   const [period, setPeriod] = useState('MONTHLY');
   const fetch = useFetch();
   const modals = useModals();
@@ -107,7 +110,7 @@ export const FirstBillingComponent = () => {
   );
 
   const price = useMemo(
-    () => Object.entries(pricing).filter(([key, value]) => key !== 'FREE'),
+    () => Object.entries(pricing).filter(([, value]) => value.checkout),
     []
   );
 
@@ -274,7 +277,7 @@ export const FirstBillingComponent = () => {
                     )}
                   >
                     <div className="text-[20px] mobile:text-[18px] font-[500]">
-                      {capitalize(key)}
+                      {value.label}
                     </div>
                     <div className="text-[24px] mobile:text-[18px] font-[400]">
                       <span className="text-[44px] mobile:text-[30px] font-[600]">
@@ -339,12 +342,26 @@ export const BillingFeatures: FC<{ tier: string }> = ({ tier }) => {
           : currentPricing.posts_per_month,
     });
 
-    if (currentPricing.team_members) {
-      list.push({
-        key: 'billing_unlimited_team_members',
-        defaultValue: 'Unlimited team members',
-      });
-    }
+    list.push({
+      key: 'billing_users',
+      defaultValue: currentPricing.users === 1 ? 'user' : 'users',
+      prefix: currentPricing.users,
+    });
+    list.push({
+      key: 'billing_workspaces',
+      defaultValue: currentPricing.workspaces === 1 ? 'workspace' : 'workspaces',
+      prefix: currentPricing.workspaces,
+    });
+    list.push({
+      key: 'billing_storage',
+      defaultValue: 'content library',
+      prefix: formatStorage(currentPricing.storage_mb),
+    });
+    list.push({
+      key: 'billing_analytics_history',
+      defaultValue: 'analytics history',
+      prefix: formatAnalyticsHistory(currentPricing.analytics_days),
+    });
     if (currentPricing?.ai) {
       list.push({
         key: 'billing_ai_auto_complete',

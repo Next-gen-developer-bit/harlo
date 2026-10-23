@@ -5,7 +5,11 @@ import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import clsx from 'clsx';
-import { pricing } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
+import {
+  formatAnalyticsHistory,
+  formatStorage,
+  pricing,
+} from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
@@ -45,7 +49,7 @@ export const MainBillingComponent: FC = () => {
   }, [fetch, toast]);
 
   const moveToCheckout = useCallback(
-    (billing: 'FREE' | 'STANDARD' | 'PRO' | 'ULTIMATE') => async () => {
+    (billing: 'FREE' | 'CREATOR' | 'PRO' | 'AGENCY') => async () => {
       if (!billingEnabled) {
         toast.show(
           'Stripe is not connected yet. Add the Stripe keys and restart the servers to checkout.',
@@ -60,6 +64,19 @@ export const MainBillingComponent: FC = () => {
             setLoading(false);
             return;
           }
+          const response = await fetch('/billing/cancel', {
+            method: 'POST',
+            body: JSON.stringify({
+              feedback: 'Moving to the Free plan',
+            }),
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            toast.show(payload.message || 'Could not cancel the subscription', 'warning');
+            return;
+          }
+          toast.show('Subscription set to cancel at the end of the period', 'success');
+          return;
         }
         const response = await fetch('/billing/subscribe', {
           method: 'POST',
@@ -113,45 +130,35 @@ export const MainBillingComponent: FC = () => {
     [billingEnabled, fetch, isYearly, toast]
   );
 
-  // 3 MVP Plan Cards definitions derived strictly from `pricing` in pricing.ts
-  const plans = [
-    {
-      key: 'STANDARD',
-      name: 'Creator',
-      audience: 'Best for individual creators & solo builders',
-      priceMonthly: pricing.STANDARD.month_price, // 29
-      priceYearly: Math.round(pricing.STANDARD.year_price / 12), // ~23/mo billed yearly
-      channels: pricing.STANDARD.channel, // 5
-      teamMembers: 'No',
-      webhooks: pricing.STANDARD.webhooks, // 2
-      aiGenerations: pricing.STANDARD.image_generation_count, // 20
-      badge: null,
-    },
-    {
-      key: 'PRO',
-      name: 'Growth',
-      audience: 'Best for growing teams, creators & agencies',
-      priceMonthly: pricing.PRO.month_price, // 49
-      priceYearly: Math.round(pricing.PRO.year_price / 12), // ~39/mo billed yearly
-      channels: pricing.PRO.channel, // 30
-      teamMembers: 'Included',
-      webhooks: pricing.PRO.webhooks, // 30
-      aiGenerations: pricing.PRO.image_generation_count, // 300
-      badge: 'Most Popular',
-    },
-    {
-      key: 'ULTIMATE',
-      name: 'Pro',
-      audience: 'Best for scaling brands & high-volume teams',
-      priceMonthly: pricing.ULTIMATE.month_price, // 99
-      priceYearly: Math.round(pricing.ULTIMATE.year_price / 12), // ~79/mo billed yearly
-      channels: pricing.ULTIMATE.channel, // 100
-      teamMembers: 'Unlimited',
-      webhooks: 'Unlimited',
-      aiGenerations: pricing.ULTIMATE.image_generation_count, // 500
-      badge: 'Best Deal',
-    },
-  ];
+  const plans = (['FREE', 'CREATOR', 'PRO', 'AGENCY'] as const).map((key) => {
+    const item = pricing[key];
+    return {
+      key,
+      name: item.label,
+      audience:
+        key === 'FREE'
+          ? 'Publish and schedule with the essentials'
+          : key === 'CREATOR'
+          ? 'For individual creators'
+          : key === 'PRO'
+          ? 'For growing teams'
+          : 'For agencies managing client workspaces',
+      priceMonthly: item.month_price,
+      priceYearly: Math.round(item.month_price * 0.8 * 100) / 100,
+      channels: item.channel,
+      posts:
+        item.posts_per_month > 10000
+          ? 'Unlimited scheduled posts'
+          : `${item.posts_per_month} scheduled posts / month`,
+      users: item.users,
+      workspaces: item.workspaces,
+      storage: formatStorage(item.storage_mb),
+      fileSize: formatStorage(item.max_file_mb),
+      analytics: formatAnalyticsHistory(item.analytics_days),
+      badge: key === 'PRO' ? 'Most Popular' : null,
+      trial: key !== 'FREE',
+    };
+  });
 
   return (
     <div className="w-full max-w-6xl mx-auto p-8 pt-10 font-sans min-h-screen">
@@ -208,7 +215,15 @@ export const MainBillingComponent: FC = () => {
       </div>
 
       {/* 3 Plan Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {!['FREE', 'CREATOR', 'PRO', 'AGENCY'].includes(currentPackage) && (
+        <p className="mb-6 text-center text-xs text-slate-500">
+          You are on a previous {currentPackage.toLowerCase()} plan. Choose a
+          current plan when you are ready to switch. Your existing subscription
+          stays active until you do.
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {plans.map((plan) => {
           const isCurrent = currentPackage === plan.key;
           const price = isYearly ? plan.priceYearly : plan.priceMonthly;
@@ -232,42 +247,35 @@ export const MainBillingComponent: FC = () => {
                 <h3 className="text-xl font-extrabold text-slate-900 mb-1">{plan.name}</h3>
                 <p className="text-xs text-slate-500 leading-relaxed mb-6">{plan.audience}</p>
 
-                <div className="flex items-baseline gap-1 mb-6">
+                <div className="flex items-baseline gap-1 mb-1">
                   <span className="text-4xl font-black text-slate-900">${price}</span>
                   <span className="text-xs text-slate-400 font-semibold">/ month</span>
                 </div>
+                <p className="mb-6 text-[11px] text-slate-400">
+                  {plan.trial
+                    ? isYearly
+                      ? 'Billed annually · 7-day trial'
+                      : '7-day free trial'
+                    : 'No trial'}
+                </p>
 
                 <div className="space-y-3 border-t border-slate-100 pt-6 text-xs text-slate-700">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span><strong>{plan.channels}</strong> Social Channels</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span><strong>Unlimited</strong> Posts & Scheduling</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Team Members: <strong>{plan.teamMembers}</strong></span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span><strong>{plan.aiGenerations}</strong> AI Generations / month</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Webhooks & API Access</span>
-                  </div>
+                  {[
+                    `${plan.channels} social accounts`,
+                    plan.posts,
+                    `${plan.users} user${plan.users === 1 ? '' : 's'}`,
+                    `${plan.workspaces} workspace${plan.workspaces === 1 ? '' : 's'}`,
+                    `${plan.storage} content library`,
+                    `${plan.fileSize} max file size`,
+                    `${plan.analytics} analytics history`,
+                  ].map((line) => (
+                    <div key={line} className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>{line}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -290,7 +298,11 @@ export const MainBillingComponent: FC = () => {
                         : 'bg-slate-900 hover:bg-slate-800 text-white'
                     )}
                   >
-                    {currentPackage === 'FREE' ? 'Subscribe Now' : 'Switch to ' + plan.name}
+                    {plan.key === 'FREE'
+                      ? 'Move to Free'
+                      : currentPackage === 'FREE'
+                      ? 'Start 7-day trial'
+                      : 'Switch to ' + plan.name}
                   </button>
                 )}
               </div>

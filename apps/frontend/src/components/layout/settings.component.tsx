@@ -757,7 +757,7 @@ export const SettingsPopup = () => {
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
               <div className="text-xs font-medium text-slate-900">
-                {user?.tier?.current || 'Current plan'}
+                {user?.tier?.label || user?.tier?.current || 'Current plan'}
               </div>
               <p className="mt-1 text-xs text-slate-500">
                 Open billing to change the plan or update payment details.

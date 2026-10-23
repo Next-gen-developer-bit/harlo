@@ -140,7 +140,7 @@ export class SubscriptionRepository {
     identifier: string,
     customerId: string,
     totalChannels: number,
-    billing: 'STANDARD' | 'TEAM' | 'PRO' | 'ULTIMATE',
+    billing: 'STANDARD' | 'TEAM' | 'PRO' | 'ULTIMATE' | 'CREATOR' | 'AGENCY',
     period: 'MONTHLY' | 'YEARLY',
     cancelAt: number | null,
     code?: string,
@@ -152,6 +152,8 @@ export class SubscriptionRepository {
     if (!findOrg) {
       return;
     }
+
+    await this.ensurePlanTiers();
 
     await this._subscription.model.subscription.upsert({
       where: {
@@ -282,5 +284,27 @@ export class SubscriptionRepository {
         paymentId: customerId,
       },
     });
+  }
+
+  private planTiersReady: Promise<void> | null = null;
+
+  private ensurePlanTiers() {
+    if (!this.planTiersReady) {
+      this.planTiersReady = (async () => {
+        const db = this._subscription.model as unknown as {
+          $executeRawUnsafe: (query: string) => Promise<unknown>;
+        };
+        await db.$executeRawUnsafe(
+          `ALTER TYPE "SubscriptionTier" ADD VALUE IF NOT EXISTS 'CREATOR'`
+        );
+        await db.$executeRawUnsafe(
+          `ALTER TYPE "SubscriptionTier" ADD VALUE IF NOT EXISTS 'AGENCY'`
+        );
+      })().catch((err) => {
+        this.planTiersReady = null;
+        throw err;
+      });
+    }
+    return this.planTiersReady;
   }
 }

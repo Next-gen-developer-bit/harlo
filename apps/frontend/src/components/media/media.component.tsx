@@ -23,6 +23,7 @@ import clsx from 'clsx';
 import { VideoFrame } from '@gitroom/react/helpers/video.frame';
 import { useUppyUploader } from '@gitroom/frontend/components/media/new.uploader';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
+import { formatStorage } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
 import { DropFiles } from '@gitroom/frontend/components/layout/drop.files';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
@@ -212,7 +213,6 @@ export const showMediaBox = (
   showModalEmitter.emit('show-modal', callback);
 };
 const CHUNK_SIZE = 1024 * 1024;
-const MAX_UPLOAD_SIZE = 1024 * 1024 * 1024; // 1 GB
 const hasMediaExtension = (
   path: string | undefined | null,
   extension: string
@@ -246,6 +246,8 @@ export const MediaBox: FC<{
   const fetch = useFetch();
   const modals = useModals();
   const toaster = useToaster();
+  const user = useUser();
+  const maxUpload = (user?.tier?.max_file_mb || 1024) * 1024 * 1024;
   useEffect(() => {
     setPage(0);
   }, [debouncedSearch]);
@@ -316,12 +318,11 @@ export const MediaBox: FC<{
       const files = Array.from(e.target.files || []);
       const totalSize = files.reduce((acc, file) => acc + file.size, 0);
 
-      if (totalSize > MAX_UPLOAD_SIZE) {
+      if (totalSize > maxUpload) {
         toaster.show(
-          t(
-            'upload_size_limit_exceeded',
-            'Upload size limit exceeded. Maximum 1 GB per upload session.'
-          ),
+          `Upload size limit exceeded. Maximum ${formatStorage(
+            user?.tier?.max_file_mb || 1024
+          )} per file on your plan.`,
           'warning'
         );
         return;
@@ -332,7 +333,7 @@ export const MediaBox: FC<{
       // @ts-ignore
       uppy.addFiles(files);
     },
-    [toaster, t]
+    [toaster, maxUpload, user?.tier?.max_file_mb]
   );
 
   const dragAndDrop = useCallback(
@@ -359,12 +360,11 @@ export const MediaBox: FC<{
 
       const totalSize = files.reduce((acc, file) => acc + file.size, 0);
 
-      if (totalSize > MAX_UPLOAD_SIZE) {
+      if (totalSize > maxUpload) {
         toaster.show(
-          t(
-            'upload_size_limit_exceeded',
-            'Upload size limit exceeded. Maximum 1 GB per upload session.'
-          ),
+          `Upload size limit exceeded. Maximum ${formatStorage(
+            user?.tier?.max_file_mb || 1024
+          )} per file on your plan.`,
           'warning'
         );
         return;
@@ -376,7 +376,7 @@ export const MediaBox: FC<{
         uppy.addFile(file);
       }
     },
-    [toaster, t]
+    [toaster, maxUpload, user?.tier?.max_file_mb]
   );
 
   const maximize = useCallback(
