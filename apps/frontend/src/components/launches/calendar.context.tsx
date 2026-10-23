@@ -382,7 +382,12 @@ export const CalendarWeekProvider: FC<{
   }, [searchKey, stateParam, calendarDisplay, urlDisplay]);
 
   const posts = useMemo(() => {
-    const rows = calendarData?.posts || [];
+    const rows = (calendarData?.posts || []) as Array<
+      Post & {
+        integration?: { providerIdentifier?: string | null } | null;
+        state: 'QUEUE' | 'DRAFT' | 'PUBLISHED' | 'ERROR';
+      }
+    >;
     return rows.filter((post) => {
       const family = post.integration?.providerIdentifier || '';
       const normalized =
