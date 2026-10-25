@@ -256,6 +256,8 @@ export const Filters = () => {
 
   const selectClass =
     'h-9 appearance-none rounded-lg bg-slate-100 px-3 pr-8 text-[13px] font-medium text-slate-700 outline-none';
+  const platformSelectClass =
+    'h-9 appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-8 text-[13px] font-medium text-slate-700 outline-none';
 
   const viewButtonClass = (active: boolean) =>
     clsx(
@@ -399,9 +401,10 @@ export const Filters = () => {
               type="button"
               onClick={setToday}
               aria-label={getTimezone()}
-              className="h-9 rounded-lg bg-slate-100 px-3 text-[13px] font-medium text-slate-700 hover:bg-slate-200"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-100 px-3 text-[13px] font-medium text-slate-700 hover:bg-slate-200"
             >
               {t('my_time', 'My time')}
+              <FilterChevron />
             </button>
             <div className="relative">
               <select
@@ -410,7 +413,7 @@ export const Filters = () => {
                 onChange={(event) =>
                   calendar.setCalendarPlatform(event.target.value)
                 }
-                className={selectClass}
+                className={platformSelectClass}
               >
                 <option value="all">{t('all_platforms', 'All Platforms')}</option>
                 {platforms.map((platform) => (
@@ -419,6 +422,7 @@ export const Filters = () => {
                   </option>
                 ))}
               </select>
+              <FilterChevron floating />
             </div>
             <div className="relative">
               <select
@@ -437,6 +441,7 @@ export const Filters = () => {
                 <option value="PUBLISHED">{t('published', 'Published')}</option>
                 <option value="ERROR">{t('failed', 'Failed')}</option>
               </select>
+              <FilterChevron floating />
             </div>
           </>
         )}
@@ -458,10 +463,8 @@ export const Filters = () => {
             onClick={setWeek}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
-              <rect x="13" y="4" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
-              <rect x="4" y="13" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
-              <rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M3 10h18M8 3v4M16 3v4M8 14h3M13 14h3M8 18h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
             {t('week', 'Week')}
           </button>
@@ -477,3 +480,25 @@ export const Filters = () => {
     </div>
   );
 };
+
+const FilterChevron = ({ floating = false }: { floating?: boolean }) => (
+  <svg
+    className={clsx(
+      'shrink-0 text-slate-500',
+      floating && 'pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2'
+    )}
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    aria-hidden="true"
+  >
+    <path
+      d="M6 9l6 6 6-6"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);

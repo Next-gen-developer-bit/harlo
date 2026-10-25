@@ -516,7 +516,7 @@ export const MonthView = () => {
     dayjs.locale(currentLanguage);
 
     const days = [];
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 0; i < 7; i++) {
       days.push(newDayjs().day(i).format('ddd'));
     }
     return days;
@@ -527,18 +527,23 @@ export const MonthView = () => {
     const currentMonth = monthStart.month();
     const currentYear = monthStart.year();
     const startOfMonth = newDayjs(new Date(currentYear, currentMonth, 1));
-    const startDayOfWeek = startOfMonth.isoWeekday();
-    const calendarStartDate = startOfMonth.subtract(startDayOfWeek - 1, 'day');
+    const startDayOfWeek = startOfMonth.day();
+    const calendarStartDate = startOfMonth.subtract(startDayOfWeek, 'day');
 
     const days = [];
     let currentDay = calendarStartDate;
     for (let i = 0; i < 42; i++) {
       let label: 'previous-month' | 'current-month' | 'next-month' =
         'current-month';
-      if (currentDay.month() < currentMonth || currentDay.year() < currentYear) {
+      if (
+        currentDay.year() < currentYear ||
+        (currentDay.year() === currentYear && currentDay.month() < currentMonth)
+      ) {
         label = 'previous-month';
-      }
-      if (currentDay.month() > currentMonth || currentDay.year() > currentYear) {
+      } else if (
+        currentDay.year() > currentYear ||
+        (currentDay.year() === currentYear && currentDay.month() > currentMonth)
+      ) {
         label = 'next-month';
       }
       days.push({
@@ -905,7 +910,12 @@ export const CalendarColumn: FC<{
   }, [posts, display, getDate]);
   const [showAll, setShowAll] = useState(false);
   const groupedPostList = useMemo(
-    () => groupPostsByGroup(postList),
+    () =>
+      groupPostsByGroup(postList).sort(
+        (left, right) =>
+          dayjs(left[0].publishDate).valueOf() -
+          dayjs(right[0].publishDate).valueOf()
+      ),
     [postList]
   );
   const dayTags = useMemo(() => {
@@ -935,7 +945,7 @@ export const CalendarColumn: FC<{
   const showLessFunc = useCallback(() => {
     setShowAll(false);
   }, []);
-  const listLimit = display === 'month' ? 4 : 3;
+  const listLimit = 3;
   const list = useMemo(() => {
     if (showAll) {
       return groupedPostList;
@@ -1225,7 +1235,7 @@ export const CalendarColumn: FC<{
                 ? 'text-slate-300'
                 : isToday
                 ? 'text-[#2563eb]'
-                : 'text-slate-700'
+                : 'text-slate-500'
             )}
           >
             {getDate.format('MMM D')}
@@ -1257,7 +1267,7 @@ export const CalendarColumn: FC<{
             </div>
           )}
         </div>
-        <div className="flex flex-col gap-1.5 flex-1 overflow-auto">
+        <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto">
           {dayTags.map((tag) => (
             <div
               key={tag.name}
@@ -1458,7 +1468,6 @@ const MonthPostCard: FC<{
     failedError,
     onRecover,
   } = props;
-  const thumb = postThumb(post.image);
   const caption =
     stripHtmlValidation('none', post.content, false, true, false) ||
     t('no_content', 'no content');
@@ -1472,22 +1481,31 @@ const MonthPostCard: FC<{
   const timeLabel = newDayjs(post.publishDate)
     .local()
     .format(isUSCitizen() ? 'h:mm A' : 'HH:mm');
+  const chipTone =
+    state === 'ERROR'
+      ? 'bg-[#fdecec] dark:bg-[#2a1618]'
+      : state === 'DRAFT'
+      ? 'bg-slate-100'
+      : state === 'PUBLISHED'
+      ? 'bg-[#eef4ff] dark:bg-[#152033]'
+      : 'bg-[#e7f6ec] dark:bg-[#143028]';
 
   return (
     <div
       // @ts-ignore
       ref={dragRef}
       className={clsx(
-        'group relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)]',
-        state === 'ERROR' && 'ring-2 ring-red-500',
-        isBeforeNow && 'opacity-90'
+        'group relative w-full rounded-lg px-2 py-1.5',
+        chipTone,
+        state === 'ERROR' && 'ring-1 ring-red-400',
+        isBeforeNow && 'opacity-80'
       )}
       style={{ opacity }}
     >
       {state === 'ERROR' && (
         <button
           type="button"
-          className="absolute -top-1.5 -left-1.5 z-20 w-[18px] h-[18px] rounded-full bg-red-500 flex items-center justify-center text-white text-[11px] font-bold"
+          className="absolute -top-1.5 -left-1.5 z-20 flex h-[16px] w-[16px] items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white"
           data-tooltip-id="tooltip"
           data-tooltip-content={`${failedError.replace(/\.$/, '')}. Click to recover.`}
           onClick={(event) => {
@@ -1498,60 +1516,52 @@ const MonthPostCard: FC<{
           !
         </button>
       )}
-      {!!commentCount && (
-        <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 shadow-sm">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="11"
-            height="11"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          {commentCount}
+      <button type="button" className="block w-full pr-5 text-left" onClick={editPost}>
+        <div className="flex items-center gap-1 text-[11px] font-medium leading-4 text-slate-700">
+          <span>{timeLabel}</span>
+          {!!commentCount && (
+            <span className="text-[10px] font-medium text-slate-400">
+              {commentCount}
+            </span>
+          )}
         </div>
-      )}
-      <button type="button" className="block w-full text-left" onClick={editPost}>
-        {thumb ? (
-          <MediaThumb src={thumb} className="h-[84px] w-full object-cover" />
-        ) : (
-          <div className="flex h-[84px] items-end bg-slate-100 px-2.5 py-2">
-            <p className="line-clamp-3 text-[11px] leading-4 text-slate-500">
-              {state === 'DRAFT' ? `${t('draft', 'Draft')}: ` : ''}
-              {caption}
-            </p>
-          </div>
-        )}
-        <div className="flex items-center justify-between gap-1 px-2 py-1.5">
-          <span className="text-[11px] font-semibold text-slate-800 whitespace-nowrap">
-            {timeLabel}
-          </span>
-          <div className="flex items-center justify-end -space-x-1">
-            {platforms.slice(0, 5).map((identifier) => (
+        <div className="mt-0.5 flex min-w-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-0.5">
+            {platforms.slice(0, 3).map((identifier) => (
               <img
                 key={identifier}
                 src={platformIconSrc(identifier)}
                 alt={identifier}
-                className="h-4 w-4 rounded-[4px] border border-white bg-white object-cover"
+                className="h-3.5 w-3.5 rounded-[3px] object-cover"
               />
             ))}
-            {platforms.length > 5 && (
-              <span className="ps-1 text-[9px] text-slate-400">
-                +{platforms.length - 5}
+            {platforms.length > 3 && (
+              <span className="text-[9px] text-slate-400">
+                +{platforms.length - 3}
               </span>
             )}
           </div>
+          <span className="min-w-0 flex-1 truncate text-[12px] leading-4 text-slate-600">
+            {state === 'DRAFT' ? `${t('draft', 'Draft')}: ` : ''}
+            {caption}
+          </span>
         </div>
       </button>
-      <div className="absolute inset-x-0 top-0 hidden justify-end gap-1 p-1 group-hover:flex">
+      <button
+        type="button"
+        className="absolute right-1.5 top-1.5 text-slate-400 hover:text-slate-700 group-hover:hidden"
+        aria-label={t('preview_post', 'Preview Post')}
+        onClick={(event) => {
+          event.stopPropagation();
+          preview();
+        }}
+      >
+        <OpenPost />
+      </button>
+      <div className="absolute right-1 top-1 hidden items-center gap-0.5 group-hover:flex">
         <button
           type="button"
-          className="rounded-md bg-white/90 p-1 text-slate-600 shadow-sm hover:text-slate-900"
+          className="rounded bg-white/80 p-0.5 text-slate-500 hover:text-slate-800"
           onClick={(event) => {
             event.stopPropagation();
             duplicatePost();
@@ -1562,7 +1572,7 @@ const MonthPostCard: FC<{
         </button>
         <button
           type="button"
-          className="rounded-md bg-white/90 p-1 text-slate-600 shadow-sm hover:text-slate-900"
+          className="rounded bg-white/80 p-0.5 text-slate-500 hover:text-slate-800"
           onClick={(event) => {
             event.stopPropagation();
             preview();
@@ -1573,7 +1583,7 @@ const MonthPostCard: FC<{
         </button>
         <button
           type="button"
-          className="rounded-md bg-white/90 p-1 text-slate-600 shadow-sm hover:text-red-600"
+          className="rounded bg-white/80 p-0.5 text-slate-500 hover:text-red-600"
           onClick={(event) => {
             event.stopPropagation();
             deletePost();
@@ -2037,6 +2047,32 @@ const SaveDraft = () => {
     </svg>
   );
 };
+const OpenPost = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    aria-hidden="true"
+  >
+    <rect
+      x="4"
+      y="4"
+      width="16"
+      height="16"
+      rx="3"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    />
+    <path
+      d="M10 14 15 9M12 9h3v3"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 const Duplicate = () => {
   const t = useT();
   return (
