@@ -1,5 +1,4 @@
 import { internalFetch } from '@gitroom/helpers/utils/internal.fetch';
-import { sanitizePostContent } from '@gitroom/helpers/utils/sanitize.post.content';
 export const dynamic = 'force-dynamic';
 import { Metadata } from 'next';
 import Link from 'next/link';
@@ -14,6 +13,29 @@ import { CreationMethodBadge } from '@gitroom/frontend/components/launches/creat
 import { LogoTextComponent } from '@gitroom/frontend/components/ui/logo-text.component';
 
 dayjs.extend(utc);
+
+const previewContent = (value: unknown) => {
+  if (typeof value !== 'string' || !value) {
+    return '';
+  }
+
+  return value
+    .replace(
+      /<\s*(script|style|iframe|object|embed|link|meta)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi,
+      ''
+    )
+    .replace(
+      /<\s*(script|style|iframe|object|embed|link|meta)\b[^>]*\/?\s*>/gi,
+      ''
+    )
+    .replace(/\s+on[a-z]+\s*=\s*(['"]).*?\1/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*[^\s>]+/gi, '')
+    .replace(
+      /(href|src)\s*=\s*(['"])\s*(?:javascript:|data:)[\s\S]*?\2/gi,
+      '$1=$2#$2'
+    );
+};
+
 export const metadata: Metadata = {
   title: 'Harlo Social Preview',
   description: '',
@@ -31,7 +53,14 @@ export default async function PostPreviewPage(props: {
   const params = await props.params;
   const { id } = params;
 
-  const post = await (await internalFetch(`/public/posts/${id}`)).json();
+  let post: any[] = [];
+  try {
+    const response = await internalFetch(`/public/posts/${id}`);
+    const body = await response.json();
+    post = Array.isArray(body) ? body : [];
+  } catch {
+    post = [];
+  }
   const t = await getT();
   if (!post.length) {
     return (
@@ -48,7 +77,12 @@ export default async function PostPreviewPage(props: {
     );
   }
 
-  const integration = post[0].integration;
+  const integration = post[0].integration || {
+    name: 'Harlo',
+    picture: '/no-picture.jpg',
+    providerIdentifier: 'web',
+    profile: '',
+  };
 
   return (
     <div className="min-h-screen">
@@ -129,7 +163,7 @@ export default async function PostPreviewPage(props: {
                     <div
                       className="whitespace-pre-wrap text-[15px] leading-relaxed text-slate-800"
                       dangerouslySetInnerHTML={{
-                        __html: sanitizePostContent(item.content),
+                        __html: previewContent(item.content),
                       }}
                     />
                   ) : null}
