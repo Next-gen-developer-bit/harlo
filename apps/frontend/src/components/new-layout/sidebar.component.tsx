@@ -373,6 +373,10 @@ body.dark .pb-sidebar {
 body.dark .pb-sidebar .pb-brand-name {
   color: #f8fafc !important;
 }
+html.dark .pb-sidebar .pb-brand-mark,
+body.dark .pb-sidebar .pb-brand-mark {
+  filter: invert(1);
+}
 body.dark .pb-sidebar .pb-nav {
   color: #cbd5e1 !important;
 }
