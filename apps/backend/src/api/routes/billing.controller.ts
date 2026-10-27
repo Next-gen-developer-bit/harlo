@@ -25,7 +25,7 @@ export class BillingController {
   private assertStripeReady() {
     if (!this._stripeService.isConfigured()) {
       throw new HttpException(
-        'Stripe is not configured yet. Add STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY, then restart the servers.',
+        'Stripe is not configured on the API. Set STRIPE_SECRET_KEY to the live secret key (sk_live_ or rk_live_) and restart the API.',
         400
       );
     }

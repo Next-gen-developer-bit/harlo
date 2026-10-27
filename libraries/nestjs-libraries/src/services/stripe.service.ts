@@ -15,14 +15,25 @@ import { TrackService } from '@gitroom/nestjs-libraries/track/track.service';
 import { UsersService } from '@gitroom/nestjs-libraries/database/prisma/users/users.service';
 import { TrackEnum } from '@gitroom/nestjs-libraries/user/track.enum';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_nothing');
+const readStripeSecret = () => {
+  let secret = (process.env.STRIPE_SECRET_KEY || '').trim();
+  if (
+    (secret.startsWith('"') && secret.endsWith('"')) ||
+    (secret.startsWith("'") && secret.endsWith("'"))
+  ) {
+    secret = secret.slice(1, -1).trim();
+  }
+  return secret;
+};
+
+const stripe = new Stripe(readStripeSecret() || 'sk_nothing');
 
 export const isStripeConfigured = () => {
-  const secret = process.env.STRIPE_SECRET_KEY || '';
+  const secret = readStripeSecret();
   return Boolean(
     secret &&
       secret !== 'sk_nothing' &&
-      secret.startsWith('sk_') &&
+      (secret.startsWith('sk_') || secret.startsWith('rk_')) &&
       secret.length > 20
   );
 };
