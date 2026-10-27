@@ -44,9 +44,7 @@ export class BillingController {
     @GetOrgFromRequest() org: Organization,
     @Param('id') body: string
   ) {
-    return {
-      status: await this._stripeService.checkSubscription(org.id, body),
-    };
+    return this._stripeService.checkSubscription(org.id, body);
   }
 
   @Get('/check-discount')
@@ -127,10 +125,9 @@ export class BillingController {
   @Get('/portal')
   async modifyPayment(@GetOrgFromRequest() org: Organization) {
     this.assertStripeReady();
-    const customer = await this._stripeService.getCustomerByOrganizationId(
+    const { url } = await this._stripeService.createBillingPortalLinkForOrg(
       org.id
     );
-    const { url } = await this._stripeService.createBillingPortalLink(customer);
     return {
       portal: url,
     };

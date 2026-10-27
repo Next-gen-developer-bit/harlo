@@ -1,4 +1,4 @@
-import { FC, ReactNode, useCallback, useEffect, useState } from 'react';
+import { FC, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import Loading from '@gitroom/frontend/components/layout/loading';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { timer } from '@gitroom/helpers/utils/timer';
@@ -24,6 +24,20 @@ export const CheckPaymentInner: FC<{
   const fetch = useFetch();
   const toaster = useToaster();
   const modal = useDecisionModal();
+  const attempts = useRef(0);
+
+  const finish = useCallback(
+    (paid: boolean) => {
+      setShowLoader(false);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('check');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+      if (paid) {
+        props.mutate();
+      }
+    },
+    [props]
+  );
 
   useEffect(() => {
     if (showLoader) {
@@ -40,28 +54,56 @@ export const CheckPaymentInner: FC<{
   }, [showLoader]);
 
   const checkSubscription = useCallback(async () => {
-    const { status } = await (
-      await fetch('/billing/check/' + props.check)
-    ).json();
-    if (status === 0) {
+    attempts.current += 1;
+    let response: Response;
+    try {
+      response = await fetch('/billing/check/' + props.check);
+    } catch {
+      toaster.show(
+        'We could not confirm the payment. Open Billing and try the plan again.',
+        'warning'
+      );
+      finish(false);
+      return;
+    }
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || typeof payload.status !== 'number') {
+      toaster.show(
+        payload.message ||
+          'We could not confirm the payment. Open Billing and try the plan again.',
+        'warning'
+      );
+      finish(false);
+      return;
+    }
+    if (payload.status === 0) {
+      if (attempts.current >= 45) {
+        toaster.show(
+          'Payment is still confirming. Check Billing in a moment instead of waiting on this screen.',
+          'warning'
+        );
+        finish(false);
+        return;
+      }
       await timer(1000);
       return checkSubscription();
     }
-    if (status === 1) {
+    if (payload.status === 1) {
       modal.open({
-        title: 'Invalid Payment',
+        title: 'Payment not confirmed',
         onlyApprove: true,
         approveLabel: 'OK',
         description:
+          payload.message ||
           'We could not validate your payment method, please try again',
       });
-      setShowLoader(false);
+      finish(false);
+      return;
     }
-    if (status === 2) {
-      setShowLoader(false);
-      props.mutate();
+    if (payload.status === 2) {
+      finish(true);
     }
-  }, []);
+  }, [fetch, finish, modal, props.check, toaster]);
   useEffect(() => {
     checkSubscription();
   }, []);

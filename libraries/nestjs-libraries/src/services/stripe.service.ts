@@ -224,8 +224,34 @@ export class StripeService {
     );
   }
 
+  private isMissingStripeCustomer(err: unknown) {
+    const stripeError = err as {
+      code?: string;
+      message?: string;
+      raw?: { code?: string; message?: string };
+    };
+    const code = stripeError?.code || stripeError?.raw?.code || '';
+    const message = stripeError?.message || stripeError?.raw?.message || '';
+    return (
+      code === 'resource_missing' ||
+      /no such customer/i.test(message) ||
+      /exists in test mode/i.test(message)
+    );
+  }
+
   async createOrGetCustomer(organization: Organization) {
-    if (organization.paymentId) {
+    if (organization.paymentId?.startsWith('cus_')) {
+      try {
+        const existing = await stripe.customers.retrieve(organization.paymentId);
+        if (!('deleted' in existing) || !existing.deleted) {
+          return organization.paymentId;
+        }
+      } catch (err) {
+        if (!this.isMissingStripeCustomer(err)) {
+          throw err;
+        }
+      }
+    } else if (organization.paymentId) {
       return organization.paymentId;
     }
 
@@ -446,6 +472,15 @@ export class StripeService {
       customer,
       return_url: process.env['FRONTEND_URL'] + '/billing',
     });
+  }
+
+  async createBillingPortalLinkForOrg(organizationId: string) {
+    const org = await this._organizationService.getOrgById(organizationId);
+    if (!org) {
+      throw new Error('Organization not found');
+    }
+    const customer = await this.createOrGetCustomer(org);
+    return this.createBillingPortalLink(customer);
   }
 
   /**
@@ -707,25 +742,72 @@ export class StripeService {
     );
 
     if (orgValue) {
-      return 2;
+      return { status: 2 };
     }
 
-    const getCustomerSubscriptions = await this.getCustomerSubscriptions(
-      organizationId
+    const org = await this._organizationService.getOrgById(organizationId);
+    if (!org?.paymentId?.startsWith('cus_')) {
+      return { status: 0 };
+    }
+
+    let subscriptions: Awaited<ReturnType<typeof stripe.subscriptions.list>>;
+    try {
+      subscriptions = await stripe.subscriptions.list({
+        customer: org.paymentId,
+        status: 'all',
+      });
+    } catch (err) {
+      if (!this.isMissingStripeCustomer(err)) {
+        throw err;
+      }
+      await this.createOrGetCustomer(org);
+      return {
+        status: 1,
+        message:
+          'The saved Stripe customer belongs to test mode. Subscribe again so the live account can create a new customer.',
+      };
+    }
+
+    const match = subscriptions.data.find(
+      (item) => item.metadata?.uniqueId === subscriptionId
     );
-    if (getCustomerSubscriptions.data.length === 0) {
-      return 0;
+    if (!match) {
+      return { status: 0 };
     }
 
     if (
-      getCustomerSubscriptions.data.find(
-        (p) => p.metadata.uniqueId === subscriptionId
-      )?.canceled_at
+      match.canceled_at ||
+      match.status === 'canceled' ||
+      match.status === 'incomplete_expired'
     ) {
-      return 1;
+      return { status: 1 };
     }
 
-    return 0;
+    if (match.status === 'active' || match.status === 'trialing') {
+      const billing = match.metadata?.billing as
+        | 'STANDARD'
+        | 'PRO'
+        | 'TEAM'
+        | 'ULTIMATE'
+        | 'CREATOR'
+        | 'AGENCY'
+        | undefined;
+      const period = match.metadata?.period as 'MONTHLY' | 'YEARLY' | undefined;
+      if (billing && period && pricing[billing]) {
+        await this._subscriptionService.createOrUpdateSubscription(
+          match.status !== 'active',
+          subscriptionId,
+          match.customer as string,
+          pricing[billing].channel!,
+          billing,
+          period,
+          match.cancel_at
+        );
+      }
+      return { status: 2 };
+    }
+
+    return { status: 0 };
   }
 
   async embedded(

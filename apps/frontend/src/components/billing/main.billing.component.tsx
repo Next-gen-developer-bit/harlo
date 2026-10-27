@@ -189,24 +189,26 @@ export const MainBillingComponent: FC = () => {
 
       {/* Monthly / Yearly Toggle Switch */}
       <div className="flex items-center justify-center gap-4 mb-12">
-        <span className={clsx('text-xs font-bold', !isYearly ? 'text-slate-900' : 'text-slate-400')}>
+        <span className={clsx('text-xs font-medium', !isYearly ? 'text-[#2563eb]' : 'text-slate-500')}>
           Monthly Billing
         </span>
         <button
+          type="button"
+          aria-pressed={isYearly}
           onClick={() => setIsYearly(!isYearly)}
           className={clsx(
-            'w-12 h-6 rounded-full p-1 transition-colors relative focus:outline-none',
-            isYearly ? 'bg-blue-600' : 'bg-slate-200'
+            'relative h-7 w-12 rounded-full p-1 transition-colors focus:outline-none',
+            isYearly ? 'bg-[#2563eb]' : 'bg-[#475569]'
           )}
         >
           <div
             className={clsx(
-              'w-4 h-4 rounded-full bg-white transition-transform shadow-sm',
-              isYearly ? 'translate-x-6' : 'translate-x-0'
+              'h-5 w-5 rounded-full bg-[#f1f5f9] shadow-sm transition-transform',
+              isYearly ? 'translate-x-5' : 'translate-x-0'
             )}
           />
         </button>
-        <span className={clsx('text-xs font-bold flex items-center gap-1.5', isYearly ? 'text-slate-900' : 'text-slate-400')}>
+        <span className={clsx('text-xs font-medium flex items-center gap-1.5', isYearly ? 'text-[#2563eb]' : 'text-slate-500')}>
           Annual Billing
           <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 uppercase tracking-wider">
             Save up to 20%
