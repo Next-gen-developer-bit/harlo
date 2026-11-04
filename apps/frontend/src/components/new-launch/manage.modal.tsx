@@ -740,14 +740,14 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
               </div>
             </div>
           </div>
-          <div className="flex w-[460px] shrink-0 flex-col bg-[#fafbfc]">
+          <div className="relative z-0 flex w-[460px] shrink-0 flex-col isolate overflow-hidden bg-[#fafbfc]">
             <div className="flex h-12 shrink-0 items-center border-b border-[#e6e8ee] bg-white px-4 text-[15px] font-semibold text-[#0f172a]">
               <div className="flex-1">{t('post_preview', 'Post Preview')}</div>
               <button type="button" className="cursor-pointer" onClick={askClose}>
                 <CloseIcon className="text-[#94a3b8]" />
               </button>
             </div>
-            <div className="relative min-h-0 flex-1">
+            <div className="relative z-0 min-h-0 flex-1 overflow-hidden">
               <Scrollable
                 scrollClasses=""
                 className="absolute left-0 top-0 h-full w-full overflow-x-hidden overflow-y-auto p-4"
@@ -757,7 +757,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             </div>
           </div>
         </div>
-        <div className="relative z-30 flex w-full shrink-0 items-center gap-2 border-t border-[#e6e8ee] bg-white px-4 py-3">
+        <div className="relative z-40 flex w-full shrink-0 items-center gap-2 border-t border-[#e6e8ee] bg-white px-4 py-3">
           <div className="flex shrink-0 items-center gap-2">
             {!dummy && (
               <TagsComponent

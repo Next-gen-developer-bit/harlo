@@ -21,6 +21,9 @@ export const VideoOrImage: FC<{
         className={clsx('w-full h-full', videoClassName)}
         muted={true}
         loop={true}
+        playsInline
+        controls={false}
+        disablePictureInPicture
       />
     );
   }

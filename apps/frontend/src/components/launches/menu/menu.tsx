@@ -154,6 +154,7 @@ export const Menu: FC<{
     [show]
   );
   const disableChannel = useCallback(async () => {
+    setShow(false);
     if (
       !(await deleteDialog(
         t('are_you_sure_disable_channel', 'Are you sure you want to disable this channel?'),
@@ -169,10 +170,10 @@ export const Menu: FC<{
       }),
     });
     toast.show(t('channel_disabled', 'Channel Disabled'), 'success');
-    setShow(false);
     onChange(false);
   }, [t]);
   const deleteChannel = useCallback(async () => {
+    setShow(false);
     if (
       !(await deleteDialog(
         t('are_you_sure_delete_channel', 'Are you sure you want to delete this channel?'),
@@ -211,11 +212,11 @@ export const Menu: FC<{
       }
     }
     toast.show(t('channel_deleted', 'Channel Deleted'), 'success');
-    setShow(false);
     onChange(true);
   }, [t, extensionId, id]);
 
   const enableChannel = useCallback(async () => {
+    setShow(false);
     await fetch('/integrations/enable', {
       method: 'POST',
       body: JSON.stringify({
@@ -223,7 +224,6 @@ export const Menu: FC<{
       }),
     });
     toast.show(t('channel_enabled', 'Channel Enabled'), 'success');
-    setShow(false);
     onChange(false);
   }, [t]);
 
@@ -400,7 +400,7 @@ export const Menu: FC<{
           ref={menuRef}
           onClick={(e) => e.stopPropagation()}
           style={{ left: show.x, top: show.y }}
-          className="fixed z-[300] min-w-[280px] w-max max-w-[calc(100vw-24px)] p-2 bg-white shadow-lg flex flex-col gap-0.5 rounded-xl border border-slate-200"
+          className="fixed z-[450] min-w-[280px] w-max max-w-[calc(100vw-24px)] p-2 bg-white shadow-lg flex flex-col gap-0.5 rounded-xl border border-slate-200"
         >
           {canDisable && !findIntegration?.refreshNeeded && (
             <div

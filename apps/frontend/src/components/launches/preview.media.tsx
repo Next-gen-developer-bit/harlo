@@ -64,7 +64,13 @@ export const PreviewMedia: FC<{
 
   if (slides.length === 1) {
     return (
-      <div className={clsx('relative w-full overflow-hidden', aspect, className)}>
+      <div
+        className={clsx(
+          'relative isolate z-0 w-full overflow-hidden',
+          aspect,
+          className
+        )}
+      >
         {slides[0]}
       </div>
     );

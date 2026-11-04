@@ -290,7 +290,7 @@ export const ModalManagerInner: FC = () => {
           isLast={modalManager.length - 1 === index}
           key={modal.id}
           modal={modal}
-          zIndex={200 + index}
+          zIndex={1000 + index}
           closeModal={closeModal}
         />
       ))}
