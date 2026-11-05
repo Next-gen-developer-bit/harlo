@@ -52,6 +52,7 @@ import Mention from '@tiptap/extension-mention';
 import { suggestion } from '@gitroom/frontend/components/new-launch/mention.component';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { AComponent } from '@gitroom/frontend/components/new-launch/a.component';
+import { UtmBuilder } from '@gitroom/frontend/components/new-launch/utm.builder';
 import { Placeholder } from '@tiptap/extensions';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { InformationComponent } from '@gitroom/frontend/components/launches/information.component';
@@ -776,6 +777,10 @@ export const Editor: FC<{
                             />
                           </>
                         )}
+                      <UtmBuilder
+                        getEditor={() => editorRef?.current?.editor}
+                        editorType={editorType}
+                      />
                       <div
                         data-tooltip-id="tooltip"
                         data-tooltip-content={t('insert_emoji', 'Insert Emoji')}
