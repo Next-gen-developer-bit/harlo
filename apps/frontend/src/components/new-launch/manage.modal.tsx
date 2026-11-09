@@ -13,10 +13,7 @@ import clsx from 'clsx';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { PicksSocialsComponent } from '@gitroom/frontend/components/new-launch/picks.socials.component';
 import { EditorWrapper } from '@gitroom/frontend/components/new-launch/editor';
-import {
-  ChannelFields,
-  SelectCurrent,
-} from '@gitroom/frontend/components/new-launch/select.current';
+import { SelectCurrent } from '@gitroom/frontend/components/new-launch/select.current';
 import { ShowAllProviders } from '@gitroom/frontend/components/new-launch/providers/show.all.providers';
 import { useExistingData } from '@gitroom/frontend/components/launches/helpers/use.existing.data';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
@@ -95,6 +92,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
   const {
     selectedIntegrations,
+    current,
+    setCurrent,
     hide,
     date,
     setDate,
@@ -123,6 +122,8 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
       tags: state.tags,
       setTags: state.setTags,
       selectedIntegrations: state.selectedIntegrations,
+      current: state.current,
+      setCurrent: state.setCurrent,
       integrations: state.integrations,
       setSelectedIntegrations: state.setSelectedIntegrations,
       locked: state.locked,
@@ -147,6 +148,16 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
     }
     ensureChannelDrafts();
   }, [channelKey, globalLength]);
+
+  useEffect(() => {
+    if (
+      !existingData.integration &&
+      selectedIntegrations.length > 1 &&
+      current !== 'global'
+    ) {
+      setCurrent('global');
+    }
+  }, [channelKey, current, existingData.integration, selectedIntegrations.length, setCurrent]);
 
   const changeCustomer = useCallback(
     (customer: string) => {
@@ -756,14 +767,25 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                     </div>
                   </div>
                   <div className="flex min-h-[280px] flex-1 flex-col gap-2">
-                    {!existingData.integration &&
-                    selectedIntegrations.length > 1 ? (
-                      !hide && <ChannelFields />
-                    ) : (
+                    {existingData.integration ? (
                       <>
                         <div>
-                          {!existingData.integration && <SelectCurrent />}
+                          <SelectCurrent />
                         </div>
+                        <div className="flex flex-1">
+                          {!hide && <EditorWrapper totalPosts={1} value="" />}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {selectedIntegrations.length > 1 && (
+                          <p className="text-[12px] leading-5 text-slate-500">
+                            {t(
+                              'shared_composer_hint',
+                              'Text and images here go to every selected account. Change one account from its preview.'
+                            )}
+                          </p>
+                        )}
                         <div className="flex flex-1">
                           {!hide && <EditorWrapper totalPosts={1} value="" />}
                         </div>

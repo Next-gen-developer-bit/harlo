@@ -30,6 +30,31 @@ class Empty {
   empty: string;
 }
 
+const plainCaption = (value?: string) =>
+  (value || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+const captionToHtml = (value: string) => {
+  const lines = value.split('\n');
+  return lines
+    .map((line) => {
+      const safe = line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `<p>${safe}</p>`;
+    })
+    .join('');
+};
+
 export { PostComment } from '@gitroom/frontend/components/new-launch/providers/post-comment.enum';
 import { PostComment } from '@gitroom/frontend/components/new-launch/providers/post-comment.enum';
 
@@ -66,9 +91,12 @@ export const withProvider = function <T extends object>(params: {
     const {
       current,
       selectedIntegration,
+      selectedCount,
       setCurrent,
       internal,
       global,
+      addRemoveInternal,
+      setInternalValueText,
       date,
       isGlobal,
       setTotalChars,
@@ -85,6 +113,9 @@ export const withProvider = function <T extends object>(params: {
         date: state.date,
         global: state.global,
         dummy: state.dummy,
+        selectedCount: state.selectedIntegrations.length,
+        addRemoveInternal: state.addRemoveInternal,
+        setInternalValueText: state.setInternalValueText,
         internal: state.internal.find((p) => p.integration.id === props.id),
         integrations: state.selectedIntegrations,
         setHide: state.setHide,
@@ -249,6 +280,19 @@ export const withProvider = function <T extends object>(params: {
             )
           );
     const hasContent = hasMeaningfulContent(value);
+    const caption = plainCaption(value?.[0]?.content);
+    const changeCaption = (text: string) => {
+      if (plainCaption(text) === plainCaption(global?.[0]?.content)) {
+        if (internal) {
+          addRemoveInternal(props.id);
+        }
+        return;
+      }
+      if (!internal) {
+        addRemoveInternal(props.id);
+      }
+      setInternalValueText(props.id, 0, captionToHtml(text));
+    };
     const family = platformFamily(selectedIntegration.integration.identifier);
     const platformLabel =
       PLATFORM_LABELS[family] ||
@@ -288,6 +332,31 @@ export const withProvider = function <T extends object>(params: {
                 {platformLabel}
               </span>
             </div>
+            {selectedCount > 1 && (
+              <div className="border-b border-[#e6e8ee] px-3 py-3">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="text-[12px] font-medium text-slate-500">
+                    {t('caption_for_account', 'Caption for this account')}
+                  </span>
+                  {!!internal && (
+                    <button
+                      type="button"
+                      onClick={() => addRemoveInternal(props.id)}
+                      className="text-[12px] font-medium text-[#612BD3]"
+                    >
+                      {t('use_shared_post', 'Use shared post')}
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  value={caption}
+                  rows={3}
+                  onChange={(event) => changeCaption(event.target.value)}
+                  placeholder={t('write_something', 'Write something…')}
+                  className="w-full resize-none rounded-lg border border-[#e6e8ee] bg-white px-3 py-2 text-[13px] leading-5 text-[#0f172a] outline-none focus:border-[#612BD3]"
+                />
+              </div>
+            )}
             <div className="relative overflow-hidden bg-white [&>div.absolute]:!relative [&>div.absolute]:!inset-auto [&>div.absolute]:!h-auto [&>div.absolute]:!w-full">
               {hasContent ? (
                 CustomPreviewComponent ? (
