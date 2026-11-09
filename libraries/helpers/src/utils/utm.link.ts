@@ -107,3 +107,109 @@ export const defaultUtmParams = (
   term: '',
   content: '',
 });
+
+export const utmToken = (value?: string) => {
+  const trimmed = (value || '').trim();
+  if (!trimmed) {
+    return '';
+  }
+  const slug = trimmed
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || trimmed;
+};
+
+export const trackingUrl = (destination: string, params: UtmParams) =>
+  buildUtmUrl(destination, {
+    source: utmToken(params.source),
+    medium: utmToken(params.medium || 'social') || 'social',
+    campaign: utmToken(params.campaign),
+    term: utmToken(params.term),
+    content: utmToken(params.content),
+  });
+
+const sameDestination = (left: string, right: string) => {
+  try {
+    const a = new URL(left);
+    const b = new URL(right);
+    return (
+      a.origin === b.origin &&
+      a.pathname.replace(/\/$/, '') === b.pathname.replace(/\/$/, '') &&
+      a.search === b.search
+    );
+  } catch {
+    return false;
+  }
+};
+
+export const rewriteTrackedLinks = (
+  content: string,
+  destination: string,
+  params: UtmParams,
+  append: boolean
+) => {
+  const tracked = trackingUrl(destination, params);
+  const target = parseUtmUrl(destination);
+  if (!tracked || !target) {
+    return { content, found: false };
+  }
+
+  let found = false;
+  const next = (content || '').replace(/https?:\/\/[^\s"'<>]+/g, (match) => {
+    const cleaned = match.replace(/[),.;]+$/g, '').replace(/&amp;/g, '&');
+    const suffix = match.slice(match.replace(/[),.;]+$/g, '').length);
+    const parsed = parseUtmUrl(cleaned);
+    if (!parsed || !sameDestination(parsed.base, target.base)) {
+      return match;
+    }
+    found = true;
+    return tracked + suffix;
+  });
+
+  if (!found && append) {
+    const trimmed = next.trim();
+    return {
+      content: trimmed ? `${trimmed} ${tracked}` : tracked,
+      found: false,
+    };
+  }
+
+  return { content: next, found };
+};
+
+export const applyTrackingToValues = <T extends { content?: string }>(
+  values: T[],
+  destination: string,
+  params: UtmParams
+) => {
+  let found = false;
+  const next = values.map((item) => {
+    const result = rewriteTrackedLinks(
+      item.content || '',
+      destination,
+      params,
+      false
+    );
+    if (result.found) {
+      found = true;
+    }
+    return { ...item, content: result.content };
+  });
+
+  if (!found && next[0]) {
+    next[0] = {
+      ...next[0],
+      content: rewriteTrackedLinks(
+        next[0].content || '',
+        destination,
+        params,
+        true
+      ).content,
+    };
+  }
+
+  return next;
+};

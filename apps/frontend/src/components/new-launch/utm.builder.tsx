@@ -1,43 +1,25 @@
 'use client';
 
-import {
-  FC,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react';
-import { createPortal } from 'react-dom';
+import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import useSWR from 'swr';
 import { useShallow } from 'zustand/react/shallow';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
-import { useToaster } from '@gitroom/react/toaster/toaster';
-import {
-  buildUtmUrl,
-  defaultUtmParams,
-  parseUtmUrl,
-  UtmParams,
-} from '@gitroom/helpers/utils/utm.link';
+import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { parseUtmUrl, trackingUrl } from '@gitroom/helpers/utils/utm.link';
 import { useLaunchStore } from '@gitroom/frontend/components/new-launch/store';
-import { platformFamily } from '@gitroom/frontend/components/launches/helpers/mvp.platforms';
+import {
+  PLATFORM_LABELS,
+  platformFamily,
+} from '@gitroom/frontend/components/launches/helpers/mvp.platforms';
 
-const readCurrentUrl = (editor: any) => {
-  const link = editor?.getAttributes?.('link')?.href;
-  if (typeof link === 'string' && link.trim()) {
-    return link.trim();
-  }
-  const selection = editor?.state?.selection;
-  if (!selection || !editor?.state?.doc) {
-    return '';
-  }
-  const selected = editor.state.doc
-    .textBetween(selection.from, selection.to, ' ')
-    .trim();
-  if (/^https?:\/\//i.test(selected)) {
-    return selected;
-  }
-  return '';
+const useSavedTags = () => {
+  const fetch = useFetch();
+  const load = useCallback(async () => {
+    const response = await fetch('/posts/tags');
+    return response.json();
+  }, [fetch]);
+  return useSWR<{ tags?: { id: string; name: string }[] }>('load-tags', load);
 };
 
 const Field = ({
@@ -52,7 +34,7 @@ const Field = ({
   placeholder?: string;
 }) => (
   <label className="block">
-    <span className="mb-1 block text-[12px] font-medium text-[#64748b]">
+    <span className="mb-1 block text-[12px] font-medium text-slate-500">
       {label}
     </span>
     <input
@@ -64,286 +46,229 @@ const Field = ({
   </label>
 );
 
-export const UtmBuilder: FC<{
-  getEditor: () => any;
-  editorType: 'none' | 'normal' | 'markdown' | 'html';
-}> = ({ getEditor, editorType }) => {
+export const LinkTrackingSection: FC = () => {
   const t = useT();
-  const toaster = useToaster();
-  const { current, selectedIntegrations, tags } = useLaunchStore(
-    useShallow((state) => ({
-      current: state.current,
-      selectedIntegrations: state.selectedIntegrations,
-      tags: state.tags,
-    }))
-  );
+  const { data } = useSavedTags();
   const [open, setOpen] = useState(false);
-  const [showOptional, setShowOptional] = useState(false);
-  const [base, setBase] = useState('');
-  const [params, setParams] = useState<UtmParams>(defaultUtmParams('social'));
-  const [error, setError] = useState('');
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(
-    null
-  );
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  const active = selectedIntegrations.find(
-    (item) => item.integration.id === current
-  );
-  const severalChannels = !active && selectedIntegrations.length > 1;
-  const family = platformFamily(active?.integration.identifier);
-  const sourceDefault =
-    severalChannels || !family || family === 'global' ? 'social' : family;
-  const campaignDefault = tags[0]?.value || tags[0]?.label || '';
-
-  const close = useCallback(() => setOpen(false), []);
-
-  const openPanel = useCallback(() => {
-    const existing = parseUtmUrl(readCurrentUrl(getEditor()));
-    if (existing) {
-      setBase(existing.base);
-      setParams({
-        ...defaultUtmParams(sourceDefault, campaignDefault),
-        ...existing.params,
-      });
-      setShowOptional(!!(existing.params.term || existing.params.content));
-    } else {
-      setBase('');
-      setParams(defaultUtmParams(sourceDefault, campaignDefault));
-      setShowOptional(false);
-    }
-    setError('');
-    setOpen(true);
-  }, [campaignDefault, getEditor, sourceDefault]);
+  const [customCampaign, setCustomCampaign] = useState(false);
+  const [customise, setCustomise] = useState(false);
+  const { selectedIntegrations, tags, global, linkTracking, setLinkTracking } =
+    useLaunchStore(
+      useShallow((state) => ({
+        selectedIntegrations: state.selectedIntegrations,
+        tags: state.tags,
+        global: state.global,
+        linkTracking: state.linkTracking,
+        setLinkTracking: state.setLinkTracking,
+      }))
+    );
+  const hydrated = useRef(false);
 
   useEffect(() => {
-    if (!open) {
+    if (hydrated.current || linkTracking.url) {
       return;
     }
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (!target) {
-        return;
-      }
-      if (
-        buttonRef.current?.contains(target) ||
-        panelRef.current?.contains(target)
-      ) {
-        return;
-      }
-      close();
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        close();
-      }
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [close, open]);
-
-  useLayoutEffect(() => {
-    if (!open || !buttonRef.current) {
-      setPosition(null);
-      return;
-    }
-    const trigger = buttonRef.current.getBoundingClientRect();
-    const width = 320;
-    const height = panelRef.current?.offsetHeight || 420;
-    const padding = 12;
-    let left = trigger.left;
-    left = Math.min(left, window.innerWidth - width - padding);
-    left = Math.max(padding, left);
-    let top = trigger.top - height - 8;
-    if (top < padding) {
-      top = Math.min(
-        trigger.bottom + 8,
-        window.innerHeight - height - padding
+    const blob = (global || []).map((item) => item.content || '').join('\n');
+    const urls = blob.match(/https?:\/\/[^\s"'<>]+/g) || [];
+    const parsed = urls
+      .map((url) =>
+        parseUtmUrl(url.replace(/[),.;]+$/g, '').replace(/&amp;/g, '&'))
+      )
+      .find(
+        (item) =>
+          item &&
+          (item.params.source ||
+            item.params.medium ||
+            item.params.campaign ||
+            item.params.term ||
+            item.params.content)
       );
-    }
-    setPosition({ top: Math.max(padding, top), left });
-  }, [open, showOptional, base, params]);
-
-  const preview = buildUtmUrl(base, params);
-
-  const update = (field: keyof UtmParams) => (value: string) => {
-    setParams((currentParams) => ({ ...currentParams, [field]: value }));
-    setError('');
-  };
-
-  const insert = () => {
-    const href = buildUtmUrl(base, params);
-    const editor = getEditor();
-    if (!href || !editor) {
-      setError(
-        t('utm_invalid_url', 'Enter a full website link, starting with https://')
-      );
+    if (!parsed) {
       return;
     }
+    hydrated.current = true;
+    setLinkTracking({
+      url: parsed.base,
+      campaign: parsed.params.campaign || '',
+      medium: parsed.params.medium || 'social',
+      term: parsed.params.term || '',
+      content: parsed.params.content || '',
+    });
+    setOpen(true);
+  }, [global, linkTracking.url, setLinkTracking]);
 
-    const existingLink = editor.getAttributes?.('link')?.href;
-    const selection = editor.state?.selection;
-    const selected = selection
-      ? editor.state.doc.textBetween(selection.from, selection.to, ' ').trim()
-      : '';
-    const canLinkText =
-      (editorType === 'html' || editorType === 'markdown') &&
-      selected &&
-      !/^https?:\/\//i.test(selected);
+  const campaigns = Array.from(
+    new Set(
+      [
+        ...(data?.tags || []).map((tag) => tag.name),
+        ...tags.map((tag) => tag.value || tag.label),
+      ].filter((name) => !!name?.trim())
+    )
+  );
+  const knownCampaign = campaigns.includes(linkTracking.campaign);
+  const showCustom =
+    customCampaign || (!!linkTracking.campaign && !knownCampaign);
 
-    if (existingLink && editor.chain) {
-      editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
-    } else if (canLinkText && editor.chain) {
-      editor.chain().focus().setLink({ href }).run();
-    } else if (editor.chain) {
-      editor.chain().focus().insertContent(href).run();
-    } else {
-      editor.commands?.insertContent?.(href);
-      editor.commands?.focus?.();
-    }
-    close();
-  };
-
-  const copy = async () => {
-    const href = buildUtmUrl(base, params);
-    if (!href) {
-      setError(
-        t('utm_invalid_url', 'Enter a full website link, starting with https://')
-      );
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(href);
-      toaster.show(t('utm_copied', 'Tracking link copied'), 'success');
-    } catch {
-      toaster.show(t('utm_copy_failed', 'Could not copy the link'), 'warning');
-    }
-  };
+  const rows = selectedIntegrations.map((item) => {
+    const family = platformFamily(item.integration.identifier) || 'social';
+    const source = linkTracking.sourceOverride.trim() || family;
+    const href = trackingUrl(linkTracking.url, {
+      source,
+      medium: linkTracking.medium || 'social',
+      campaign: linkTracking.campaign,
+      term: linkTracking.term,
+      content: linkTracking.content,
+    });
+    return {
+      id: item.integration.id,
+      name:
+        PLATFORM_LABELS[family] ||
+        item.integration.name ||
+        family,
+      href,
+    };
+  });
 
   return (
-    <>
+    <div className="rounded-xl border border-[#e6e8ee] bg-white">
       <button
-        ref={buttonRef}
         type="button"
-        onClick={() => (open ? close() : openPanel())}
-        data-tooltip-id="tooltip"
-        data-tooltip-content={t('utm_link', 'UTM link')}
-        className={clsx(
-          'flex h-8 shrink-0 cursor-pointer select-none items-center rounded-md border px-2 text-[12px] font-semibold',
-          open
-            ? 'border-[#612BD3] bg-[#f4f2fb] text-[#612BD3]'
-            : 'border-[#e6e8ee] bg-white text-[#334155]'
-        )}
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
       >
-        UTM
+        <span className="text-[12px] text-[#612BD3]">{open ? '▾' : '▸'}</span>
+        <span className="flex-1 text-[13px] font-semibold text-[#0f172a]">
+          {t('link_tracking', 'Link tracking')}
+        </span>
+        <span className="text-[12px] text-slate-500">
+          {linkTracking.url
+            ? t('tracking_on', 'On')
+            : t('add_tracked_link', 'Add a tracked link')}
+        </span>
       </button>
-      {open &&
-        createPortal(
-          <div
-            ref={panelRef}
-            onClick={(event) => event.stopPropagation()}
-            style={{
-              position: 'fixed',
-              top: position?.top ?? -9999,
-              left: position?.left ?? -9999,
-              visibility: position ? 'visible' : 'hidden',
-            }}
-            className="z-[5000] w-[320px] rounded-xl border border-[#e6e8ee] bg-white p-3 text-[#0f172a] shadow-lg"
-          >
-            <div className="mb-3 text-[13px] font-semibold">
-              {t('utm_builder', 'Tracking link')}
-            </div>
-            {severalChannels && (
-              <p className="mb-3 text-[12px] leading-5 text-[#64748b]">
-                {t(
-                  'utm_shared_post',
-                  'This post is shared across channels, so source starts as social. Customise one channel to use its name.'
-                )}
-              </p>
+      {open && (
+        <div className="flex flex-col gap-3 border-t border-[#e6e8ee] px-3 py-3">
+          <Field
+            label={t('website_url', 'Website URL')}
+            value={linkTracking.url}
+            placeholder="https://example.com/page"
+            onChange={(url) => setLinkTracking({ url })}
+          />
+          <label className="block">
+            <span className="mb-1 block text-[12px] font-medium text-slate-500">
+              {t('utm_campaign', 'Campaign')}
+            </span>
+            {campaigns.length > 0 && (
+              <select
+                value={
+                  showCustom
+                    ? '__custom'
+                    : knownCampaign
+                    ? linkTracking.campaign
+                    : ''
+                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === '__custom') {
+                    setCustomCampaign(true);
+                    if (knownCampaign) {
+                      setLinkTracking({ campaign: '' });
+                    }
+                    return;
+                  }
+                  setCustomCampaign(false);
+                  setLinkTracking({ campaign: value });
+                }}
+                className="h-9 w-full rounded-lg border border-[#e6e8ee] bg-white px-3 text-[13px] text-[#0f172a] outline-none focus:border-[#612BD3]"
+              >
+                <option value="">
+                  {t('select_campaign', 'Select a campaign')}
+                </option>
+                {campaigns.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+                <option value="__custom">
+                  {t('custom_campaign', 'Custom campaign')}
+                </option>
+              </select>
             )}
+            {(campaigns.length === 0 || showCustom) && (
+              <input
+                value={linkTracking.campaign}
+                placeholder={t('utm_campaign_placeholder', 'spring-launch')}
+                onChange={(event) =>
+                  setLinkTracking({ campaign: event.target.value })
+                }
+                className={clsx(
+                  'h-9 w-full rounded-lg border border-[#e6e8ee] bg-white px-3 text-[13px] text-[#0f172a] outline-none focus:border-[#612BD3]',
+                  campaigns.length > 0 && 'mt-2'
+                )}
+              />
+            )}
+          </label>
+          <p className="text-[12px] leading-5 text-slate-500">
+            {t(
+              'utm_source_automatic',
+              'Source is filled from each selected platform. The link is added when you save or schedule.'
+            )}
+          </p>
+          {!!linkTracking.url && rows.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {rows.map((row) => (
+                <div key={row.id} className="min-w-0">
+                  <div className="text-[12px] font-medium text-[#0f172a]">
+                    {row.name}
+                  </div>
+                  <div className="break-all text-[12px] leading-5 text-slate-500">
+                    {row.href ||
+                      t('utm_preview_empty', 'Enter a valid website link.')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setCustomise((value) => !value)}
+            className="self-start text-[12px] font-medium text-[#612BD3]"
+          >
+            {customise
+              ? t('utm_hide_custom', 'Hide custom fields')
+              : t('utm_customise', 'Customise tracking')}
+          </button>
+          {customise && (
             <div className="flex flex-col gap-2.5">
               <Field
-                label={t('website_url', 'Website URL')}
-                value={base}
-                placeholder="https://example.com/page"
-                onChange={(value) => {
-                  setBase(value);
-                  setError('');
-                }}
-              />
-              <Field
-                label={t('utm_source', 'Source')}
-                value={params.source || ''}
-                placeholder={sourceDefault}
-                onChange={update('source')}
+                label={t('utm_source_override', 'Source override')}
+                value={linkTracking.sourceOverride}
+                placeholder={t(
+                  'utm_source_blank',
+                  'Leave blank to use each platform'
+                )}
+                onChange={(sourceOverride) => setLinkTracking({ sourceOverride })}
               />
               <Field
                 label={t('utm_medium', 'Medium')}
-                value={params.medium || ''}
+                value={linkTracking.medium}
                 placeholder="social"
-                onChange={update('medium')}
+                onChange={(medium) => setLinkTracking({ medium })}
               />
               <Field
-                label={t('utm_campaign', 'Campaign')}
-                value={params.campaign || ''}
-                placeholder={t('utm_campaign_placeholder', 'spring-launch')}
-                onChange={update('campaign')}
+                label={t('utm_term', 'Term')}
+                value={linkTracking.term}
+                onChange={(term) => setLinkTracking({ term })}
               />
-              <button
-                type="button"
-                onClick={() => setShowOptional((value) => !value)}
-                className="self-start text-[12px] font-medium text-[#612BD3]"
-              >
-                {showOptional
-                  ? t('utm_hide_optional', 'Hide term and content')
-                  : t('utm_show_optional', 'Add term and content')}
-              </button>
-              {showOptional && (
-                <>
-                  <Field
-                    label={t('utm_term', 'Term')}
-                    value={params.term || ''}
-                    onChange={update('term')}
-                  />
-                  <Field
-                    label={t('utm_content', 'Content')}
-                    value={params.content || ''}
-                    onChange={update('content')}
-                  />
-                </>
-              )}
+              <Field
+                label={t('utm_content', 'Content')}
+                value={linkTracking.content}
+                onChange={(content) => setLinkTracking({ content })}
+              />
             </div>
-            <div className="mt-3 break-all rounded-lg bg-[#f8fafc] px-2.5 py-2 text-[12px] leading-5 text-[#334155]">
-              {preview ||
-                t('utm_preview_empty', 'The tracking link will show here.')}
-            </div>
-            {error && (
-              <div className="mt-2 text-[12px] text-[#b42318]">{error}</div>
-            )}
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={copy}
-                className="h-9 flex-1 rounded-lg border border-[#e6e8ee] text-[13px] font-semibold text-[#334155]"
-              >
-                {t('copy', 'Copy')}
-              </button>
-              <button
-                type="button"
-                onClick={insert}
-                className="h-9 flex-1 rounded-lg bg-[#612BD3] text-[13px] font-semibold text-white"
-              >
-                {t('insert_link', 'Insert link')}
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
-    </>
+          )}
+        </div>
+      )}
+    </div>
   );
 };

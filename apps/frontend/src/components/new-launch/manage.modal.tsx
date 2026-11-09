@@ -40,8 +40,39 @@ import { useShortlinkPreference } from '@gitroom/frontend/components/settings/sh
 import dayjs from 'dayjs';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { Button } from '@gitroom/react/form/button';
+import { LinkTrackingSection } from '@gitroom/frontend/components/new-launch/utm.builder';
+import { applyTrackingToValues } from '@gitroom/helpers/utils/utm.link';
+import { platformFamily } from '@gitroom/frontend/components/launches/helpers/mvp.platforms';
 
 export const COMPOSER_LOCAL_DRAFT_KEY = 'poscally-composer-unsaved';
+
+const withPlatformLinks = (posts: any[]) => {
+  const { linkTracking, selectedIntegrations } = useLaunchStore.getState();
+  const destination = linkTracking?.url?.trim() || '';
+  if (!destination) {
+    return posts;
+  }
+
+  return posts.map((post) => {
+    const identifier = selectedIntegrations.find(
+      (item) => item.integration.id === post.integration?.id
+    )?.integration.identifier;
+    const source =
+      linkTracking.sourceOverride.trim() ||
+      platformFamily(identifier) ||
+      'social';
+    return {
+      ...post,
+      value: applyTrackingToValues(post.value || [], destination, {
+        source,
+        medium: linkTracking.medium || 'social',
+        campaign: linkTracking.campaign,
+        term: linkTracking.term,
+        content: linkTracking.content,
+      }),
+    };
+  });
+};
 
 export const ManageModal: FC<AddEditModalProps> = (props) => {
   const t = useT();
@@ -316,29 +347,31 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
         const group = groupRef.current || existingData.group || makeId(10);
         groupRef.current = group;
 
-        const posts = allValues.map((post: any) => ({
-          type,
-          integration: {
-            id: post.id,
-          },
-          group,
-          settings: { ...(post.settings || {}) },
-          value: post.values.map((value: any) => ({
-            ...(value.id ? { id: value.id } : {}),
-            content: value.content,
-            delay: value.delay || 0,
-            image:
-              (value?.media || []).map(
-                ({ id, path, alt, thumbnail, thumbnailTimestamp }: any) => ({
-                  id,
-                  path,
-                  alt,
-                  thumbnail,
-                  thumbnailTimestamp,
-                })
-              ) || [],
-          })),
-        }));
+        const posts = withPlatformLinks(
+          allValues.map((post: any) => ({
+            type,
+            integration: {
+              id: post.id,
+            },
+            group,
+            settings: { ...(post.settings || {}) },
+            value: post.values.map((value: any) => ({
+              ...(value.id ? { id: value.id } : {}),
+              content: value.content,
+              delay: value.delay || 0,
+              image:
+                (value?.media || []).map(
+                  ({ id, path, alt, thumbnail, thumbnailTimestamp }: any) => ({
+                    id,
+                    path,
+                    alt,
+                    thumbnail,
+                    thumbnailTimestamp,
+                  })
+                ) || [],
+            })),
+          }))
+        );
 
         if (!dummy) {
           const checkAllValid = await (
@@ -425,12 +458,12 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             await fetch('/posts/should-shortlink', {
               method: 'POST',
               body: JSON.stringify({
-                messages: allValues
-                  // platforms that remove links won't keep shortlinks either
+                messages: posts
                   .filter(
-                    (p: any) => !integrationById(p.id)?.integration?.stripLinks
+                    (p: any) =>
+                      !integrationById(p.integration.id)?.integration?.stripLinks
                   )
-                  .flatMap((p: any) => p.values.flatMap((a: any) => a.content)),
+                  .flatMap((p: any) => p.value.flatMap((a: any) => a.content)),
               }),
             })
           ).json();
@@ -614,27 +647,29 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
       const group = groupRef.current || existingData.group || makeId(10);
       groupRef.current = group;
-      const posts = allValues.map((post: any) => ({
-        type: 'draft' as const,
-        integration: { id: post.id },
-        group,
-        settings: { ...(post.settings || {}) },
-        value: post.values.map((value: any) => ({
-          ...(value.id ? { id: value.id } : {}),
-          content: value.content,
-          delay: value.delay || 0,
-          image:
-            (value?.media || []).map(
-              ({ id, path, alt, thumbnail, thumbnailTimestamp }: any) => ({
-                id,
-                path,
-                alt,
-                thumbnail,
-                thumbnailTimestamp,
-              })
-            ) || [],
-        })),
-      }));
+      const posts = withPlatformLinks(
+        allValues.map((post: any) => ({
+          type: 'draft' as const,
+          integration: { id: post.id },
+          group,
+          settings: { ...(post.settings || {}) },
+          value: post.values.map((value: any) => ({
+            ...(value.id ? { id: value.id } : {}),
+            content: value.content,
+            delay: value.delay || 0,
+            image:
+              (value?.media || []).map(
+                ({ id, path, alt, thumbnail, thumbnailTimestamp }: any) => ({
+                  id,
+                  path,
+                  alt,
+                  thumbnail,
+                  thumbnailTimestamp,
+                })
+              ) || [],
+          })),
+        }))
+      );
 
       const res = await fetch('/posts', {
         method: 'POST',
@@ -734,6 +769,7 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
                         </div>
                       </>
                     )}
+                    {!dummy && <LinkTrackingSection />}
                     <div id="social-empty" className="pb-2" />
                   </div>
                 </div>

@@ -37,6 +37,17 @@ interface StoreState {
   totalChars: number;
   activateExitButton: boolean;
   tags: { label: string; value: string }[];
+  linkTracking: {
+    url: string;
+    campaign: string;
+    medium: string;
+    sourceOverride: string;
+    term: string;
+    content: string;
+  };
+  setLinkTracking: (
+    patch: Partial<StoreState['linkTracking']>
+  ) => void;
   tab: 0 | 1;
   current: string;
   comments: boolean | 'no-media';
@@ -151,6 +162,14 @@ const initialState = {
   date: newDayjs(),
   postComment: PostComment.ALL,
   tags: [] as { label: string; value: string }[],
+  linkTracking: {
+    url: '',
+    campaign: '',
+    medium: 'social',
+    sourceOverride: '',
+    term: '',
+    content: '',
+  },
   totalChars: 0,
   tab: 0 as 0,
   isCreateSet: false,
@@ -647,6 +666,10 @@ export const useLaunchStore = create<StoreState>()((set) => ({
   setTags: (tags: { label: string; value: string }[]) =>
     set((state) => ({
       tags,
+    })),
+  setLinkTracking: (patch) =>
+    set((state) => ({
+      linkTracking: { ...state.linkTracking, ...patch },
     })),
   setIsCreateSet: (isCreateSet: boolean) =>
     set((state) => ({
