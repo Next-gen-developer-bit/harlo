@@ -1629,31 +1629,61 @@ export class PostsService {
     republish = false
   ) {
     const getPostById = await this._postRepository.getPostById(id, orgId);
-
-    if (action === 'schedule' && !republish) {
-      this.guardAgainstRepublish(getPostById, 'changeDate');
+    if (!getPostById) {
+      throw new NotFoundException('Post not found');
     }
 
-    // schedule: Set status to QUEUE and change date (reschedule the post)
-    // update: Just change the date without changing the status
-    const newDate = await this._postRepository.changeDate(
-      orgId,
-      id,
-      date,
-      getPostById.state === 'DRAFT',
-      action
-    );
+    const grouped = getPostById.group
+      ? await this._postRepository.getPostsByGroup(orgId, getPostById.group)
+      : [];
+    const postsToMove = grouped.length ? grouped : [getPostById];
 
-    if (action === 'schedule') {
-      await this.startWorkflow(
-        getPostById.integration.providerIdentifier.split('-')[0].toLowerCase(),
-        getPostById.id,
+    if (action === 'schedule' && !republish) {
+      for (const post of postsToMove) {
+        this.guardAgainstRepublish(post, 'changeDate');
+      }
+    }
+
+    // A calendar card is one group. Move every destination, including thread
+    // comments, so dragging does not leave the other accounts on the old day.
+    let moved = getPostById;
+    for (const post of postsToMove) {
+      const updated = await this._postRepository.changeDate(
         orgId,
-        getPostById.state === 'DRAFT' ? 'DRAFT' : 'QUEUE'
+        post.id,
+        date,
+        post.state === 'DRAFT',
+        action
+      );
+      if (post.id === id) {
+        moved = updated;
+      }
+    }
+
+    for (const post of postsToMove) {
+      if (post.parentPostId || !post.integration?.providerIdentifier) {
+        continue;
+      }
+      if (post.state === 'DRAFT') {
+        continue;
+      }
+      // Published posts stay published unless the user chose to reschedule.
+      // Queued posts still restart so they go out on the new day.
+      if (post.state === 'PUBLISHED' && !(action === 'schedule' && republish)) {
+        continue;
+      }
+      if (post.state === 'ERROR' && action !== 'schedule') {
+        continue;
+      }
+      await this.startWorkflow(
+        post.integration.providerIdentifier.split('-')[0].toLowerCase(),
+        post.id,
+        orgId,
+        'QUEUE'
       );
     }
 
-    return newDate;
+    return moved;
   }
 
   async generatePostsDraft(orgId: string, body: CreateGeneratedPostsDto) {

@@ -998,16 +998,31 @@ export const CalendarColumn: FC<{
       drop: async (item: any) => {
         if (isBeforeNow) return;
 
-        // Find the post to check its state
+        // A card can contain every account in the group. Confirm once for
+        // the whole card, then the API moves every destination together.
         const post = posts.find((p) => p.id === item.id);
+        const groupPosts = post?.group
+          ? posts.filter((entry) => entry.group === post.group)
+          : post
+          ? [post]
+          : [];
+        const accountNames = [
+          ...new Set(
+            groupPosts
+              .map((entry) => entry.integration?.name)
+              .filter(Boolean)
+          ),
+        ].join(', ');
         let action: 'schedule' | 'update' = 'schedule';
+        let republish = false;
 
-        // Check if post is already published or queued in the past
         if (
-          post &&
-          (post.state === 'PUBLISHED' ||
-            (post.state === 'QUEUE' &&
-              dayjs().isAfter(dayjs.utc(post.publishDate))))
+          groupPosts.some(
+            (entry) =>
+              entry.state === 'PUBLISHED' ||
+              (entry.state === 'QUEUE' &&
+                dayjs().isAfter(dayjs.utc(entry.publishDate)))
+          )
         ) {
           const whatToDo = await new Promise<'schedule' | 'update' | 'cancel'>(
             (resolve) => {
@@ -1020,9 +1035,11 @@ export const CalendarColumn: FC<{
                         'post_already_published_republish_warning',
                         'This post was already published. Republishing will publish it again to'
                       )}{' '}
-                      {post.integration?.name} {t('republish_at', 'at')}{' '}
+                      {accountNames || post?.integration?.name}{' '}
+                      {t('republish_at', 'at')}{' '}
                       {getDate.format('DD/MM/YYYY HH:mm')}.
-                      {(!!item.interval || !!post.intervalInDays) && (
+                      {(!!item.interval ||
+                        groupPosts.some((entry) => entry.intervalInDays)) && (
                         <div className="mt-[10px]">
                           {t(
                             'republish_recurring_note',
@@ -1071,6 +1088,7 @@ export const CalendarColumn: FC<{
             return;
           }
           action = whatToDo;
+          republish = whatToDo === 'schedule';
         }
 
         if (!item.interval) {
@@ -1081,9 +1099,7 @@ export const CalendarColumn: FC<{
           body: JSON.stringify({
             date: getDate.utc().format('YYYY-MM-DDTHH:mm:ss'),
             action,
-            // published posts always confirm via the modal before reaching here;
-            // for QUEUE posts the flag is a no-op on the server
-            ...(action === 'schedule' ? { republish: true } : {}),
+            ...(republish ? { republish: true } : {}),
           }),
         });
         if (status !== 500) {
@@ -1668,6 +1684,7 @@ const CalendarItem: FC<{
       type: 'post',
       item: {
         id: post.id,
+        group: post.group,
         interval: !!post.intervalInDays,
         date,
       },
@@ -1675,7 +1692,7 @@ const CalendarItem: FC<{
         opacity: monitor.isDragging() ? 0 : 1,
       }),
     }),
-    []
+    [post.id, post.group, post.intervalInDays, date]
   );
 
   if (display === 'month') {

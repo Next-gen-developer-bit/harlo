@@ -415,22 +415,22 @@ export const CalendarWeekProvider: FC<{
   const listTotal = listData?.total || 0;
   const listTotalPages = Math.ceil(listTotal / 100);
 
-  const changeDate = useCallback(
-    (id: string, date: dayjs.Dayjs) => {
-      setInternalData((d) =>
-        d.map((post: Post) => {
-          if (post.id === id) {
-            return {
-              ...post,
-              publishDate: date.utc().format('YYYY-MM-DDTHH:mm:ss'),
-            };
-          }
-          return post;
-        })
-      );
-    },
-    [posts, internalData]
-  );
+  const changeDate = useCallback((id: string, date: dayjs.Dayjs) => {
+    const nextDate = date.utc().format('YYYY-MM-DDTHH:mm:ss');
+    setInternalData((current) => {
+      const target = current.find((post: Post) => post.id === id);
+      const group = target?.group;
+      return current.map((post: Post) => {
+        if (post.id === id || (group && post.group === group)) {
+          return {
+            ...post,
+            publishDate: nextDate,
+          };
+        }
+        return post;
+      });
+    });
+  }, []);
 
   useEffect(() => {
     if (posts) {
