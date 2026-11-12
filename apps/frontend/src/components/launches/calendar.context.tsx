@@ -9,6 +9,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import dayjs from 'dayjs';
@@ -83,7 +84,7 @@ export const CalendarContext = createContext({
   }) => {
     /** empty **/
   },
-  changeDate: (id: string, date: dayjs.Dayjs) => {
+  changeDate: (id: string, date: dayjs.Dayjs, group?: string) => {
     /** empty **/
   },
   // List view specific
@@ -415,32 +416,46 @@ export const CalendarWeekProvider: FC<{
   const listTotal = listData?.total || 0;
   const listTotalPages = Math.ceil(listTotal / 100);
 
-  const changeDate = useCallback((id: string, date: dayjs.Dayjs) => {
-    const nextDate = date.utc().format('YYYY-MM-DDTHH:mm:ss');
-    setInternalData((current) => {
-      const target = current.find((post: Post) => post.id === id);
-      const group = target?.group;
-      return current.map((post: Post) => {
-        if (post.id === id || (group && post.group === group)) {
-          return {
-            ...post,
-            publishDate: nextDate,
-          };
-        }
-        return post;
+  const holdCalendarMove = useRef(false);
+  const [calendarVersion, setCalendarVersion] = useState(0);
+  const changeDate = useCallback(
+    (id: string, date: dayjs.Dayjs, group?: string) => {
+      const nextDate = date.utc().format('YYYY-MM-DDTHH:mm:ss');
+      holdCalendarMove.current = true;
+      setInternalData((current) => {
+        const target = current.find((post: Post) => post.id === id);
+        const nextGroup = group || target?.group;
+        return current.map((post: Post) => {
+          if (post.id === id || (nextGroup && post.group === nextGroup)) {
+            return {
+              ...post,
+              publishDate: nextDate,
+            };
+          }
+          return post;
+        });
       });
-    });
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
+    if (holdCalendarMove.current) {
+      return;
+    }
     if (posts) {
       setInternalData(posts);
     }
-  }, [posts]);
+  }, [posts, calendarVersion]);
 
   // Combined reload function that handles both calendar and list views
   const reloadCalendarView = useCallback(async () => {
-    await Promise.all([mutateCalendar(), mutateList()]);
+    try {
+      await Promise.all([mutateCalendar(), mutateList()]);
+    } finally {
+      holdCalendarMove.current = false;
+      setCalendarVersion((version) => version + 1);
+    }
   }, [mutateCalendar, mutateList]);
 
   // Determine loading state based on current view

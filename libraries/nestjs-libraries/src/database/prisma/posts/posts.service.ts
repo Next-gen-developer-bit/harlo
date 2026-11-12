@@ -1644,21 +1644,15 @@ export class PostsService {
       }
     }
 
-    // A calendar card is one group. Move every destination, including thread
-    // comments, so dragging does not leave the other accounts on the old day.
-    let moved = getPostById;
-    for (const post of postsToMove) {
-      const updated = await this._postRepository.changeDate(
-        orgId,
-        post.id,
-        date,
-        post.state === 'DRAFT',
-        action
-      );
-      if (post.id === id) {
-        moved = updated;
-      }
-    }
+    // One write for every account in the card, including thread comments.
+    // Match the group itself so a sibling cannot stay on the old day.
+    await this._postRepository.changeGroupDate(
+      orgId,
+      getPostById.group?.trim() ? getPostById.group : null,
+      postsToMove.map((post) => post.id),
+      date,
+      action
+    );
 
     for (const post of postsToMove) {
       if (post.parentPostId || !post.integration?.providerIdentifier) {
@@ -1675,15 +1669,19 @@ export class PostsService {
       if (post.state === 'ERROR' && action !== 'schedule') {
         continue;
       }
-      await this.startWorkflow(
-        post.integration.providerIdentifier.split('-')[0].toLowerCase(),
-        post.id,
-        orgId,
-        'QUEUE'
-      );
+      try {
+        await this.startWorkflow(
+          post.integration.providerIdentifier.split('-')[0].toLowerCase(),
+          post.id,
+          orgId,
+          'QUEUE'
+        );
+      } catch (err) {
+        console.error(`Failed to reschedule workflow for ${post.id}`, err);
+      }
     }
 
-    return moved;
+    return this._postRepository.getPostById(id, orgId);
   }
 
   async generatePostsDraft(orgId: string, body: CreateGeneratedPostsDto) {

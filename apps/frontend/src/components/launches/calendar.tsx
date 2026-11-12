@@ -584,9 +584,9 @@ export const MonthView = () => {
               gridTemplateRows: `repeat(${Math.max(1, calendarDays.length / 7)}, minmax(168px, 1fr))`,
             }}
           >
-            {calendarDays.map((date, index) => (
+            {calendarDays.map((date) => (
               <CalendarColumn
-                key={index}
+                key={date.day.format('YYYY-MM-DD')}
                 getDate={newDayjs(date.day).endOf('day')}
                 randomHour={true}
                 outsideMonth={date.label !== 'current-month'}
@@ -1091,24 +1091,38 @@ export const CalendarColumn: FC<{
           republish = whatToDo === 'schedule';
         }
 
+        const sourceDate = post?.publishDate
+          ? dayjs.utc(post.publishDate).local()
+          : dayjs(item.date);
+        const targetDate =
+          display === 'month'
+            ? getDate
+                .hour(sourceDate.hour())
+                .minute(sourceDate.minute())
+                .second(0)
+                .millisecond(0)
+            : getDate;
         if (!item.interval) {
-          changeDate(item.id, getDate);
+          changeDate(item.id, targetDate, item.group);
         }
-        const { status } = await fetch(`/posts/${item.id}/date`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            date: getDate.utc().format('YYYY-MM-DDTHH:mm:ss'),
-            action,
-            ...(republish ? { republish: true } : {}),
-          }),
-        });
-        if (status !== 500) {
-          if (item.interval || action === 'schedule') {
-            reloadCalendarView();
+        try {
+          const { status } = await fetch(`/posts/${item.id}/date`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              date: targetDate.utc().format('YYYY-MM-DDTHH:mm:ss'),
+              action,
+              ...(republish ? { republish: true } : {}),
+            }),
+          });
+          if (!status || status >= 400) {
+            await reloadCalendarView();
             return;
           }
+        } catch (err) {
+          await reloadCalendarView();
           return;
         }
+        await reloadCalendarView();
       },
       collect: (monitor) => ({
         canDrop: isBeforeNow
@@ -1116,7 +1130,7 @@ export const CalendarColumn: FC<{
           : !!monitor.canDrop() && !!monitor.isOver(),
       }),
     }),
-    [posts]
+    [posts, getDate, display, isBeforeNow, changeDate, fetch, reloadCalendarView]
   );
 
   const addModal = useCallback(async () => {

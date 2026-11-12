@@ -646,6 +646,57 @@ export class PostsRepository {
     });
   }
 
+  async changeGroupDate(
+    orgId: string,
+    group: string | null | undefined,
+    ids: string[],
+    date: string,
+    action: 'schedule' | 'update' = 'schedule'
+  ) {
+    const publishDate = dayjs(date).toDate();
+    const identity = group
+      ? {
+          organizationId: orgId,
+          group,
+          deletedAt: null,
+        }
+      : {
+          organizationId: orgId,
+          id: { in: ids },
+          deletedAt: null,
+        };
+    if (!group && !ids.length) {
+      return;
+    }
+    if (action !== 'schedule') {
+      await this._post.model.post.updateMany({
+        where: identity,
+        data: { publishDate },
+      });
+      return;
+    }
+
+    await this._post.model.post.updateMany({
+      where: {
+        ...identity,
+        state: 'DRAFT',
+      },
+      data: { publishDate },
+    });
+    await this._post.model.post.updateMany({
+      where: {
+        ...identity,
+        state: { not: 'DRAFT' },
+      },
+      data: {
+        publishDate,
+        state: 'QUEUE',
+        releaseId: null,
+        releaseURL: null,
+      },
+    });
+  }
+
   countPostsFromDay(orgId: string, date: Date) {
     return this._post.model.post.count({
       where: {
