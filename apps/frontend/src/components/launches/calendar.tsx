@@ -887,6 +887,7 @@ export const CalendarColumn: FC<{
   } = useCalendar();
   const modal = useModals();
   const fetch = useFetch();
+  const toaster = useToaster();
 
   // Use shared post actions hook
   const {
@@ -1094,19 +1095,31 @@ export const CalendarColumn: FC<{
         const sourceDate = post?.publishDate
           ? dayjs.utc(post.publishDate).local()
           : dayjs(item.date);
-        const targetDate =
-          display === 'month'
-            ? getDate
-                .hour(sourceDate.hour())
-                .minute(sourceDate.minute())
-                .second(0)
-                .millisecond(0)
-            : getDate;
+        let targetDate = getDate;
+        if (display === 'month') {
+          // Shift by whole days so the post keeps its time of day.
+          const days = dayjs
+            .utc(getDate.format('YYYY-MM-DD'))
+            .diff(dayjs.utc(sourceDate.format('YYYY-MM-DD')), 'day');
+          if (!days) {
+            return;
+          }
+          const sameTime = sourceDate
+            .add(days, 'day')
+            .second(0)
+            .millisecond(0);
+          // A time that already passed today would publish right away.
+          targetDate = sameTime.isBefore(dayjs()) ? getDate : sameTime;
+        }
         if (!item.interval) {
           changeDate(item.id, targetDate, item.group);
         }
+        const moveFailed = t(
+          'could_not_move_post',
+          'This post could not be rescheduled. Please try again.'
+        );
         try {
-          const { status } = await fetch(`/posts/${item.id}/date`, {
+          const response = await fetch(`/posts/${item.id}/date`, {
             method: 'PUT',
             body: JSON.stringify({
               date: targetDate.utc().format('YYYY-MM-DDTHH:mm:ss'),
@@ -1114,13 +1127,12 @@ export const CalendarColumn: FC<{
               ...(republish ? { republish: true } : {}),
             }),
           });
-          if (!status || status >= 400) {
-            await reloadCalendarView();
-            return;
+          if (!response.status || response.status >= 400) {
+            const error = await response.json().catch(() => null);
+            toaster.show(error?.message || moveFailed, 'warning');
           }
         } catch (err) {
-          await reloadCalendarView();
-          return;
+          toaster.show(moveFailed, 'warning');
         }
         await reloadCalendarView();
       },
@@ -1130,7 +1142,16 @@ export const CalendarColumn: FC<{
           : !!monitor.canDrop() && !!monitor.isOver(),
       }),
     }),
-    [posts, getDate, display, isBeforeNow, changeDate, fetch, reloadCalendarView]
+    [
+      posts,
+      getDate,
+      display,
+      isBeforeNow,
+      changeDate,
+      fetch,
+      reloadCalendarView,
+      toaster,
+    ]
   );
 
   const addModal = useCallback(async () => {

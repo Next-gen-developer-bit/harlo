@@ -5,6 +5,7 @@ import {
   APPROVED_SUBMIT_FOR_ORDER,
   CreationMethod,
   Post,
+  Prisma,
   State,
 } from '@prisma/client';
 import { GetPostsDto } from '@gitroom/nestjs-libraries/dtos/posts/get.posts.dto';
@@ -654,7 +655,7 @@ export class PostsRepository {
     action: 'schedule' | 'update' = 'schedule'
   ) {
     const publishDate = dayjs(date).toDate();
-    const identity = group
+    const identity: Prisma.PostWhereInput = group
       ? {
           organizationId: orgId,
           group,

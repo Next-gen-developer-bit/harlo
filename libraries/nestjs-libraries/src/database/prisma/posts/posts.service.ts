@@ -1654,6 +1654,9 @@ export class PostsService {
       action
     );
 
+    // Try every account before reporting a failure, so one bad restart
+    // cannot leave the others without a job for the new time.
+    let failed: unknown;
     for (const post of postsToMove) {
       if (post.parentPostId || !post.integration?.providerIdentifier) {
         continue;
@@ -1677,8 +1680,11 @@ export class PostsService {
           'QUEUE'
         );
       } catch (err) {
-        console.error(`Failed to reschedule workflow for ${post.id}`, err);
+        failed = failed || err;
       }
+    }
+    if (failed) {
+      throw failed;
     }
 
     return this._postRepository.getPostById(id, orgId);

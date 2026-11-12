@@ -416,12 +416,15 @@ export const CalendarWeekProvider: FC<{
   const listTotal = listData?.total || 0;
   const listTotalPages = Math.ceil(listTotal / 100);
 
-  const holdCalendarMove = useRef(false);
+  // Moves still being saved. The server list is ignored until they finish,
+  // so an older reload cannot put a dragged post back.
+  const holdCalendarMove = useRef(0);
   const [calendarVersion, setCalendarVersion] = useState(0);
   const changeDate = useCallback(
     (id: string, date: dayjs.Dayjs, group?: string) => {
-      const nextDate = date.utc().format('YYYY-MM-DDTHH:mm:ss');
-      holdCalendarMove.current = true;
+      // Same shape the API returns, so the card shows the right time.
+      const nextDate = date.toISOString();
+      holdCalendarMove.current += 1;
       setInternalData((current) => {
         const target = current.find((post: Post) => post.id === id);
         const nextGroup = group || target?.group;
@@ -453,7 +456,7 @@ export const CalendarWeekProvider: FC<{
     try {
       await Promise.all([mutateCalendar(), mutateList()]);
     } finally {
-      holdCalendarMove.current = false;
+      holdCalendarMove.current = Math.max(0, holdCalendarMove.current - 1);
       setCalendarVersion((version) => version + 1);
     }
   }, [mutateCalendar, mutateList]);
