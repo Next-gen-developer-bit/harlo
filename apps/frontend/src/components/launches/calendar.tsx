@@ -59,7 +59,6 @@ import i18next from 'i18next';
 import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.modal';
 import { CreationMethodBadge } from '@gitroom/frontend/components/launches/creation.method.badge';
 import { deleteDialog } from '@gitroom/react/helpers/delete.dialog';
-import { useVariables } from '@gitroom/react/helpers/variable.context';
 import copy from 'copy-to-clipboard';
 import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
@@ -1732,7 +1731,6 @@ const CalendarItem: FC<{
     display,
     deletePost,
     showTime,
-    missingRelease,
     integrations,
     groupPosts,
     commentCount,
@@ -1743,18 +1741,11 @@ const CalendarItem: FC<{
     .map((item) => item.integration?.name)
     .filter(Boolean)
     .join(', ');
-  const { disableXAnalytics } = useVariables();
   const router = useRouter();
   const openInsights = useCallback(() => {
     router.push(`/analytics/post/${post.id}`);
   }, [post.id, router]);
-  const insightReady = destinations.some(
-    (item) =>
-      item.state === 'PUBLISHED' &&
-      !!item.releaseId &&
-      item.releaseId !== 'missing' &&
-      !(item.integration?.providerIdentifier === 'x' && disableXAnalytics)
-  );
+  const insightReady = destinations.some((item) => item.state === 'PUBLISHED');
   const user = useUser();
   const showCreationMethodBadge =
     user?.impersonate &&
@@ -1951,38 +1942,18 @@ const CalendarItem: FC<{
         >
           <Preview />
         </div>{' '}
-        {(post.integration.providerIdentifier === 'x' &&
-          disableXAnalytics &&
-          destinations.every(
-            (item) => item.integration?.providerIdentifier === 'x'
-          )) ||
-        !destinations.some((item) => item.releaseId) ? (
-          <></>
-        ) : !insightReady &&
-          destinations.some((item) => item.releaseId === 'missing') &&
-          missingRelease ? (
-          <div
-            className={clsx(
-              'hidden group-hover:block hover:underline cursor-pointer',
-              post?.tags?.[0]?.tag?.color && 'mix-blend-difference'
-            )}
-            onClick={missingRelease}
-          >
-            <Statistics />
-          </div>
-        ) : insightReady ? (
+        {insightReady ? (
           <div
             className={clsx(
               'hidden group-hover:block hover:underline cursor-pointer',
               post?.tags?.[0]?.tag?.color && 'mix-blend-difference'
             )}
             onClick={openInsights}
+            aria-label={t('view_insights', 'View Insights')}
           >
             <Statistics />
           </div>
-        ) : (
-          <></>
-        )}{' '}
+        ) : null}{' '}
         <button
           type="button"
           aria-label={t('delete_post', 'Delete Post')}

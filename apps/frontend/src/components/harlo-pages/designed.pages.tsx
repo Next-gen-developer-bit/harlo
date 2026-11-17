@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useCallback, useState } from 'react';
+import { ReactNode, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useClickAway } from '@uidotdev/usehooks';
 import useSWR from 'swr';
@@ -11,6 +11,7 @@ import { useWorkspaceOverview } from '@gitroom/frontend/components/workspace-hom
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import { useOrganizations } from '@gitroom/frontend/components/layout/use.organizations';
 import {
+  AnalyticsPeriod,
   formatMetric,
   usePublishedPostsAnalytics,
 } from '@gitroom/frontend/components/platform-analytics/use.published.posts.analytics';
@@ -191,26 +192,132 @@ export const QueuePage = () => {
   );
 };
 
-export const CampaignsPage = () => (
-  <div className={shell}>
-    <div className="mb-6 flex justify-end">
-      <PrimaryLink href="/compose?create=1">Create post</PrimaryLink>
-    </div>
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
-      <h2 className="text-lg font-semibold text-slate-900">No campaigns yet</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
-        Campaigns group the posts you already schedule. A published post in a
-        campaign opens in Post Insights from the posts list, calendar, or analytics.
-      </p>
-      <div className="mt-5 flex justify-center gap-3">
+const campaignFromContent = (content?: string) => {
+  const match = (content || '').match(/utm_campaign(?:=|%3D)([^&"'\s<]+)/i);
+  if (!match?.[1]) {
+    return '';
+  }
+  const raw = match[1].replace(/&amp;$/i, '');
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, ' ')).trim();
+  } catch {
+    return raw.trim();
+  }
+};
+
+const analyticsPeriod = (days?: number): AnalyticsPeriod => {
+  const allowed: AnalyticsPeriod[] = [7, 30, 90, 365, 730];
+  return [...allowed].reverse().find((item) => item <= (days || 30)) || 7;
+};
+
+export const CampaignsPage = () => {
+  const user = useUser();
+  const { data, isLoading } = usePublishedPostsAnalytics(
+    analyticsPeriod(user?.tier?.analytics_days)
+  );
+  const campaigns = useMemo(() => {
+    const groups = new Map<
+      string,
+      Array<{
+        id: string;
+        content?: string;
+        publishDate: string;
+        account: string;
+      }>
+    >();
+    for (const post of data?.posts || []) {
+      const name = campaignFromContent(post.content);
+      if (!name) {
+        continue;
+      }
+      const rows = groups.get(name) || [];
+      rows.push({
+        id: post.id,
+        content: post.content,
+        publishDate: post.publishDate,
+        account: post.integration?.name || 'Account',
+      });
+      groups.set(name, rows);
+    }
+    return [...groups.entries()].sort((left, right) =>
+      left[0].localeCompare(right[0])
+    );
+  }, [data?.posts]);
+
+  return (
+    <div className={shell}>
+      <div className="mb-6 flex justify-end">
         <PrimaryLink href="/compose?create=1">Create post</PrimaryLink>
-        <Link href="/launches" className="inline-flex h-10 items-center text-sm font-semibold text-blue-600">
-          Open calendar
-        </Link>
       </div>
+      {isLoading ? (
+        <div className="rounded-2xl border border-slate-200 bg-white px-5 py-16 text-center text-sm text-slate-400">
+          Loading campaigns…
+        </div>
+      ) : campaigns.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
+          <h2 className="text-lg font-semibold text-slate-900">No campaigns yet</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+            Add a campaign name in a post’s link tracking. Published posts that
+            use it show up here, and each one opens in Post Insights.
+          </p>
+          <div className="mt-5 flex justify-center gap-3">
+            <PrimaryLink href="/compose?create=1">Create post</PrimaryLink>
+            <Link href="/launches" className="inline-flex h-10 items-center text-sm font-semibold text-blue-600">
+              Open calendar
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {campaigns.map(([name, posts]) => (
+            <section
+              key={name}
+              className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+            >
+              <div className="border-b border-slate-100 px-5 py-4">
+                <h2 className="text-sm font-semibold text-slate-900">{name}</h2>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  {posts.length} published post{posts.length === 1 ? '' : 's'}
+                </p>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {posts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="flex items-center justify-between gap-4 px-5 py-3"
+                  >
+                    <div className="min-w-0">
+                      <Link
+                        href={`/analytics/post/${post.id}`}
+                        className="block truncate text-sm font-medium text-slate-900 hover:text-blue-600"
+                      >
+                        {(post.content || 'Untitled post')
+                          .replace(/<[^>]*>/g, ' ')
+                          .replace(/\s+/g, ' ')
+                          .trim() || 'Untitled post'}
+                      </Link>
+                      <div className="text-xs text-slate-400">
+                        {post.account}
+                        {' · '}
+                        {dayjs(post.publishDate).format('D MMM YYYY')}
+                      </div>
+                    </div>
+                    <Link
+                      href={`/analytics/post/${post.id}`}
+                      className="shrink-0 text-xs font-semibold text-blue-600"
+                    >
+                      View Insights
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 export const WorkspacesPage = () => {
   const user = useUser();
@@ -493,12 +600,15 @@ export const WorkspacesPage = () => {
 };
 
 export const ReportsPage = () => {
-  const { data, isLoading } = usePublishedPostsAnalytics(30);
+  const user = useUser();
+  const { data, isLoading } = usePublishedPostsAnalytics(
+    analyticsPeriod(user?.tier?.analytics_days)
+  );
 
   return (
     <div className={shell}>
       <div className="mb-6 flex justify-end">
-        <PrimaryLink href="/analytics">View insights</PrimaryLink>
+        <PrimaryLink href="/analytics">Open analytics</PrimaryLink>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <Stat
@@ -511,6 +621,47 @@ export const ReportsPage = () => {
         />
         <Stat label="Published posts" value={isLoading ? '…' : data?.totals.published || 0} />
       </div>
+      <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">Published posts</h2>
+        </div>
+        {isLoading ? (
+          <div className="px-5 py-10 text-center text-sm text-slate-400">
+            Loading posts…
+          </div>
+        ) : !data?.posts?.length ? (
+          <div className="px-5 py-10 text-center text-sm text-slate-400">
+            No published posts in this period.
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {data.posts.map((post) => (
+              <Link
+                key={post.id}
+                href={`/analytics/post/${post.id}`}
+                className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-slate-50"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-slate-900">
+                    {(post.content || 'Untitled post')
+                      .replace(/<[^>]*>/g, ' ')
+                      .replace(/\s+/g, ' ')
+                      .trim() || 'Untitled post'}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {post.integration?.name || 'Account'}
+                    {' · '}
+                    {dayjs(post.publishDate).format('D MMM YYYY')}
+                  </div>
+                </div>
+                <span className="shrink-0 text-xs font-semibold text-blue-600">
+                  View Insights
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

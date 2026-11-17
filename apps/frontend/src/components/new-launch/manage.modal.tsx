@@ -35,6 +35,7 @@ import { CloseIcon, TrashIcon } from '@gitroom/frontend/components/ui/icons';
 import { useHasScroll } from '@gitroom/frontend/components/ui/is.scroll.hook';
 import { useShortlinkPreference } from '@gitroom/frontend/components/settings/shortlink-preference.component';
 import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
 import { useUser } from '@gitroom/frontend/components/layout/user.context';
 import { Button } from '@gitroom/react/form/button';
 import { LinkTrackingSection } from '@gitroom/frontend/components/new-launch/utm.builder';
@@ -73,6 +74,7 @@ const withPlatformLinks = (posts: any[]) => {
 
 export const ManageModal: FC<AddEditModalProps> = (props) => {
   const t = useT();
+  const router = useRouter();
   const user = useUser();
   const fetch = useFetch();
   const canQueue = user?.tier?.queue !== false;
@@ -833,6 +835,24 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
             )}
           </div>
           <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
+            {existingData?.posts?.some((item) => item.state === 'PUBLISHED') && (
+              <button
+                type="button"
+                onClick={() => {
+                  const published = existingData.posts.find(
+                    (item) => item.state === 'PUBLISHED'
+                  );
+                  if (!published?.id) {
+                    return;
+                  }
+                  modal.closeAll();
+                  router.push(`/analytics/post/${published.id}`);
+                }}
+                className="flex h-9 cursor-pointer items-center whitespace-nowrap rounded-lg border border-[#612BD3] bg-white px-3 text-[13px] font-semibold text-[#612BD3]"
+              >
+                {t('view_insights', 'View Insights')}
+              </button>
+            )}
             {existingData?.integration && (
               <button
                 onClick={deletePost}
