@@ -69,6 +69,23 @@ export const formatMetric = (value?: number | null) => {
 
 export type AnalyticsPeriod = 7 | 30 | 90 | 365 | 730;
 
+export const useGroupPostInsights = (postId: string, date: number) => {
+  const fetch = useFetch();
+
+  const load = useCallback(async () => {
+    const response = await fetch(`/analytics/group/${postId}?date=${date}`);
+    if (!response.ok) {
+      throw new Error('Failed to load post insights');
+    }
+    return (await response.json()) as { posts: PublishedPostAnalytics[] };
+  }, [fetch, postId, date]);
+
+  return useSWR(`/analytics/group/${postId}?date=${date}`, load, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
+};
+
 export const usePublishedPostsAnalytics = (date: AnalyticsPeriod) => {
   const fetch = useFetch();
 

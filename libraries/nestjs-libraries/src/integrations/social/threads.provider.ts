@@ -887,59 +887,38 @@ export class ThreadsProvider extends SocialAbstract implements SocialProvider {
     date: number
   ): Promise<AnalyticsData[]> {
     const today = dayjs().format('YYYY-MM-DD');
+    const metrics: Array<[string, string]> = [
+      ['views', 'Views'],
+      ['likes', 'Likes'],
+      ['replies', 'Replies'],
+      ['reposts', 'Reposts'],
+      ['quotes', 'Quotes'],
+    ];
 
-    try {
-      // Fetch thread insights from Threads API
-      const { data } = await (
-        await fetch(
-          `https://graph.threads.net/v1.0/${postId}/insights?metric=views,likes,replies,reposts,quotes&access_token=${accessToken}`
-        )
-      ).json();
-
-      if (!data || data.length === 0) {
-        return [];
-      }
-
-      const result: AnalyticsData[] = [];
-
-      for (const metric of data) {
-        const value = metric.values?.[0]?.value ?? metric.total_value?.value;
-        if (value === undefined) continue;
-
-        let label = '';
-
-        switch (metric.name) {
-          case 'views':
-            label = 'Views';
-            break;
-          case 'likes':
-            label = 'Likes';
-            break;
-          case 'replies':
-            label = 'Replies';
-            break;
-          case 'reposts':
-            label = 'Reposts';
-            break;
-          case 'quotes':
-            label = 'Quotes';
-            break;
-        }
-
-        if (label) {
-          result.push({
+    const rows = await Promise.all(
+      metrics.map(async ([metric, label]) => {
+        try {
+          const response = await fetch(
+            `https://graph.threads.net/v1.0/${postId}/insights?metric=${metric}&access_token=${accessToken}`
+          );
+          const body = await response.json();
+          const item = body?.data?.[0];
+          const value = item?.total_value?.value ?? item?.values?.[0]?.value;
+          if (!response.ok || body?.error || value === undefined || value === null) {
+            return null;
+          }
+          return {
             label,
             percentageChange: 0,
             data: [{ total: String(value), date: today }],
-          });
+          };
+        } catch (err) {
+          return null;
         }
-      }
+      })
+    );
 
-      return result;
-    } catch (err) {
-      console.error('Error fetching Threads post analytics:', err);
-      return [];
-    }
+    return rows.filter((row): row is AnalyticsData => !!row);
   }
 
   // override async mention(

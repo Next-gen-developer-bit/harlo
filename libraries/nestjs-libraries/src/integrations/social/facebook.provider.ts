@@ -1030,16 +1030,11 @@ export class FacebookProvider extends SocialAbstract implements SocialProvider {
         });
       };
 
-      const { data } = await (
-        await fetch(
-          `https://graph.facebook.com/v23.0/${postId}/insights?metric=post_total_media_view_unique,post_reactions_by_type_total,post_clicks,post_clicks_by_type&access_token=${accessToken}`
-        )
-      ).json();
-
-      for (const metric of data || []) {
-        const value = metric.values?.[0]?.value;
-        if (value === undefined) continue;
-
+      const readInsight = (metric: any) => {
+        const value = metric?.total_value?.value ?? metric?.values?.[0]?.value;
+        if (value === undefined || value === null) {
+          return;
+        }
         switch (metric.name) {
           case 'post_total_media_view_unique':
             pushMetric('Impressions', value);
@@ -1064,7 +1059,32 @@ export class FacebookProvider extends SocialAbstract implements SocialProvider {
             }
             break;
         }
-      }
+      };
+
+      // One metric per request. Meta rejects the whole call when any metric
+      // does not apply to that post, which used to hide the numbers that do.
+      const insightNames = [
+        'post_total_media_view_unique',
+        'post_reactions_by_type_total',
+        'post_clicks',
+        'post_clicks_by_type',
+      ];
+      await Promise.all(
+        insightNames.map(async (name) => {
+          try {
+            const { data } = await (
+              await fetch(
+                `https://graph.facebook.com/v23.0/${postId}/insights?metric=${name}&access_token=${accessToken}`
+              )
+            ).json();
+            for (const metric of data || []) {
+              readInsight(metric);
+            }
+          } catch (err) {
+            return;
+          }
+        })
+      );
 
       const objectStats = await (
         await fetch(

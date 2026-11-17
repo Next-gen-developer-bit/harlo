@@ -210,7 +210,17 @@ export const WorkspaceHomeComponent = () => {
                 </tr>
               ) : (
                 recent.map((post: { id: string; content?: string; publishDate: string; state?: string; image?: string; integration?: { providerIdentifier?: string; name?: string } }) => (
-                  <tr key={post.id} className="border-t border-slate-100">
+                  <tr
+                    key={post.id}
+                    className={`border-t border-slate-100 ${
+                      post.state === 'PUBLISHED' ? 'cursor-pointer hover:bg-slate-50' : ''
+                    }`}
+                    onClick={() => {
+                      if (post.state === 'PUBLISHED') {
+                        router.push(`/analytics/post/${post.id}`);
+                      }
+                    }}
+                  >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-slate-100">
@@ -241,7 +251,13 @@ export const WorkspaceHomeComponent = () => {
                       <StatusPill state={post.state} />
                     </td>
                     <td className="px-5 py-3 text-xs text-slate-500">
-                      {reachById.get(post.id) || '—'}
+                      {post.state === 'PUBLISHED' ? (
+                        <span className="font-semibold text-blue-600">
+                          {reachById.get(post.id) || 'View insights'}
+                        </span>
+                      ) : (
+                        reachById.get(post.id) || '—'
+                      )}
                     </td>
                   </tr>
                 ))

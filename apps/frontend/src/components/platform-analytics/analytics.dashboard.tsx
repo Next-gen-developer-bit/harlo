@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
+import Link from 'next/link';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
@@ -371,9 +372,12 @@ const PostsPanel = ({
             className="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
           >
             <div className="min-w-0">
-              <div className="truncate text-xs font-semibold text-slate-800">
+              <Link
+                href={`/analytics/post/${post.id}`}
+                className="block truncate text-xs font-semibold text-slate-800 hover:text-blue-600"
+              >
                 {stripCaption(post.content)}
-              </div>
+              </Link>
               <div className="mt-1 flex items-center gap-2 text-[10px] text-slate-400">
                 {post.integration && (
                   <img
@@ -444,6 +448,7 @@ export const AnalyticsDashboard = () => {
   const activePeriod = periods.some((option) => option.value === period)
     ? period
     : periods[periods.length - 1]?.value || 30;
+  const [platform, setPlatform] = useState('all');
   const [channelId, setChannelId] = useState('all');
   const [showPosts, setShowPosts] = useState(false);
   const { data: integrations } = useIntegrationList();
@@ -454,20 +459,51 @@ export const AnalyticsDashboard = () => {
 
   const posts = useMemo(() => data?.posts || [], [data?.posts]);
   const channels = useMemo(() => data?.channels || [], [data?.channels]);
+  const connectedPlatforms = useMemo(() => {
+    const seen = new Set<string>();
+    const rows: Array<{ family: string; label: string }> = [];
+    for (const integration of integrations || []) {
+      const family = platformFamily(integration.identifier);
+      if (!family || seen.has(family)) {
+        continue;
+      }
+      seen.add(family);
+      rows.push({
+        family,
+        label: PLATFORM_LABELS[family] || family,
+      });
+    }
+    return rows;
+  }, [integrations]);
+  const platformPosts = useMemo(
+    () =>
+      platform === 'all'
+        ? posts
+        : posts.filter(
+            (post) =>
+              platformFamily(post.integration?.providerIdentifier) === platform
+          ),
+    [platform, posts]
+  );
   const visiblePosts = useMemo(
     () =>
       channelId === 'all'
-        ? posts
-        : posts.filter((post) => post.integration?.id === channelId),
-    [channelId, posts]
+        ? platformPosts
+        : platformPosts.filter((post) => post.integration?.id === channelId),
+    [channelId, platformPosts]
   );
-  const visibleChannels = useMemo(
-    () =>
-      channelId === 'all'
+  const visibleChannels = useMemo(() => {
+    const forPlatform =
+      platform === 'all'
         ? channels
-        : channels.filter((channel) => channel.id === channelId),
-    [channelId, channels]
-  );
+        : channels.filter(
+            (channel) =>
+              platformFamily(channel.providerIdentifier) === platform
+          );
+    return channelId === 'all'
+      ? forPlatform
+      : forPlatform.filter((channel) => channel.id === channelId);
+  }, [channelId, channels, platform]);
   const totals = useMemo(
     () => ({
       impressions: sumAvailable(visiblePosts.map((post) => post.impressions)),
@@ -546,7 +582,13 @@ export const AnalyticsDashboard = () => {
             aria-label="Social channel"
           >
             <option value="all">All channels</option>
-            {(integrations || []).map(
+            {(integrations || [])
+              .filter(
+                (integration: { identifier: string }) =>
+                  platform === 'all' ||
+                  platformFamily(integration.identifier) === platform
+              )
+              .map(
               (integration: {
                 id: string;
                 name: string;
@@ -594,6 +636,64 @@ export const AnalyticsDashboard = () => {
         </div>
       ) : (
         <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setPlatform('all');
+                setChannelId('all');
+              }}
+              className={clsx(
+                'h-9 rounded-full border px-3 text-xs font-semibold',
+                platform === 'all'
+                  ? 'border-blue-600 bg-blue-600 text-white'
+                  : 'border-slate-200 bg-white text-slate-600'
+              )}
+            >
+              All platforms
+            </button>
+            {connectedPlatforms.map((item) => {
+              const reach = sumAvailable(
+                posts
+                  .filter(
+                    (post) =>
+                      platformFamily(post.integration?.providerIdentifier) ===
+                      item.family
+                  )
+                  .map((post) => post.impressions)
+              );
+              return (
+                <button
+                  key={item.family}
+                  type="button"
+                  onClick={() => {
+                    setPlatform(item.family);
+                    setChannelId('all');
+                  }}
+                  className={clsx(
+                    'flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-semibold',
+                    platform === item.family
+                      ? 'border-blue-600 bg-blue-600 text-white'
+                      : 'border-slate-200 bg-white text-slate-700'
+                  )}
+                >
+                  <img
+                    src={platformIcon(item.family)}
+                    alt=""
+                    className="h-4 w-4 object-contain"
+                  />
+                  {item.label}
+                  <span
+                    className={
+                      platform === item.family ? 'text-blue-100' : 'text-slate-400'
+                    }
+                  >
+                    {formatMetric(reach)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               title="Measured reach"
@@ -803,9 +903,12 @@ export const AnalyticsDashboard = () => {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[11px] font-semibold text-slate-800">
+                        <Link
+                          href={`/analytics/post/${post.id}`}
+                          className="block truncate text-[11px] font-semibold text-slate-800 hover:text-blue-600"
+                        >
                           {stripCaption(post.content)}
-                        </div>
+                        </Link>
                         <div className="mt-1 flex items-center gap-1.5 text-[9px] text-slate-400">
                           {post.integration && (
                             <img

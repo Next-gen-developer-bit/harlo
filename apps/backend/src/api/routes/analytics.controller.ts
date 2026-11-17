@@ -31,6 +31,15 @@ export class AnalyticsController {
     return this._postsService.saveAnalyticsSnapshot(org.id, postId, body);
   }
 
+  @Get('/group/:postId')
+  async getGroupPostInsights(
+    @GetOrgFromRequest() org: Organization,
+    @Param('postId') postId: string,
+    @Query('date') date: string
+  ) {
+    return this._postsService.getGroupPostInsights(org.id, postId, +date);
+  }
+
   @Get('/post/:postId')
   async getPostAnalytics(
     @GetOrgFromRequest() org: Organization,

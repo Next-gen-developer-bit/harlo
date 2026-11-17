@@ -1509,66 +1509,42 @@ export class InstagramProvider
     date: number,
     type = 'graph.facebook.com'
   ): Promise<AnalyticsData[]> {
-    const [accessToken, userToken] = token.split('___');
+    const [accessToken] = token.split('___');
     const today = dayjs().format('YYYY-MM-DD');
+    const metrics: Array<[string, string]> = [
+      ['views', 'Views'],
+      ['reach', 'Reach'],
+      ['saved', 'Saves'],
+      ['likes', 'Likes'],
+      ['comments', 'Comments'],
+      ['shares', 'Shares'],
+    ];
 
-    try {
-      // Fetch media insights from Instagram Graph API
-      const { data } = await (
-        await fetch(
-          `https://${type}/v21.0/${postId}/insights?metric=views,reach,saved,likes,comments,shares&access_token=${accessToken}`
-        )
-      ).json();
-
-      if (!data || data.length === 0) {
-        return [];
-      }
-
-      const result: AnalyticsData[] = [];
-
-      for (const metric of data) {
-        const value = metric.values?.[0]?.value;
-        if (value === undefined) continue;
-
-        let label = '';
-
-        switch (metric.name) {
-          case 'views':
-            label = 'Views';
-            break;
-          case 'reach':
-            label = 'Reach';
-            break;
-          case 'engagement':
-            label = 'Engagement';
-            break;
-          case 'saved':
-            label = 'Saves';
-            break;
-          case 'likes':
-            label = 'Likes';
-            break;
-          case 'comments':
-            label = 'Comments';
-            break;
-          case 'shares':
-            label = 'Shares';
-            break;
-        }
-
-        if (label) {
-          result.push({
+    // Ask for each metric on its own. A story or reel rejects some of these,
+    // and Meta then returns no numbers for the whole request.
+    const rows = await Promise.all(
+      metrics.map(async ([metric, label]) => {
+        try {
+          const response = await fetch(
+            `https://${type}/v21.0/${postId}/insights?metric=${metric}&access_token=${accessToken}`
+          );
+          const body = await response.json();
+          const item = body?.data?.[0];
+          const value = item?.total_value?.value ?? item?.values?.[0]?.value;
+          if (!response.ok || body?.error || value === undefined || value === null) {
+            return null;
+          }
+          return {
             label,
             percentageChange: 0,
             data: [{ total: String(value), date: today }],
-          });
+          };
+        } catch (err) {
+          return null;
         }
-      }
+      })
+    );
 
-      return result;
-    } catch (err) {
-      console.error('Error fetching Instagram post analytics:', err);
-      return [];
-    }
+    return rows.filter((row): row is AnalyticsData => !!row);
   }
 }

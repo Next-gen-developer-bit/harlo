@@ -199,8 +199,8 @@ export const CampaignsPage = () => (
     <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
       <h2 className="text-lg font-semibold text-slate-900">No campaigns yet</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
-        Campaigns group the posts you already schedule. Start from the composer,
-        then follow them on the calendar and in analytics.
+        Campaigns group the posts you already schedule. A published post in a
+        campaign opens in Post Insights from the posts list, calendar, or analytics.
       </p>
       <div className="mt-5 flex justify-center gap-3">
         <PrimaryLink href="/compose?create=1">Create post</PrimaryLink>

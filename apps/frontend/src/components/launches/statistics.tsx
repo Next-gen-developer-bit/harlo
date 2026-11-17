@@ -1,11 +1,18 @@
 import React, { FC, Fragment, useCallback, useMemo, useState } from 'react';
-import useSWR, { useSWRConfig } from 'swr';
+import useSWR from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { ChartSocial } from '@gitroom/frontend/components/analytics/chart-social';
 import { Select } from '@gitroom/react/form/select';
 import { LoadingComponent } from '@gitroom/frontend/components/layout/loading';
 import { MissingReleaseModal } from '@gitroom/frontend/components/launches/missing-release.modal';
+import { useModals } from '@gitroom/frontend/components/layout/new-modal';
+import { ImportStatsModal } from '@gitroom/frontend/components/platform-analytics/import.stats.modal';
+import {
+  formatMetric,
+  PublishedPostAnalytics,
+  useGroupPostInsights,
+} from '@gitroom/frontend/components/platform-analytics/use.published.posts.analytics';
 
 interface AnalyticsData {
   label: string;
@@ -20,15 +27,17 @@ export const StatisticsModal: FC<{
   const { postId } = props;
   const t = useT();
   const fetch = useFetch();
+  const modals = useModals();
   const [dateRange, setDateRange] = useState(7);
+  const [selectedId, setSelectedId] = useState(postId);
 
   const loadStatistics = useCallback(async () => {
     return (await fetch(`/posts/${postId}/statistics`)).json();
   }, [postId, fetch]);
 
   const loadPostAnalytics = useCallback(async () => {
-    return (await fetch(`/analytics/post/${postId}?date=${dateRange}`)).json();
-  }, [postId, dateRange, fetch]);
+    return (await fetch(`/analytics/post/${selectedId}?date=${dateRange}`)).json();
+  }, [selectedId, dateRange, fetch]);
 
   const { data: statisticsData, isLoading: isLoadingStatistics } = useSWR(
     `/posts/${postId}/statistics`,
@@ -36,7 +45,7 @@ export const StatisticsModal: FC<{
   );
 
   const { data: analyticsData, isLoading: isLoadingAnalytics, mutate: mutateAnalytics } = useSWR(
-    `/analytics/post/${postId}?date=${dateRange}`,
+    `/analytics/post/${selectedId}?date=${dateRange}`,
     loadPostAnalytics,
     {
       revalidateOnFocus: false,
@@ -71,7 +80,33 @@ export const StatisticsModal: FC<{
     });
   }, [analyticsData]);
 
-  const isLoading = isLoadingStatistics || isLoadingAnalytics;
+  const {
+    data: groupInsights,
+    isLoading: isLoadingGroup,
+    mutate: mutateGroup,
+  } = useGroupPostInsights(postId, dateRange);
+  const channels = groupInsights?.posts || [];
+
+  const openImport = useCallback(
+    (channel: PublishedPostAnalytics) => {
+      modals.openModal({
+        title: 'Add post stats',
+        withCloseButton: true,
+        children: (
+          <ImportStatsModal
+            post={channel}
+            onSaved={() => {
+              mutateGroup();
+              mutateAnalytics();
+            }}
+          />
+        ),
+      });
+    },
+    [modals, mutateAnalytics, mutateGroup]
+  );
+
+  const isLoading = isLoadingStatistics || isLoadingAnalytics || isLoadingGroup;
 
   return (
     <div className="relative min-h-[200px]">
@@ -79,10 +114,93 @@ export const StatisticsModal: FC<{
         <div className="flex items-center justify-center py-[40px]">
           <LoadingComponent />
         </div>
-      ) : isMissing ? (
-        <MissingReleaseModal postId={postId} onSuccess={() => mutateAnalytics()} />
+      ) : isMissing && channels.length === 0 ? (
+        <MissingReleaseModal postId={selectedId} onSuccess={() => mutateAnalytics()} />
       ) : (
         <div className="flex flex-col gap-[24px]">
+          {channels.length > 0 && (
+            <div className="flex flex-col gap-[10px]">
+              <h3 className="text-[18px] font-[500]">
+                {t('channel_insights', 'Each channel')}
+              </h3>
+              <div className="flex flex-col gap-[8px]">
+                {channels.map((channel) => (
+                  <div
+                    key={channel.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedId(channel.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        setSelectedId(channel.id);
+                      }
+                    }}
+                    className={`rounded-[12px] border bg-white px-[14px] py-[12px] text-left ${
+                      selectedId === channel.id
+                        ? 'border-[#2563eb]'
+                        : 'border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-[12px]">
+                      <div className="flex min-w-0 items-center gap-[8px]">
+                        {channel.integration?.providerIdentifier && (
+                          <img
+                            src={
+                              channel.integration.providerIdentifier === 'youtube'
+                                ? '/icons/platforms/youtube.svg'
+                                : `/icons/platforms/${channel.integration.providerIdentifier}.png`
+                            }
+                            alt=""
+                            className="h-[16px] w-[16px] rounded-[3px] object-cover"
+                          />
+                        )}
+                        <span className="truncate text-[14px] font-medium text-slate-800">
+                          {channel.integration?.name ||
+                            t('unknown_account', 'Unknown account')}
+                        </span>
+                      </div>
+                      {channel.canImportStats && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openImport(channel);
+                          }}
+                          className="shrink-0 rounded-lg border border-blue-200 px-[8px] py-[4px] text-[12px] font-medium text-blue-600"
+                        >
+                          {channel.available
+                            ? t('update_stats', 'Update stats')
+                            : t('add_stats', 'Add stats')}
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-[10px] grid grid-cols-2 gap-[8px] sm:grid-cols-4">
+                      {(
+                        [
+                          [channel.reachLabel || 'Impressions', channel.impressions],
+                          ['Likes', channel.likes],
+                          ['Comments', channel.comments],
+                          ['Shares', channel.shares],
+                        ] as Array<[string, number | null]>
+                      ).map(([label, value]) => (
+                        <div key={label}>
+                          <div className="text-[11px] text-slate-400">{label}</div>
+                          <div className="text-[16px] font-medium text-slate-800">
+                            {formatMetric(value)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {!channel.available && channel.unavailableHint && (
+                      <div className="mt-[8px] text-[12px] text-slate-500">
+                        {channel.unavailableHint}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Post Analytics Section */}
           {analyticsData && Array.isArray(analyticsData) && analyticsData.length > 0 && (
             <div className="flex flex-col gap-[14px]">
@@ -184,7 +302,8 @@ export const StatisticsModal: FC<{
           </div>
 
           {/* No analytics available message */}
-          {(!analyticsData || !Array.isArray(analyticsData) || analyticsData.length === 0) &&
+          {channels.length === 0 &&
+            (!analyticsData || !Array.isArray(analyticsData) || analyticsData.length === 0) &&
             (!statisticsData?.clicks || statisticsData.clicks.length === 0) && (
               <div className="text-center text-gray-400 py-[20px]">
                 {t('no_statistics_available', 'No statistics available for this post')}

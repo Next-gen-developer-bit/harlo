@@ -93,3 +93,41 @@ export const usePostAnalytics = (postId?: string) => {
 
   return { data, isLoading, error, totals };
 };
+
+export const usePostSeries = (postId: string, date: number) => {
+  const fetch = useFetch();
+
+  const load = useCallback(async () => {
+    const response = await fetch(`/analytics/post/${postId}?date=${date}`);
+    if (!response.ok) {
+      throw new Error('Failed to load post series');
+    }
+    return (await response.json()) as PostAnalyticsSeries[] | { missing: true };
+  }, [date, fetch, postId]);
+
+  return useSWR(
+    postId ? `/analytics/post/${postId}?date=${date}` : null,
+    load,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  );
+};
+
+export const useShortLinkStats = (postId: string) => {
+  const fetch = useFetch();
+
+  const load = useCallback(async () => {
+    const response = await fetch(`/posts/${postId}/statistics`);
+    if (!response.ok) {
+      return { clicks: [] as Array<{ clicks: number }> };
+    }
+    return (await response.json()) as { clicks?: Array<{ clicks: number }> };
+  }, [fetch, postId]);
+
+  return useSWR(`/posts/${postId}/statistics`, load, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
+};

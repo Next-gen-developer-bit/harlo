@@ -34,6 +34,9 @@ const titleForPath = (pathname: string, state: string | null) => {
   if (pathname === '/third-party' || pathname.startsWith('/third-party/')) {
     return 'Social Accounts';
   }
+  if (pathname.startsWith('/analytics/post/')) {
+    return 'Post Insights';
+  }
   if (pathname === '/analytics' || pathname.startsWith('/analytics/')) {
     return 'Analytics';
   }

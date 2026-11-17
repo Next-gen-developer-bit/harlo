@@ -277,15 +277,16 @@ export class PostsService {
       'Shares',
       'Reposts',
       'Retweets',
-      'Saves',
+      'Quotes',
     ]);
+    const saves = this.pickAnalyticsMetric(analytics, ['Saves', 'Saved']);
     const impressions = this.pickAnalyticsMetric(analytics, [
       'Impressions',
       'Views',
       'Reach',
       'Unique Impressions',
     ]);
-    const engagementParts = [likes, comments, shares].filter(
+    const engagementParts = [likes, comments, shares, saves].filter(
       (value): value is number => value !== null
     );
 
@@ -360,7 +361,7 @@ export class PostsService {
   }
 
   async getPublishedPostsAnalytics(orgId: string, date: number) {
-    const days = [7, 30, 90].includes(date) ? date : 30;
+    const days = [7, 30, 90, 365, 730].includes(date) ? date : 30;
     const posts = await this._postRepository.getPublishedPostsForAnalytics(
       orgId,
       dayjs.utc().subtract(days, 'day').toDate()
@@ -521,6 +522,129 @@ export class PostsService {
     );
 
     return { posts: mapped, totals, channels };
+  }
+
+  async getGroupPostInsights(orgId: string, postId: string, date: number) {
+    const post = await this._postRepository.getPostById(postId, orgId);
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    const grouped = post.group
+      ? await this._postRepository.getPostsByGroup(orgId, post.group)
+      : [];
+    const destinations = (grouped.length ? grouped : [post]).filter(
+      (item) => !item.parentPostId
+    );
+    const days = [7, 30, 90].includes(date) ? date : 7;
+    const posts = [];
+
+    for (let i = 0; i < destinations.length; i += 3) {
+      const chunk = destinations.slice(i, i + 3);
+      posts.push(
+        ...(await Promise.all(
+          chunk.map((destination) =>
+            this.destinationInsight(orgId, destination, days)
+          )
+        ))
+      );
+    }
+
+    return { posts };
+  }
+
+  private async destinationInsight(
+    orgId: string,
+    post: {
+      id: string;
+      content: string;
+      publishDate: Date;
+      releaseURL: string | null;
+      releaseId: string | null;
+      state: State;
+      image: string | null;
+      settings?: string | null;
+      integration: {
+        id: string;
+        name: string;
+        picture: string | null;
+        providerIdentifier: string;
+      } | null;
+    },
+    days: number
+  ) {
+    const provider = post.integration
+      ? this._integrationManager.getSocialIntegration(
+          post.integration.providerIdentifier
+        )
+      : undefined;
+    const empty = {
+      impressions: null,
+      likes: null,
+      comments: null,
+      shares: null,
+      engagements: null,
+    };
+    const canLoad =
+      post.state === 'PUBLISHED' &&
+      !!post.releaseId &&
+      post.releaseId !== 'missing';
+    const analytics = canLoad
+      ? await this.checkPostAnalytics(orgId, post.id, days)
+      : [];
+    const live = Array.isArray(analytics)
+      ? this.summarizeAnalytics(analytics)
+      : empty;
+    const metrics = this.mergeAnalyticsMetrics(
+      live,
+      this.parseAnalyticsSnapshot(post.settings)
+    );
+    const available =
+      metrics.impressions !== null ||
+      metrics.likes !== null ||
+      metrics.comments !== null ||
+      metrics.shares !== null;
+    const canImportStats = Boolean(provider?.analyticsManualImport);
+    const unavailableHint = available
+      ? ''
+      : post.state !== 'PUBLISHED'
+      ? 'Stats appear after this channel publishes.'
+      : post.releaseId === 'missing'
+      ? 'Connect this published post to load its stats.'
+      : !post.releaseId
+      ? 'This channel has not returned a post id yet.'
+      : provider?.analyticsUnavailableHint ||
+        (!provider?.postAnalytics
+          ? 'This channel does not share post stats.'
+          : 'No stats returned for this post yet.');
+
+    return {
+      id: post.id,
+      content: post.content,
+      publishDate: post.publishDate,
+      releaseURL: post.releaseURL,
+      state: post.state,
+      image: post.image,
+      integration: post.integration
+        ? {
+            id: post.integration.id,
+            name: post.integration.name,
+            picture: post.integration.picture,
+            providerIdentifier: post.integration.providerIdentifier,
+          }
+        : null,
+      ...metrics,
+      available,
+      reachLabel: provider?.analyticsReachLabel || 'Impressions',
+      unavailableHint,
+      canImportStats,
+      importHint: canImportStats ? provider?.analyticsImportHint || '' : '',
+      importUrl: canImportStats
+        ? provider?.analyticsImportUrl?.(post.releaseURL, post.releaseId) ||
+          post.releaseURL ||
+          ''
+        : '',
+    };
   }
 
   async saveAnalyticsSnapshot(

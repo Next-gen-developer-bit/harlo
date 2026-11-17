@@ -773,9 +773,21 @@ export const ListView = () => {
                           ) : null}
                         </div>
                         <div className="min-w-0">
-                          <div className="truncate font-medium text-slate-900 max-w-[280px]">
-                            {caption}
-                          </div>
+                          {group.some((item) => item.state === 'PUBLISHED') ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                router.push(`/analytics/post/${post.id}`)
+                              }
+                              className="block max-w-[280px] truncate text-left font-medium text-slate-900 hover:text-blue-600"
+                            >
+                              {caption}
+                            </button>
+                          ) : (
+                            <div className="max-w-[280px] truncate font-medium text-slate-900">
+                              {caption}
+                            </div>
+                          )}
                           <div className="truncate text-xs text-slate-400 max-w-[280px]">
                             {post.integration?.name || 'Workspace'}
                           </div>
@@ -820,6 +832,17 @@ export const ListView = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
+                        {group.some((item) => item.state === 'PUBLISHED') && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(`/analytics/post/${post.id}`)
+                            }
+                            className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50"
+                          >
+                            View Insights
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={editPost(post, false)}
@@ -1502,6 +1525,7 @@ const MonthPostCard: FC<{
   preview: () => void;
   failedError: string;
   onRecover: () => void;
+  onInsights?: () => void;
 }> = memo((props) => {
   const t = useT();
   const {
@@ -1518,6 +1542,7 @@ const MonthPostCard: FC<{
     preview,
     failedError,
     onRecover,
+    onInsights,
   } = props;
   const caption =
     stripHtmlValidation('none', post.content, false, true, false) ||
@@ -1610,6 +1635,19 @@ const MonthPostCard: FC<{
         <OpenPost />
       </button>
       <div className="absolute right-1 top-1 hidden items-center gap-0.5 group-hover:flex">
+        {onInsights && (
+          <button
+            type="button"
+            className="rounded bg-white/80 p-0.5 text-slate-500 hover:text-slate-800"
+            onClick={(event) => {
+              event.stopPropagation();
+              onInsights();
+            }}
+            aria-label={t('view_insights', 'View Insights')}
+          >
+            <Statistics />
+          </button>
+        )}
         <button
           type="button"
           className="rounded bg-white/80 p-0.5 text-slate-500 hover:text-slate-800"
@@ -1706,6 +1744,17 @@ const CalendarItem: FC<{
     .filter(Boolean)
     .join(', ');
   const { disableXAnalytics } = useVariables();
+  const router = useRouter();
+  const openInsights = useCallback(() => {
+    router.push(`/analytics/post/${post.id}`);
+  }, [post.id, router]);
+  const insightReady = destinations.some(
+    (item) =>
+      item.state === 'PUBLISHED' &&
+      !!item.releaseId &&
+      item.releaseId !== 'missing' &&
+      !(item.integration?.providerIdentifier === 'x' && disableXAnalytics)
+  );
   const user = useUser();
   const showCreationMethodBadge =
     user?.impersonate &&
@@ -1744,6 +1793,7 @@ const CalendarItem: FC<{
         deletePost={deletePost}
         duplicatePost={duplicatePost}
         preview={preview}
+        onInsights={insightReady ? openInsights : undefined}
         failedError={readablePostError(
           failedDestination?.error || post.error
         )}
@@ -1901,10 +1951,16 @@ const CalendarItem: FC<{
         >
           <Preview />
         </div>{' '}
-        {(post.integration.providerIdentifier === 'x' && disableXAnalytics) ||
-        !post.releaseId ? (
+        {(post.integration.providerIdentifier === 'x' &&
+          disableXAnalytics &&
+          destinations.every(
+            (item) => item.integration?.providerIdentifier === 'x'
+          )) ||
+        !destinations.some((item) => item.releaseId) ? (
           <></>
-        ) : post.releaseId === 'missing' && missingRelease ? (
+        ) : !insightReady &&
+          destinations.some((item) => item.releaseId === 'missing') &&
+          missingRelease ? (
           <div
             className={clsx(
               'hidden group-hover:block hover:underline cursor-pointer',
@@ -1914,13 +1970,13 @@ const CalendarItem: FC<{
           >
             <Statistics />
           </div>
-        ) : post.releaseId !== 'missing' ? (
+        ) : insightReady ? (
           <div
             className={clsx(
               'hidden group-hover:block hover:underline cursor-pointer',
               post?.tags?.[0]?.tag?.color && 'mix-blend-difference'
             )}
-            onClick={statistics}
+            onClick={openInsights}
           >
             <Statistics />
           </div>
@@ -2173,7 +2229,7 @@ export const Statistics = () => {
       viewBox="0 0 32 32"
       fill="none"
       data-tooltip-id="tooltip"
-      data-tooltip-content={t('post_statistics', 'Post Statistics')}
+      data-tooltip-content={t('view_insights', 'View Insights')}
     >
       <path
         d="M28 25H27V5C27 4.73478 26.8946 4.48043 26.7071 4.29289C26.5196 4.10536 26.2652 4 26 4H19C18.7348 4 18.4804 4.10536 18.2929 4.29289C18.1054 4.48043 18 4.73478 18 5V10H12C11.7348 10 11.4804 10.1054 11.2929 10.2929C11.1054 10.4804 11 10.7348 11 11V16H6C5.73478 16 5.48043 16.1054 5.29289 16.2929C5.10536 16.4804 5 16.7348 5 17V25H4C3.73478 25 3.48043 25.1054 3.29289 25.2929C3.10536 25.4804 3 25.7348 3 26C3 26.2652 3.10536 26.5196 3.29289 26.7071C3.48043 26.8946 3.73478 27 4 27H28C28.2652 27 28.5196 26.8946 28.7071 26.7071C28.8946 26.5196 29 26.2652 29 26C29 25.7348 28.8946 25.4804 28.7071 25.2929C28.5196 25.1054 28.2652 25 28 25ZM20 6H25V25H20V6ZM13 12H18V25H13V12ZM7 18H11V25H7V18Z"
